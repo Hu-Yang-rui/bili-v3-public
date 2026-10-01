@@ -96,24 +96,32 @@
     <ellipse cx="1120" cy="70" rx="220" ry="130" fill="#FF8FB0" fill-opacity="0.10"/>
 
     <!-- 弹幕：自绘渲染层示意，缓动同页面转场 -->
+    <!-- ⚠️ 两个约束，改之前先看：
+         ① base x 必须落在播放器可视区（660..1240）内。若 SMIL 不执行
+            （Safari 的 <img>、camo 代理、打印/PDF），弹幕会永久停在这一帧；
+            base x=0 会让四条弹幕全部落到裁剪区外 → 播放器变成空壳。
+         ② 动画终点必须让文字**完全移出左边界**（x+tx+字宽 < 660）。
+            只有两个 keyframe 时终点会瞬间跳回起点，若此刻文字还在画面里，
+            就会看到弹幕在中途"啪"地闪回。四条终点都停在 x=140，已出画。
+    -->
     <g font-family="'Microsoft YaHei','PingFang SC','Segoe UI',Helvetica,Arial,sans-serif"
        font-size="17" fill="#FFFFFF" stroke="#000000" stroke-width="3.5"
        stroke-linejoin="round" paint-order="stroke">
-      <text x="0" y="76">这也太丝滑了
+      <text x="700" y="76">这也太丝滑了
         <animateTransform attributeName="transform" type="translate"
-          values="1250 0;620 0" dur="9s" begin="-1s" repeatCount="indefinite"/>
+          values="580 0;-560 0" dur="9s" begin="-1s" repeatCount="indefinite"/>
       </text>
-      <text x="0" y="108">封面 16:10
+      <text x="880" y="108">封面 16:10
         <animateTransform attributeName="transform" type="translate"
-          values="1250 0;620 0" dur="12s" begin="-7s" repeatCount="indefinite"/>
+          values="400 0;-740 0" dur="12s" begin="-7s" repeatCount="indefinite"/>
       </text>
-      <text x="0" y="140" fill="#FF8FB0">骨架共享相位
+      <text x="760" y="140" fill="#FF8FB0">骨架共享相位
         <animateTransform attributeName="transform" type="translate"
-          values="1250 0;620 0" dur="10.5s" begin="-4s" repeatCount="indefinite"/>
+          values="520 0;-620 0" dur="10.5s" begin="-4s" repeatCount="indefinite"/>
       </text>
-      <text x="0" y="172">DASH 音视频分离
+      <text x="940" y="172">DASH 音视频分离
         <animateTransform attributeName="transform" type="translate"
-          values="1250 0;620 0" dur="13.5s" begin="-10s" repeatCount="indefinite"/>
+          values="340 0;-800 0" dur="13.5s" begin="-10s" repeatCount="indefinite"/>
       </text>
     </g>
 
