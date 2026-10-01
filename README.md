@@ -110,6 +110,13 @@ UI (Compose) → ViewModel (StateFlow) → Repository → ApiClient
                                                         └ 容错 JSON 解析
 ```
 
+<p align="center">
+  <img src="assets/arch-flow.svg" alt="架构数据流：脉冲依次穿过 UI → ViewModel → Repository → ApiClient，再分流到 Wbi / Endpoints / 容错 JSON 解析" width="100%">
+</p>
+
+> 脉冲一个周期 2.6s，依次点亮四层主干与三个易变点 ——
+> 把「请求怎么走」和「哪三个文件最该收敛」画在同一张图上。
+
 ### 几个刻意的架构决策
 
 | 决策 | 理由 |
@@ -312,6 +319,13 @@ app/src/main/java/com/example/biliv3/
 
 已封装为 `Modifier.biliCard()`，页面里不要再自己拼 `shadow + background + clip`。
 
+<p align="center">
+  <img src="assets/card-layering.svg" alt="深浅色分层手段对比：深色卡片靠 1dp 10% 白描边追光分层，浅色卡片靠多层投影浮动分层" width="100%">
+</p>
+
+> 左：深色的描边追光绕卡片轮廓走一圈；右：浅色的投影上下呼吸。
+> 同一张 `biliCard()`，两套分层手段各自成立 —— 这就是为什么不能只调一种。
+
 ### 尺寸
 
 ```
@@ -326,9 +340,20 @@ app/src/main/java/com/example/biliv3/
 页面转场 220ms · 淡入淡出 160ms · 图片淡入 180ms · 骨架微光 1200ms，
 缓动统一 `cubic-bezier(0.16, 1, 0.3, 1)`。
 
-> 上面那张顶部动图（`assets/hero-dark.svg`）就是这套令牌的**同源演示**：
-> 品牌粉扫光 = 骨架微光相位，弹幕横移 = 页面转场的缓动曲线。
-> 用纯 SVG 手写（无 GIF / 无外链），所以它是矢量、可缩放、体积不到 4 KB。
+<p align="center">
+  <img src="assets/motion-tokens.svg" alt="动效令牌演示：三条跑道分别以 220ms / 160ms / 180ms 走完行程，第四条演示 1200ms 骨架微光相位" width="100%">
+</p>
+
+> 四条跑道就是四个令牌：滑块横移用 SMIL 的 `keySplines`，
+> 与 Compose 里那个 `cubic-bezier(0.16, 1, 0.3, 1)` 是**同一条曲线**。
+> 快慢差异（220 / 160 / 180ms）一眼可见，而不是只写在表格里。
+
+> 顶部那张 hero 图（`assets/hero-dark.svg` / `hero-light.svg`）是这套令牌的
+> **同源演示**：品牌粉扫光 = 骨架微光相位，弹幕横移 = 页面转场的缓动曲线。
+> 全部用纯 SVG 手写（无 GIF / 无外链 / 无 JS），矢量、可缩放、每张 5~10 KB。
+>
+> 深浅主题由 `<picture>` + `prefers-color-scheme` 切换；
+> 架构图 / 动效图 / 分层图则用 SVG **内联 CSS** 自适应，一份文件两套配色。
 
 ---
 
