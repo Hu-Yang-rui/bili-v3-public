@@ -2,6 +2,10 @@
 
 > 第三方 B 站 Android 客户端 · Kotlin + Jetpack Compose + Media3
 
+<p align="center">
+  <img src="assets/hero-dark.svg" alt="BiliV3 — 暖调深色底 · 卡片分层 · B 站品牌粉 · 弹幕动效" width="100%">
+</p>
+
 一个**个人自用**的第三方哔哩哔哩 Android 客户端。目标不是复刻官方 App，
 而是把「看视频」这条主链路做到官方级精度：封面为主角、动效只服务反馈、
 深浅色两套分层手段各自成立。
@@ -317,6 +321,10 @@ app/src/main/java/com/example/biliv3/
 
 页面转场 220ms · 淡入淡出 160ms · 图片淡入 180ms · 骨架微光 1200ms，
 缓动统一 `cubic-bezier(0.16, 1, 0.3, 1)`。
+
+> 上面那张顶部动图（`assets/hero-dark.svg`）就是这套令牌的**同源演示**：
+> 品牌粉扫光 = 骨架微光相位，弹幕横移 = 页面转场的缓动曲线。
+> 用纯 SVG 手写（无 GIF / 无外链），所以它是矢量、可缩放、体积不到 4 KB。
 
 ---
 

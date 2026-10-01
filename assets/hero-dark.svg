@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="BiliV3 — 第三方 B 站 Android 客户端（暖调深色 · 品牌粉 · 弹幕动效）">
+  <title>BiliV3 — 第三方 B 站 Android 客户端</title>
+  <defs>
+    <radialGradient id="glow" gradientUnits="userSpaceOnUse" cx="240" cy="10" r="620">
+      <stop offset="0" stop-color="#FF8FB0" stop-opacity="0.22"/>
+      <stop offset="0.55" stop-color="#FF8FB0" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#FF8FB0" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- 品牌字：品牌粉 → 主文字 → 品牌粉，横向扫过 -->
+    <linearGradient id="word" gradientUnits="userSpaceOnUse" x1="64" y1="0" x2="340" y2="0">
+      <stop offset="0" stop-color="#FF8FB0"/>
+      <stop offset="0.5" stop-color="#F0EDF2"/>
+      <stop offset="1" stop-color="#FF8FB0"/>
+      <animate attributeName="x1" values="20;900;20" dur="7s" repeatCount="indefinite"/>
+      <animate attributeName="x2" values="340;1220;340" dur="7s" repeatCount="indefinite"/>
+    </linearGradient>
+
+    <!-- 骨架微光：与设计令牌同源（1200ms 量级） -->
+    <linearGradient id="shimmer" gradientUnits="userSpaceOnUse" x1="64" y1="0" x2="264" y2="0">
+      <stop offset="0" stop-color="#FF8FB0" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#FF8FB0" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#FF8FB0" stop-opacity="0"/>
+      <animate attributeName="x1" values="64;1136" dur="2.6s" repeatCount="indefinite"/>
+      <animate attributeName="x2" values="264;1336" dur="2.6s" repeatCount="indefinite"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="#121114"/>
+  <ellipse cx="240" cy="10" rx="620" ry="300" fill="url(#glow)">
+    <animate attributeName="opacity" values="1;0.55;1" dur="9s" repeatCount="indefinite"/>
+  </ellipse>
+
+  <text x="64" y="108" font-family="'Segoe UI','Helvetica Neue',Helvetica,Arial,sans-serif"
+        font-size="76" font-weight="700" letter-spacing="1" fill="url(#word)">BiliV3</text>
+  <text x="68" y="148" font-family="'Segoe UI','Helvetica Neue',Helvetica,Arial,sans-serif"
+        font-size="21" fill="#A8A2B0">第三方 B 站 Android 客户端 · Kotlin + Jetpack Compose + Media3</text>
+
+  <rect x="64" y="170" width="1072" height="2" rx="1" fill="#FFFFFF" fill-opacity="0.08"/>
+  <rect x="64" y="170" width="1072" height="2" rx="1" fill="url(#shimmer)"/>
+
+  <g font-family="'Microsoft YaHei','PingFang SC','Segoe UI',Helvetica,Arial,sans-serif"
+     font-size="22" fill="#F0EDF2" stroke="#121114" stroke-width="4"
+     stroke-linejoin="round" paint-order="stroke">
+
+    <text x="0" y="214" fill="#FF8FB0">这也太丝滑了
+      <animateTransform attributeName="transform" type="translate"
+        values="1250 0;-420 0" dur="13s" begin="-1s" repeatCount="indefinite"/>
+    </text>
+    <text x="0" y="214">封面 16:10
+      <animateTransform attributeName="transform" type="translate"
+        values="1250 0;-420 0" dur="17s" begin="-9s" repeatCount="indefinite"/>
+    </text>
+
+    <text x="0" y="242">DASH 音视频分离
+      <animateTransform attributeName="transform" type="translate"
+        values="1250 0;-420 0" dur="15s" begin="-4s" repeatCount="indefinite"/>
+    </text>
+    <text x="0" y="242">cubic-bezier(.16,1,.3,1)
+      <animateTransform attributeName="transform" type="translate"
+        values="1250 0;-460 0" dur="21s" begin="-13s" repeatCount="indefinite"/>
+    </text>
+
+    <text x="0" y="270">弹幕本地屏蔽
+      <animateTransform attributeName="transform" type="translate"
+        values="1250 0;-420 0" dur="14s" begin="-6s" repeatCount="indefinite"/>
+    </text>
+    <text x="0" y="270">WBI 签名通过
+      <animateTransform attributeName="transform" type="translate"
+        values="1250 0;-420 0" dur="18s" begin="-2s" repeatCount="indefinite"/>
+    </text>
+  </g>
+
+  <rect x="0.5" y="0.5" width="1199" height="299" fill="none"
+        stroke="#FFFFFF" stroke-opacity="0.10"/>
+</svg>
