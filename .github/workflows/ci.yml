@@ -31,7 +31,14 @@ jobs:
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        # ⚠️ 必须用 v4：v3 会无条件执行 `sdkmanager tools`，
+        # 而 `tools` 包早已从 SDK 仓库下线 → "Failed to find package 'tools'" → exit 1。
+        # 这跟项目代码无关，纯粹是 action 版本过期。
+        uses: android-actions/setup-android@v4
+
+      - name: Install SDK packages
+        # 显式装 compileSdk / build-tools，不依赖 AGP 自动下载
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -42,6 +49,10 @@ jobs:
       - name: Assemble debug APK
         # release 变体需要签名密钥，CI 上没有，故只构建 debug
         run: ./gradlew :app:assembleDebug --console=plain --stacktrace
+
+      - name: Report build environment
+        if: always()
+        run: java -version 2>&1 && ./gradlew --version
 
       - name: Upload test report
         if: always()

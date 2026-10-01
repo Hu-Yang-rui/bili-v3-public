@@ -3,7 +3,11 @@
 > 第三方 B 站 Android 客户端 · Kotlin + Jetpack Compose + Media3
 
 <p align="center">
-  <img src="assets/hero-dark.svg" alt="BiliV3 — 暖调深色底 · 卡片分层 · B 站品牌粉 · 弹幕动效" width="100%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/hero-light.svg">
+    <img src="assets/hero-dark.svg" alt="BiliV3 — 暖调深色底 · 卡片分层 · B 站品牌粉 · 弹幕动效" width="100%">
+  </picture>
 </p>
 
 一个**个人自用**的第三方哔哩哔哩 Android 客户端。目标不是复刻官方 App，
