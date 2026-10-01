@@ -15,6 +15,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # ⚠️ 关键：关掉 settings.gradle.kts 里的阿里云镜像。
+  # GitHub runner 在海外，阿里云会偶发 502，而 Gradle 对 **5xx 是硬失败**
+  # （只有 404 才继续试下一个仓库），不会回落到 google()/mavenCentral()。
+  # 海外 runner 直连官方源又快又稳，本地开发不受影响（不设此变量仍走镜像）。
+  BILIV3_REPO_MIRROR: 'off'
+
 jobs:
   build:
     name: Test & Assemble Debug
@@ -22,10 +29,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -41,7 +48,7 @@ jobs:
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Unit tests
         run: ./gradlew :app:testDebugUnitTest --console=plain --stacktrace
@@ -56,14 +63,14 @@ jobs:
 
       - name: Upload test report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-report
           path: app/build/reports/tests/testDebugUnitTest/
           if-no-files-found: ignore
 
       - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
