@@ -267,8 +267,19 @@ object AicuDns : Dns {
     private fun List<String>.toInetAddresses(): List<InetAddress> =
         mapNotNull { runCatching { InetAddress.getByName(it) }.getOrNull() }
 
-    /** 最简对象扫描：DoH 的 Answer 元素都是扁平对象，不含嵌套花括号。 */
-    private val OBJECT_REGEX = Regex("\\{[^{}]*}")
+    /**
+     * 最简对象扫描：DoH 的 Answer 元素都是扁平对象，不含嵌套花括号。
+     *
+     * ⚠️ 收尾的 `}` **必须转义**。写成 `\{[^{}]*}` 时 Java 的 regex 能接受
+     * （所以 JVM 单测全绿），但 Android 的 ICU regex 会抛
+     * `PatternSyntaxException: Syntax error in regexp pattern near index 9`。
+     * 本对象是 `AicuDns` 的静态字段，异常发生在 `<clinit>`，
+     * 会包装成 `ExceptionInInitializerError` 让 App **一启动就闪退**
+     * （AicuApi.defaultClient → AppContainer → MainActivity.onCreate）。
+     *
+     * 教训：JVM 单测跑不出这类差异 —— 正则必须在真机/模拟器上验一次。
+     */
+    private val OBJECT_REGEX = Regex("\\{[^{}]*\\}")
 
     /** `"type": 1` —— A 记录。 */
     private val TYPE_FIELD = Regex("\"type\"\\s*:\\s*(\\d+)")

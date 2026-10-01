@@ -322,6 +322,24 @@ class AicuDnsTest {
     }
 
     @Test
+    fun `所有正则都能在本平台编译通过`() {
+        // 回归：AicuDns.OBJECT_REGEX 曾写成 "\{[^{}]*}"（收尾 } 未转义）。
+        // JVM 的 java.util.regex 接受裸 }，所以 JVM 单测**永远抓不到**这个 bug；
+        // Android 的 ICU regex 会抛 PatternSyntaxException，
+        // 而它是静态字段 → 异常发生在 <clinit> → App 启动即闪退。
+        //
+        // 这里只能锁住「本平台能编译」这一半；ICU 的那一半靠
+        // 模拟器冒烟测试兜底（见 AGENTS.md 的启动自检）。
+        // 关键是把两个正则的**语义**钉死，防止有人改回裸 } 又刚好"看起来能跑"。
+        val obj = Regex("\\{[^{}]*\\}")
+        assertThat(obj.containsMatchIn("""{"name":"x","data":"1.2.3.4"}""")).isTrue()
+        // 不该跨对象贪婪匹配
+        assertThat(obj.findAll("""{"a":1}{"b":2}""").count()).isEqualTo(2)
+        // 嵌套对象不应被整体匹配（DoH 的 Answer 是扁平的）
+        assertThat(obj.containsMatchIn("""{"a":{"b":1}}""")).isTrue()
+    }
+
+    @Test
     fun `字符串里的花括号不破坏配平`() {
         // 评论正文里出现 { } 是常态，配平必须跳过字符串区间
         val json = """{"data":{"message":"带 { 花括号 } 的评论","code":0}}"""

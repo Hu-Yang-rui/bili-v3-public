@@ -109,22 +109,27 @@
        用叠加 rect 而不是 animate 盒子的 stroke-opacity ——
        内联 CSS 的优先级高于 presentation attribute，
        直接 animate 属性会被 .card 的 stroke-opacity 覆盖掉。
-       opacity="0" 是基底值：SMIL 不执行时高亮完全不出现，
-       静态帧保持干净（否则默认 opacity=1 会让四个盒子常亮粉边）。 -->
-  <g fill="none" class="accst" stroke-width="1.5" opacity="0">
-    <rect x="890" y="70" width="190" height="64" rx="16">
+
+       ⚠️ opacity 的静态基底值必须写在**每个 rect 自己**身上，
+       绝不能写在父 <g> 上。父组的 opacity 会与子元素相乘：
+       <g opacity="0"><rect><animate values="0;0.85"/></rect></g>
+       计算结果是 0 × 0.85 = 0，高亮**永远不会出现**。
+       （实测：父组 opacity=0 时子 rect 动画到峰值仍是全透明；
+       把基底移到子 rect 上后正常显示。） -->
+  <g fill="none" class="accst" stroke-width="1.5">
+    <rect x="890" y="70" width="190" height="64" rx="16" opacity="0">
       <animate attributeName="opacity" values="0;0;0.85;0" keyTimes="0;0.30;0.40;0.55"
                dur="2.6s" repeatCount="indefinite"/>
     </rect>
-    <rect x="1010" y="200" width="190" height="52" rx="14">
+    <rect x="1010" y="200" width="190" height="52" rx="14" opacity="0">
       <animate attributeName="opacity" values="0;0;0.85;0" keyTimes="0;0.58;0.66;0.80"
                dur="2.6s" repeatCount="indefinite"/>
     </rect>
-    <rect x="1010" y="268" width="190" height="52" rx="14">
+    <rect x="1010" y="268" width="190" height="52" rx="14" opacity="0">
       <animate attributeName="opacity" values="0;0;0.85;0" keyTimes="0;0.64;0.72;0.86"
                dur="2.6s" repeatCount="indefinite"/>
     </rect>
-    <rect x="1010" y="336" width="190" height="52" rx="14">
+    <rect x="1010" y="336" width="190" height="52" rx="14" opacity="0">
       <animate attributeName="opacity" values="0;0;0.85;0" keyTimes="0;0.70;0.78;0.92"
                dur="2.6s" repeatCount="indefinite"/>
     </rect>
