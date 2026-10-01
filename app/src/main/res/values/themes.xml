@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      浅色启动主题：仅用于冷启动时的窗口背景，避免白屏闪一下。
+      背景色与 Compose 侧 LightColors.bgBase (#F4F5F7) 保持一致。
+
+      深色对应版本在 values-night/themes.xml（windowLightStatusBar=false）。
+    -->
+    <style name="Theme.BiliV3" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/launch_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

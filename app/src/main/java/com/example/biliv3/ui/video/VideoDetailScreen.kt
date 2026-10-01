@@ -1,0 +1,2182 @@
+package com.example.biliv3.ui.video
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PictureInPictureAlt
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.PlayCircleOutline
+import androidx.compose.material.icons.outlined.RemoveRedEye
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.exoplayer.ExoPlayer
+import coil.compose.AsyncImage
+import com.example.biliv3.data.model.VideoDetail
+import com.example.biliv3.data.model.VideoItem
+import com.example.biliv3.data.model.formatCount
+import com.example.biliv3.data.model.formatRelativeTime
+import com.example.biliv3.design.BiliTheme
+import com.example.biliv3.design.WindowSize
+import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.tokens.FontSize
+import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Sizes
+import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.player.PlayerFactory
+import com.example.biliv3.ui.component.ErrorState
+import com.example.biliv3.ui.component.ProvideShimmer
+import com.example.biliv3.ui.component.SkeletonBox
+import com.example.biliv3.ui.component.VideoCard
+
+/**
+ * 视频详情页。
+ *
+ * ## 布局（自上而下，紧凑）
+ *
+ * ```
+ * [← 返回]                    ← 52dp 顶栏
+ * ┌───────────────────────┐
+ * │  封面 / 播放器   ⚙    │  ← 16:9，点击封面才起播
+ * └───────────────────────┘
+ * [头像] 标题两行…            ← UP 内联在标题左侧
+ * 播放量 · 弹幕 · 时间
+ * 简介（收起，点击展开）
+ * [👍 1.2万] [🪙 投币] [⭐ 收藏] [↗ 分享]
+ * 分P 选择器（仅多P）
+ * 相关推荐网格
+ * ```
+ *
+ * ## 相对上一版的改动
+ *
+ * | 项 | 之前 | 现在 |
+ * |---|---|---|
+ * | 起播 | 进页面自动取流播放 | **点封面才起播**（省流量、首屏更快） |
+ * | UP 主 | 独占一个卡片区域 | **内联到标题左侧** |
+ * | 简介 | 常显 4 行 | **默认收起，可展开** |
+ * | 清晰度 | 正文区一大块胶囊 | **收进右上角齿轮** |
+ * | 互动 | 无 | 点赞/投币/收藏/分享 |
+ */
+@Composable
+fun VideoDetailScreen(
+    bvid: String,
+    windowSize: WindowSize,
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit = {},
+    onVideoClick: (String) -> Unit = {},
+    onLoginRequired: () -> Unit = {},
+    /**
+     * 应用设置。
+     *
+     * ⚠️ 传进来而不是让 ViewModel 自己读 —— 详情页的 ViewModel 是
+     * key = "detail-$bvid" 的**每视频一份**，若由它持有 SettingsStore，
+     * 会出现"每个视频各订阅一次 DataStore"的浪费。
+     * 由导航层订阅一次、按值传入更省。
+     *
+     * 数据流是**单向**的：设置页写 DataStore → 这里读 → 应用到播放器。
+     */
+    settings: com.example.biliv3.data.Settings = com.example.biliv3.data.Settings(),
+    /**
+     * Activity 级播放器持有者。
+     *
+     * 由导航层从 `AppContainer` 传入。**不能用默认值新建** ——
+     * 那会变成"每个页面各持一个播放器"，PiP 与切页继续播都会失效。
+     * 默认值只用于 Compose Preview。
+     */
+    holder: com.example.biliv3.player.PlayerHolder = rememberPreviewHolder(),
+    /**
+     * 是否处于 PiP 小窗。
+     *
+     * PiP 下必须隐藏绝大多数控件（顶栏、互动栏、设置齿轮）——
+     * 小窗尺寸下它们要么挤压画面，要么根本点不中。
+     */
+    isInPip: Boolean = false,
+    /**
+     * 请求进入 PiP。不支持的设备上应传入 `{ false }`。
+     */
+    onEnterPip: () -> Boolean = { false },
+    /**
+     * 播放器弹层里改弹幕档位时回调，用于**写回全局设置**。
+     *
+     * 参数顺序：启用 / 不透明度 / 字号 / 显示区域。
+     * 不提供时只在本次播放内生效，不持久化。
+     */
+    onDanmakuSettingsChanged: (Boolean, Float, Float, Float) -> Unit =
+        { _, _, _, _ -> },
+    /** 设置里「自动起播」为 true 时使用。 */
+    onApplySpeed: (Float) -> Unit = { },
+    /** 点 UP 头像 / 名字 → 用户主页。 */
+    onOwnerClick: (Long) -> Unit = {},
+    /** 「查看全部 N 条回复」→ 楼中楼详情页。(oid, root, upMid) */
+    onViewAllReplies: (com.example.biliv3.data.model.CommentItem) -> Unit = {},
+    /**
+     * 打开楼中楼详情页（oid, root, upMid）。
+     *
+     * 与 [onViewAllReplies] 是同一个语义 —— 保留两个名字是为了
+     * 让"详情页内部转发"与"外部注入"两处可读性更好；
+     * 实际只有后者会被调用。
+     */
+    onOpenReplyDetail: (Long, Long, Long) -> Unit = { _, _, _ -> },
+    /**
+     * 离线缓存入口。
+     *
+     * 传 null 表示不启用下载（预览环境）。启用时由导航层注入真实实现，
+     * 详情页只负责"点下载"这个动作。
+     */
+    downloadEntry: com.example.biliv3.ui.download.VideoDownloadEntryViewModel? = null,
+    /** 打开离线缓存管理页。 */
+    onOpenDownloads: () -> Unit = {},
+    /** 加入稍后再看。由导航层注入（需要 LibraryRepository）。 */
+    onAddToView: (Long) -> Unit = {},
+    /** 该视频是否已在稍后再看。 */
+    inToView: Boolean = false,
+    /** 续播位置（毫秒）。0 = 从头播。 */
+    resumePositionMs: Long = 0L,
+    /** 续播提示是否已被用户消费（点"继续"或"从头"后置 true）。 */
+    onResumeConsumed: () -> Unit = {},
+    viewModel: VideoDetailViewModel = viewModel(
+        key = "detail-$bvid",
+        factory = VideoDetailViewModelFactory(bvid),
+    ),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val playState by viewModel.playState.collectAsStateWithLifecycle()
+    val currentPage by viewModel.currentPage.collectAsStateWithLifecycle()
+    val interaction by viewModel.interaction.collectAsStateWithLifecycle()
+    val descExpanded by viewModel.descExpanded.collectAsStateWithLifecycle()
+    val toast by viewModel.toast.collectAsStateWithLifecycle()
+    val subtitleTracks by viewModel.subtitleTracks.collectAsStateWithLifecycle()
+    val activeSubtitle by viewModel.activeSubtitle.collectAsStateWithLifecycle()
+    val subtitleLoading by viewModel.subtitleLoading.collectAsStateWithLifecycle()
+    val subtitleError by viewModel.subtitleError.collectAsStateWithLifecycle()
+    val danmaku by viewModel.danmaku.collectAsStateWithLifecycle()
+    val danmakuEnabled by viewModel.danmakuEnabled.collectAsStateWithLifecycle()
+    val danmakuAlpha by viewModel.danmakuAlpha.collectAsStateWithLifecycle()
+    val danmakuFontScale by viewModel.danmakuFontScale.collectAsStateWithLifecycle()
+    val danmakuArea by viewModel.danmakuArea.collectAsStateWithLifecycle()
+    val comments by viewModel.comments.collectAsStateWithLifecycle()
+    val coinBalance by viewModel.coinBalance.collectAsStateWithLifecycle()
+    val commentTotal by viewModel.commentTotal.collectAsStateWithLifecycle()
+    val commentLoading by viewModel.commentLoading.collectAsStateWithLifecycle()
+    val commentLoadingMore by viewModel.commentLoadingMore.collectAsStateWithLifecycle()
+    val commentHasMore by viewModel.commentHasMore.collectAsStateWithLifecycle()
+    val commentSort by viewModel.commentSort.collectAsStateWithLifecycle()
+    val colors = BiliTheme.colors
+    val context = LocalContext.current
+
+    var playerError by remember { mutableStateOf<String?>(null) }
+
+    /**
+     * ⚠️ 播放器来自 **Activity 级** [PlayerHolder]，不再是本页 `remember` 的。
+     *
+     * ## 为什么必须这样（PiP / 切页继续播的硬前提）
+     *
+     * 原先播放器是页面局部状态 + `DisposableEffect` 里 release，
+     * 于是"页面销毁 → 播放器释放"。而 PiP 场景下：
+     *
+     * - 进 PiP 后，若导航栈变化或配置变更导致本 Composable 被销毁，
+     *   播放器会跟着被 release → **小窗直接黑掉**
+     * - 切到别的页面（如点相关推荐）也会中断声音
+     *
+     * 提升到 [PlayerHolder] 后，页面只做"绑定/解绑"，不负责生命周期。
+     *
+     * ## 页面销毁时**不 release**
+     *
+     * 只在**离开视频场景**（如返回键退出详情页且不是进 PiP）时才释放。
+     * 这个判断放在 [onLeaveVideo] 回调里，由导航层决定。
+     */
+    val player = holder.player
+
+    // 点击封面：取得播放器 + 开始取流
+    val handleStartPlay: () -> Unit = {
+        val p = holder.acquire(bvid)
+        // 应用设置里的默认倍速。放在创建时就设，而不是起播后 ——
+        // 否则用户会听到/看到一瞬间的原速，再"跳"到设定的倍速。
+        runCatching { p.setPlaybackSpeed(settings.defaultSpeed) }
+        viewModel.startPlayback()
+    }
+
+    /**
+     * 把设置里的弹幕偏好同步到详情页。
+     *
+     * ## ⚠️ 必须跟随 `settings` 变化，不能只用 `LaunchedEffect(Unit)`
+     *
+     * 第一版写的是 `LaunchedEffect(Unit)`（只在进页面时同步一次），
+     * 理由写的是"避免把本视频的临时调整冲掉"。**那个理由是错的**：
+     *
+     * - 播放器弹层里的临时调整，写进的正是**同一个 ViewModel**
+     *   （`viewModel.setDanmakuArea(...)`），并不存在另一个"本视频临时值"
+     *   会被设置页覆盖。
+     * - 而 `LaunchedEffect(Unit)` 导致真正的问题：
+     *   用户去设置页改了字号/不透明度，**返回视频页不生效** ——
+     *   这就是"选择框与其他位置没有联动"。
+     *
+     * 现在用 `settings` 作 key：设置一变就同步。
+     * 用户在播放器弹层里的调整依然立即生效（它直接写 ViewModel，
+     * 不经过这里），两者不会互相打架。
+     */
+    LaunchedEffect(settings.danmakuEnabled, settings.danmakuAlpha,
+        settings.danmakuFontScale, settings.danmakuArea) {
+        viewModel.setDanmakuEnabled(settings.danmakuEnabled)
+        viewModel.setDanmakuAlpha(settings.danmakuAlpha)
+        viewModel.setDanmakuFontScale(settings.danmakuFontScale)
+        viewModel.setDanmakuArea(settings.danmakuArea)
+    }
+
+    /**
+     * 「自动起播」。
+     *
+     * 默认关闭（省流量、首屏更快）—— 这也是原先的行为。
+     * 打开后进页面即取流起播，与官方 App 一致。
+     *
+     * ⚠️ 只在**首次进入**时触发一次：`LaunchedEffect(Unit)` 保证
+     * 后续重组不会反复起播。
+     */
+    LaunchedEffect(Unit) {
+        if (settings.autoPlay) handleStartPlay()
+    }
+
+    /**
+     * ⚠️ 本页面**不再 release 播放器**（这是 PiP 的关键改动）。
+     *
+     * ## 历史沿革（两版，理由完全不同）
+     *
+     * **第一版**：`DisposableEffect(player) { onDispose { player?.release() } }`
+     * → 把刚创建的播放器立刻释放掉，导致「视频完全无法播放」。
+     * 根因是 key 变化时 Compose 先 dispose 旧 effect，而闭包读到的
+     * 已经是新实例。改成 `DisposableEffect(Unit)` 后修复。
+     *
+     * **第二版（现在）**：播放器生命周期**上移到 [PlayerHolder]**，
+     * 页面完全不再负责 release。
+     *
+     * 为什么必须再改：PiP 下本 Composable 可能被销毁，若仍在这里 release，
+     * 小窗会直接黑掉、切页会中断声音。释放改由
+     * [MainActivity.onDestroy]（真正退出应用）与导航层的
+     * `onLeaveVideo` 决定。
+     *
+     * 这里只做**错误监听绑定**：把 holder 的错误回调接到本页的 UI 状态。
+     * 解绑时只清回调，不碰播放器。
+     */
+    DisposableEffect(holder) {
+        val prev = holder.onError
+        holder.onError = { e -> playerError = describePlayerError(e) }
+        onDispose {
+            // 只恢复回调，**不释放播放器**
+            holder.onError = prev
+        }
+    }
+
+    LaunchedEffect(playState) {
+        if (playState is PlayState.Ready) playerError = null
+    }
+
+    /**
+     * 左栏视图切换：true=评论，false=简介。
+     *
+     * ⚠️ 注意这是**切换控件**的状态，不是"简介展开"。
+     * 简介正文的展开由 `descExpanded`（标题右侧倒 V）控制，两者独立。
+     */
+    var commentTabSelected by remember { mutableStateOf(true) }
+
+    /** 一次性提示（发弹幕入口用，复用现有 snackbar 通路）。 */
+    var toastMessage by remember { mutableStateOf<String?>(null) }
+
+    /**
+     * 正在回复的目标评论（null = 未在回复，输入框按"发主评论"处理）。
+     *
+     * 与评论输入框联动：点某条评论的「回复」→ 这里被设置 →
+     * 输入框显示"回复 @某人"并带上 root/parent 参数。
+     */
+    var replyTarget by remember {
+        mutableStateOf<com.example.biliv3.data.model.CommentItem?>(null)
+    }
+
+    /** 评论输入弹层开关。 */
+    var showCommentInput by remember { mutableStateOf(false) }
+
+    /** 弹幕输入弹层开关。 */
+    var showDanmakuInput by remember { mutableStateOf(false) }
+
+    var isFullscreen by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
+
+    /**
+     * 「更多」菜单开关（下载 / 稍后再看 / 分享渠道）。
+     *
+     * ⚠️ 这个菜单此前**不存在**，导致：
+     * - `VideoDownloader`（315 行、含断点续传）没有任何 UI 入口
+     * - `LibraryRepository.addToView()` 没有任何 UI 入口
+     * - `ItemMoreMenu` 的分享渠道横排只在收藏夹页用到
+     */
+    var showMoreMenu by remember { mutableStateOf(false) }
+
+
+    /**
+     * 投币确认弹窗开关。
+     *
+     * ⚠️ 投币**必须**经确认 —— 硬币是不可撤销的消耗品，
+     * 而互动栏里投币与点赞/收藏相邻，误触概率不低。
+     */
+    var showCoinDialog by remember { mutableStateOf(false) }
+
+    // 打开投币弹窗前先拉余额（弹窗要显示）。
+    // 放这里而不是弹窗内部：弹窗是纯展示组件，不该自己发请求。
+    if (showCoinDialog) {
+        LaunchedEffect(Unit) { viewModel.loadCoinBalance() }
+    }
+
+    /**
+     * 页面内返回的分层处理。
+     *
+     * ## 顺序（从最内层到最外层）
+     *
+     * 1. **设置弹层开着** → 只关弹层，留在视频页
+     * 2. **全屏中** → 退出全屏，留在视频页
+     * 3. 都不是 → 交给 NavHost，真正返回上一页（首页）
+     *
+     * ## ⚠️ 这条链路曾经是断的
+     *
+     * 设置弹层过去不是 Dialog（只是一段普通 Compose 内容），
+     * 系统返回手势感知不到它，直接落到 NavHost 上 `popBackStack()`
+     * → 视频页被弹掉，用户回到首页。表现就是
+     * 「点齿轮后返回，直接回首页而不是关掉设置」。
+     *
+     * 现在双保险：
+     * - `PlayerSettingsSheet` 内部是 `Dialog`，会**优先**接管返回
+     * - 本 `BackHandler` 兜住「全屏 → 先退全屏」这一层，
+     *   并保证即使弹层被移除，返回也不会穿透到 NavHost
+     *
+     * `BackHandler` 的 `enabled` 控制谁生效：弹层开着时由 Dialog 处理，
+     * 这里只在**全屏**时接管，避免两层同时消费返回事件。
+     */
+    androidx.activity.compose.BackHandler(enabled = isFullscreen && !showSettings) {
+        isFullscreen = false
+    }
+
+    /**
+     * 播放进度持久化（在线断点续播）。
+     *
+     * ## 为什么在 dispose 时上报，而不是逐帧
+     *
+     * 逐帧写 DataStore 是主线程 IO，会直接拖慢播放页。
+     * 只需要"离开这个视频时记住看到哪"这一个时机 ——
+     * 退出、切页、进 PiP 都覆盖到了。
+     *
+     * ## ⚠️ key 只放 bvid
+     *
+     * 放 `currentPage` 会导致**每次切分P 都重建 effect**，
+     * 而 effect 重建 = 先 dispose 旧的 = 用旧分P 的进度写一次。
+     * 用 `rememberUpdatedState` 在 dispose 时读最新分P，逻辑才正确
+     * （与 MainShell 里播放器释放的坑是同一类）。
+     */
+    val latestPage by rememberUpdatedState(currentPage)
+    val latestDetail by rememberUpdatedState(
+        (state as? DetailUiState.Content)?.detail,
+    )
+    val latestPlayer by rememberUpdatedState(player)
+
+    androidx.compose.runtime.DisposableEffect(bvid) {
+        onDispose {
+            val p = latestPlayer ?: return@onDispose
+            val d = latestDetail ?: return@onDispose
+            val pos = runCatching { p.currentPosition }.getOrDefault(0L)
+            if (pos <= 0L) return@onDispose
+
+            // 把当前分P 的 cid 也记上 —— 否则多P 视频的续播会串到 P1
+            val cid = d.pages.getOrNull(latestPage)?.cid ?: d.cid
+            viewModel.reportProgressForCid(cid, pos)
+        }
+    }
+
+    /**
+     * 续播提示条。
+     *
+     * 只在「有进度」且「用户还没点过」时显示，两种选择都要能点：
+     * - 继续播放 → seek 到该位置
+     * - 从头播放 → 忽略进度（并清除，避免每次进来都弹）
+     *
+     * ⚠️ 阈值由 `PlaybackProgressStore.shouldResume` 判定
+     * （<5% 视为没看、>95% 视为看完），不在 UI 里重复实现。
+     *
+     * ⚠️ 必须渲染在**根 Box 内部**（与 SnackbarHost 同级），
+     * 否则它不会浮在页面之上 —— 与评论输入浮层踩过的是同一个坑。
+     */
+
+    // 弹幕按播放进度懒加载（每 6 分钟一片）。
+    // 跟随播放进度轮询，进到新分片时自动拉取。
+    //
+    // ⚠️ 只在**播放中**轮询。原先无条件每 3 秒唤醒一次，
+    // 即使没起播/已暂停也在轮询，纯属空转（省电 + 减少主线程调度）。
+    // 恢复播放会重建本 effect，所以不会漏掉新的分片。
+    LaunchedEffect(player, playState, currentPage) {
+        val p = player ?: return@LaunchedEffect
+        if (playState !is PlayState.Ready) return@LaunchedEffect
+        while (true) {
+            if (!p.isPlaying) {
+                kotlinx.coroutines.delay(DANMAKU_IDLE_POLL_MS)
+                continue
+            }
+            val pos = runCatching { p.currentPosition }.getOrNull() ?: break
+            viewModel.ensureDanmakuLoaded(pos)
+            kotlinx.coroutines.delay(DANMAKU_LOAD_POLL_MS)
+        }
+    }
+
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(toast) {
+        toast?.let {
+            snackbar.showSnackbar(it)
+            viewModel.consumeToast()
+        }
+    }
+
+    // 页面内一次性提示（发弹幕入口等）
+    LaunchedEffect(toastMessage) {
+        toastMessage?.let {
+            snackbar.showSnackbar(it)
+            toastMessage = null
+        }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colors.bgBase),
+        ) {
+            // ⚠️ **没有**顶部固定白栏（对照官方结构）。
+            //
+            // 原先这里有一条常驻的 52dp 白底「← 视频详情」栏，
+            // 会：①占掉纵向空间 ②把播放器往下推 ③与官方观感不符。
+            //
+            // 现在播放器**直接顶到状态栏**，页面一进来就是画面。
+            // 返回按钮改为浮在画面上（点画面才浮现，见 PlayerArea）。
+
+            when (val s = state) {
+                is DetailUiState.Loading -> ProvideShimmer { DetailSkeleton() }
+
+                is DetailUiState.Error -> ErrorState(
+                    title = "视频加载失败",
+                    description = s.message,
+                    onRetry = viewModel::load,
+                    modifier = Modifier.fillMaxSize(),
+                )
+
+                is DetailUiState.Content -> DetailContent(
+                    detail = s.detail,
+                    related = s.related,
+                    windowSize = windowSize,
+                    playState = playState,
+                    currentPage = currentPage,
+                    player = player,
+                    playerError = playerError,
+                    interaction = interaction,
+                    descExpanded = descExpanded,
+                    isFullscreen = isFullscreen,
+                    activeSubtitle = activeSubtitle,
+                    danmaku = danmaku,
+                    danmakuEnabled = danmakuEnabled,
+                    danmakuAlpha = danmakuAlpha,
+                    danmakuFontScale = danmakuFontScale,
+                    danmakuArea = danmakuArea,
+                    danmakuBlockModes = settings.danmakuBlockModes,
+                    danmakuBlockKeywords = settings.danmakuBlockKeywords,
+                    onToggleDanmaku = viewModel::toggleDanmaku,
+                    onDanmakuAlpha = viewModel::setDanmakuAlpha,
+                    onDanmakuFontScale = viewModel::setDanmakuFontScale,
+                    onDanmakuArea = viewModel::setDanmakuArea,
+                    comments = comments,
+                    commentTotal = commentTotal,
+                    commentLoading = commentLoading,
+                    commentLoadingMore = commentLoadingMore,
+                    commentHasMore = commentHasMore,
+                    onLoadMoreComments = viewModel::loadMoreComments,
+                    onLikeComment = viewModel::likeComment,
+                    onDeleteComment = viewModel::deleteComment,
+                    onReplyComment = { c ->
+                        replyTarget = c
+                        showCommentInput = true
+                    },
+                    // 评论排序：mode 3=热度 2=时间（此前硬编码 3、无切换入口）
+                    commentSort = commentSort,
+                    onSortChange = viewModel::setCommentSort,
+                    onReportComment = viewModel::reportComment,
+                    reportReasons = viewModel.reportReasons,
+                    // 评论头像 → 用户主页（此前完全不可点）
+                    onAvatarClick = { mid ->
+                        if (mid > 0) onOwnerClick(mid)
+                    },
+                    // 「查看全部 N 条回复」→ 楼中楼详情页
+                    onViewAllReplies = { c ->
+                        onOpenReplyDetail(c.oid, c.rpid, viewModel.ownerMid)
+                    },                    isLoggedIn = viewModel.isLoggedIn,
+                    onStartPlay = handleStartPlay,
+                    onToggleFullscreen = { isFullscreen = !isFullscreen },
+                    onOpenSettings = { showSettings = true },
+                    onEnterPip = onEnterPip,
+                    isInPip = isInPip,
+                    onBack = onBack,
+                    holder = holder,
+                    onToggleDesc = viewModel::toggleDesc,
+                    commentTabSelected = commentTabSelected,
+                    onSelectCommentTab = { commentTabSelected = it },
+                    // 发弹幕：与弹幕开关/播放器状态联动（见 DanmakuInputSheet）
+                    onSendDanmaku = { showDanmakuInput = true },
+                    onSelectPage = viewModel::selectPage,
+                    onRetryPlay = {
+                        playerError = null
+                        viewModel.retryPlay()
+                    },
+                    onPlayerError = { msg -> playerError = msg },
+                    onLike = {
+                        if (viewModel.isLoggedIn) viewModel.toggleLike() else onLoginRequired()
+                    },
+                    // 投币：先弹确认框，用户在框里选份数才真正执行
+                    onCoin = {
+                        if (viewModel.isLoggedIn) showCoinDialog = true else onLoginRequired()
+                    },
+                    onFavorite = {
+                        if (viewModel.isLoggedIn) viewModel.toggleFavorite() else onLoginRequired()
+                    },
+                    onShare = {
+                        // 唤起系统分享面板，同时上报埋点
+                        val intent = android.content.Intent(
+                            android.content.Intent.ACTION_SEND,
+                        ).apply {
+                            type = "text/plain"
+                            putExtra(
+                                android.content.Intent.EXTRA_TEXT,
+                                "https://www.bilibili.com/video/$bvid",
+                            )
+                        }
+                        runCatching {
+                            context.startActivity(
+                                android.content.Intent.createChooser(intent, "分享到"),
+                            )
+                        }
+                        viewModel.onShared()
+                    },
+                    onVideoClick = onVideoClick,
+                    // 头像 / 名字 → UP 主主页（此前完全不可点）
+                    onOwnerClick = { mid ->
+                        if (mid > 0) onOwnerClick(mid)
+                    },
+                    // ⋮ → 下载 / 稍后再看 / 分享渠道
+                    onMoreClick = { showMoreMenu = true },
+                )
+            }
+        }
+
+        SnackbarHost(
+            hostState = snackbar,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = Space.x12),
+        )
+
+        // ---- 续播提示条 ----
+        if (resumePositionMs > 0L && playState is PlayState.Ready) {
+            ResumeBar(
+                positionMs = resumePositionMs,
+                onResume = {
+                    runCatching { player?.seekTo(resumePositionMs) }
+                    onResumeConsumed()
+                },
+                onDismiss = { onResumeConsumed() },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = Space.x12, start = Space.x3, end = Space.x3),
+            )
+        }
+
+        // ---- 评论输入浮层 ----
+        //
+        // ⚠️ 必须放在**根 Box 内部**（与 SnackbarHost 同级），
+        // 否则它不会覆盖在页面之上。
+        //
+        // ⚠️ 而且它**不再是 Dialog**（原实现是 Dialog，已改）：
+        // Dialog 是独立 window，配合 `decorFitsSystemWindows = false`
+        // 导致键盘避让彻底失效（四次尝试全部无效，详见 CommentInputSheet 的说明）。
+        // 现在它是页面内的全屏浮层，`imePadding()` 正常生效。
+        //
+        // 与评论区的「回复」入口联动：replyTarget 非空时标题显示"回复 @某人"，
+        // 并把 root/parent 一起带给 ViewModel（决定挂在哪一层楼）。
+        if (showCommentInput) {
+            CommentInputSheet(
+                replyTo = replyTarget,
+                onDismiss = {
+                    showCommentInput = false
+                    replyTarget = null
+                },
+                onSend = { text ->
+                    val target = replyTarget
+                    viewModel.postComment(
+                        message = text,
+                        // 回复主评论时 root == parent
+                        root = target?.rpid ?: 0L,
+                        parent = target?.rpid ?: 0L,
+                    )
+                    showCommentInput = false
+                    replyTarget = null
+                },
+            )
+        }
+
+        // ---- 弹幕输入浮层 ----
+        //
+        // 与评论输入浮层同理：放在根 Box 内，且不再是 Dialog
+        // （Dialog 独立 window 会让键盘避让失效）。
+        if (showDanmakuInput) {
+            DanmakuInputSheet(
+                onDismiss = { showDanmakuInput = false },
+                onSend = { text, color, mode ->
+                    // 弹幕时间取当前播放进度 —— 与播放器状态联动，
+                    // 保证它出现在用户正在看的位置。
+                    val pos = runCatching { player?.currentPosition ?: 0L }
+                        .getOrDefault(0L)
+                    viewModel.sendDanmaku(text, color, mode, pos)
+                    showDanmakuInput = false
+                },
+            )
+        }
+
+        // ---- 更多菜单（⋮）：下载 / 稍后再看 / 分享渠道 ----
+        //
+        // ⚠️ 这是「下载」与「稍后再看」唯一的 UI 入口。
+        // 此前两个功能底层都完整实现（`VideoDownloader` 315 行、
+        // `LibraryRepository.addToView()`），却没有任何页面调用它们。
+        //
+        // 放在根 Box 内、与其它浮层同级 —— 保证它覆盖在页面之上。
+        if (showMoreMenu) {
+            val cur = state as? DetailUiState.Content
+            val detail = cur?.detail
+            val readyInfo = (playState as? PlayState.Ready)?.info
+
+            com.example.biliv3.ui.component.ItemMoreMenu(
+                title = detail?.title ?: "视频",
+                isFavorited = interaction.favored,
+                onDismiss = { showMoreMenu = false },
+                onShareChannel = { channel ->
+                    showMoreMenu = false
+                    when (channel) {
+                        // 「下载分享」= 把直链分享出去（不是下载视频），
+                        // 与下面的「缓存」是两件事，命名上刻意区分。
+                        "复制链接" -> {
+                            copyToClipboard(context, "https://www.bilibili.com/video/$bvid")
+                        }
+                        else -> {
+                            // 其余渠道走系统分享面板（不伪造微信/QQ 的 SDK 集成）
+                            val intent = android.content.Intent(
+                                android.content.Intent.ACTION_SEND,
+                            ).apply {
+                                type = "text/plain"
+                                putExtra(
+                                    android.content.Intent.EXTRA_TEXT,
+                                    "https://www.bilibili.com/video/$bvid",
+                                )
+                            }
+                            runCatching {
+                                context.startActivity(
+                                    android.content.Intent.createChooser(intent, "分享到"),
+                                )
+                            }
+                        }
+                    }
+                    viewModel.onShared()
+                },
+                onToggleFavorite = {
+                    showMoreMenu = false
+                    if (viewModel.isLoggedIn) viewModel.toggleFavorite() else onLoginRequired()
+                },
+                extraActions = buildList {
+                    // ---- 缓存（离线下载）----
+                    if (detail != null && downloadEntry != null) {
+                        val downloaded = downloadEntry.downloaded.collectAsStateWithLifecycle().value
+                        add(
+                            com.example.biliv3.ui.component.MoreMenuAction(
+                                label = if (downloaded) "已缓存（查看缓存）" else "缓存到本地",
+                                icon = androidx.compose.material.icons.Icons.Outlined.Download,
+                                onClick = {
+                                    if (downloaded) {
+                                        showMoreMenu = false
+                                        onOpenDownloads()
+                                    } else if (readyInfo == null) {
+                                        // ⚠️ 没取过流就没法下载 —— 直说，
+                                        // 而不是发一个注定失败的请求
+                                        showMoreMenu = false
+                                        toastMessage = "请先点击封面开始播放，再缓存"
+                                    } else {
+                                        showMoreMenu = false
+                                        val page = detail.pages.getOrNull(currentPage)
+                                        downloadEntry.download(
+                                            info = readyInfo,
+                                            bvid = detail.bvid,
+                                            cid = page?.cid ?: detail.cid,
+                                            aid = detail.aid,
+                                            title = detail.title,
+                                            cover = detail.cover,
+                                            authorName = detail.ownerName,
+                                            pageIndex = currentPage,
+                                            pageLabel = if (detail.isMultiPart) {
+                                                "P${currentPage + 1}"
+                                            } else {
+                                                ""
+                                            },
+                                            durationSeconds = detail.durationSeconds,
+                                        )
+                                    }
+                                },
+                            ),
+                        )
+                    }
+
+                    // ---- 稍后再看 ----
+                    if (detail != null) {
+                        add(
+                            com.example.biliv3.ui.component.MoreMenuAction(
+                                label = if (inToView) "已在稍后再看" else "加入稍后再看",
+                                icon = androidx.compose.material.icons.Icons.Outlined.Schedule,
+                                onClick = {
+                                    showMoreMenu = false
+                                    if (!viewModel.isLoggedIn) {
+                                        onLoginRequired()
+                                    } else if (inToView) {
+                                        toastMessage = "已在稍后再看列表里"
+                                    } else {
+                                        onAddToView(detail.aid)
+                                    }
+                                },
+                            ),
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    // ---- 播放设置弹层（字幕 / AI 翻译、清晰度、倍速）----
+    //
+    // ⚠️ 打开条件**不能要求 ready != null**。
+    //
+    // 之前写的是 `showSettings && ready != null && activePlayer != null`，
+    // 于是"还没点播放"或"播放失败"时弹层根本打不开 ——
+    // 而 AI 字幕正是最需要在这些状态下也能选的。
+    //
+    // 现在：只要 showSettings 就打开。清晰度/倍速区在无取流信息时
+    // 自动不渲染（由 PlayerSettingsSheet 内部判断），字幕区始终可用。
+    val ready = playState as? PlayState.Ready
+    val activePlayer = player
+    if (showSettings) {
+        PlayerSettingsSheet(
+            info = ready?.info,
+            player = activePlayer,
+            subtitleTracks = subtitleTracks,
+            activeSubtitle = activeSubtitle,
+            subtitleLoading = subtitleLoading,
+            isLoggedIn = viewModel.isLoggedIn,
+            onSelectQuality = {
+                viewModel.selectQuality(it)
+                showSettings = false
+            },
+            onSelectSubtitle = { track ->
+                viewModel.selectSubtitle(track)
+            },
+            danmakuEnabled = danmakuEnabled,
+            danmakuAlpha = danmakuAlpha,
+            danmakuFontScale = danmakuFontScale,
+            danmakuArea = danmakuArea,
+            // ⚠️ 每个回调都做两件事：改本次播放的 ViewModel 状态 + 写回全局设置。
+            //
+            // 只改 ViewModel 的话，播放器里调完去设置页看还是旧值（未联动）；
+            // 只写设置的话，本次播放不会立即生效（要重进页面）。
+            // 两边都写，才是真正的"联动"。
+            onToggleDanmaku = {
+                viewModel.toggleDanmaku()
+                onDanmakuSettingsChanged(
+                    !danmakuEnabled, danmakuAlpha, danmakuFontScale, danmakuArea,
+                )
+            },
+            onDanmakuAlpha = { v ->
+                viewModel.setDanmakuAlpha(v)
+                onDanmakuSettingsChanged(danmakuEnabled, v, danmakuFontScale, danmakuArea)
+            },
+            onDanmakuFontScale = { v ->
+                viewModel.setDanmakuFontScale(v)
+                onDanmakuSettingsChanged(danmakuEnabled, danmakuAlpha, v, danmakuArea)
+            },
+            onDanmakuArea = { v ->
+                viewModel.setDanmakuArea(v)
+                onDanmakuSettingsChanged(danmakuEnabled, danmakuAlpha, danmakuFontScale, v)
+            },
+            onLoginRequired = {
+                showSettings = false
+                onLoginRequired()
+            },
+            onDismiss = { showSettings = false },
+        )
+    }
+
+    // ---- 投币确认弹窗 ----
+    //
+    // ⚠️ 必须在**真正投币之前**拦一道。硬币投出不可撤销，
+    // 而互动栏里投币与点赞/收藏挤在一行，误触代价很高。
+    if (showCoinDialog) {
+        CoinDialog(
+            coinBalance = coinBalance,
+            onDismiss = { showCoinDialog = false },
+            onConfirm = { count, alsoLike ->
+                showCoinDialog = false
+                viewModel.coin(count, alsoLike)
+            },
+        )
+    }
+
+    // ---- 字幕错误提示 ----
+    LaunchedEffect(subtitleError) {
+        subtitleError?.let {
+            snackbar.showSnackbar(it)
+            viewModel.clearSubtitleError()
+        }
+    }
+}
+
+/**
+ * 播放器在**非全屏**状态下使用的宽高比。
+ *
+ * ## 为什么按断点区分
+ *
+ * | 场景 | 比例 | 理由 |
+ * |---|---|---|
+ * | 移动（竖屏） | **4:3** | 16:9 只占约 25% 屏高，画面太小；4:3 让画面明显变大 |
+ * | 平板 / 桌面 | 16:9 | 宽屏下 16:9 才是视频的正确比例，放大反而留黑边过多 |
+ *
+ * ## 为什么不是"直接用视频真实比例"
+ *
+ * 视频真实比例要等取流后才拿到，而**未起播时就要显示封面**。
+ * 若封面用 16:9、起播后跳成 4:3，会出现明显的高度跳变。
+ * 用固定比例保证"未播/在播"布局一致。
+ *
+ * 真实画面由 `PlayerView` 的 `RESIZE_MODE_FIT` 负责按原比例缩放，
+ * 所以即使容器是 4:3、视频是 16:9，画面也**不会被拉伸变形**，
+ * 只会在容器内上下留黑边（画面本身比 16:9 容器大得多）。
+ */
+private fun playerAspectRatio(windowSize: WindowSize): Float = when (windowSize) {
+    WindowSize.Mobile -> PLAYER_ASPECT_PORTRAIT
+    WindowSize.Tablet, WindowSize.Desktop -> PLAYER_ASPECT_WIDE
+}
+
+/**
+ * 竖屏播放器比例 4:3。
+ *
+ * 取值的取舍：比 16:9 高很多（画面面积增大 ~78%），
+ * 又不像 1:1 那样在横屏视频上留过多黑边。
+ */
+private const val PLAYER_ASPECT_PORTRAIT = 4f / 3f
+
+/** 宽屏播放器比例 16:9（视频标准比例）。 */
+private const val PLAYER_ASPECT_WIDE = 16f / 9f
+
+/**
+ * 元信息小项：图标 + 文字。
+ *
+ * ## 为什么图标与文字用 `Space.x1` 的小间距
+ *
+ * 图标与文字属于**同一个语义单元**（"这是播放量"），
+ * 间距要明显小于项与项之间（`Space.x3`）——
+ * 靠间距的**对比**建立分组，比加分隔线更轻。
+ */
+@Composable
+private fun MetaItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+) {
+    val colors = BiliTheme.colors
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = colors.textTertiary,
+            modifier = Modifier.size(Sizes.iconSm + 2.dp),
+        )
+        Spacer(Modifier.width(Space.x1))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.label,
+                color = colors.textSecondary,
+            ),
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * 浮动返回按钮（叠在视频画面左上角）。
+ *
+ * ## 为什么不再是固定顶栏
+ *
+ * 原先顶部有一条常驻白底「← 视频详情」栏。参考官方结构后改为：
+ * **播放器顶到状态栏，没有任何固定栏** —— 页面一进来就是画面。
+ *
+ * 返回入口改为浮在画面上的圆形按钮，**与播放控件同步显隐**：
+ * 默认隐藏 → 点画面浮现 → 再点/3 秒后淡出。
+ *
+ * ## 为什么必须留返回入口（不能真的全隐藏）
+ *
+ * 虽然"默认隐藏"是需求，但若连返回都完全不可见，
+ * 用户会以为"进了个没有出口的页面"。所以：
+ * - 它随点击浮现（发现路径清晰：点一下画面）
+ * - 系统返回手势**始终可用**（不依赖这个按钮）
+ *
+ * ## 视觉
+ *
+ * 半透明黑圆底 + 白色箭头 —— 与齿轮/小窗按钮同一套语言，
+ * 保证压在任意亮度的画面上都清晰可辨。
+ */
+@Composable
+private fun FloatingBackButton(
+    onClick: () -> Unit,
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val colors = BiliTheme.colors
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = modifier,
+    ) {
+        Box(
+            modifier = Modifier
+                .statusBarsPadding()
+                .padding(start = Space.x2, top = Space.x2)
+                // ⚠️ minTouchTarget 在 Space 里，不在 Sizes 里
+                // （AGENTS.md §7.2 已记录这个坑）
+                .size(Space.minTouchTarget)
+                .clip(CircleShape)
+                .background(colors.overlayControl)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "返回",
+                tint = colors.onOverlay,
+                modifier = Modifier.size(Sizes.iconXl),
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun DetailContent(
+    detail: VideoDetail,
+    related: List<VideoItem>,
+    /** 断点。决定播放器宽高比（竖屏放大画面）。 */
+    windowSize: WindowSize,
+    playState: PlayState,
+    currentPage: Int,
+    player: ExoPlayer?,
+    playerError: String?,
+    interaction: com.example.biliv3.data.api.InteractionState,
+    descExpanded: Boolean,
+    isFullscreen: Boolean,
+    activeSubtitle: com.example.biliv3.data.subtitle.SubtitleBody?,
+    danmaku: List<com.example.biliv3.data.danmaku.DanmakuItem>,
+    danmakuEnabled: Boolean,
+    danmakuAlpha: Float,
+    danmakuFontScale: Float,
+    danmakuArea: Float,
+    /** 本地屏蔽：弹幕类型（1=滚动 4=底部 5=顶部）。 */
+    danmakuBlockModes: Set<Int>,
+    /** 本地屏蔽：关键词。 */
+    danmakuBlockKeywords: List<String>,
+    onToggleDanmaku: () -> Unit,
+    onDanmakuAlpha: (Float) -> Unit,
+    onDanmakuFontScale: (Float) -> Unit,
+    onDanmakuArea: (Float) -> Unit,
+    comments: List<com.example.biliv3.data.model.CommentItem>,
+    commentTotal: Int,
+    commentLoading: Boolean,
+    commentLoadingMore: Boolean,
+    commentHasMore: Boolean,
+    onLoadMoreComments: () -> Unit,
+    /** 评论点赞 / 删除 / 回复。 */
+    onLikeComment: (com.example.biliv3.data.model.CommentItem) -> Unit,
+    onDeleteComment: (com.example.biliv3.data.model.CommentItem) -> Unit,
+    onReplyComment: (com.example.biliv3.data.model.CommentItem) -> Unit,
+    /** 评论排序（3=热度 2=时间）。 */
+    commentSort: Int,
+    onSortChange: (Int) -> Unit,
+    /** 举报评论：目标 + 理由编号。 */
+    onReportComment: (com.example.biliv3.data.model.CommentItem, Int) -> Unit,
+    /** 可选的举报理由。 */
+    reportReasons: List<Pair<Int, String>>,
+    /** 点评论者头像 → 用户主页。 */
+    onAvatarClick: (Long) -> Unit,
+    /** 「查看全部 N 条回复」→ 楼中楼详情页。 */
+    onViewAllReplies: (com.example.biliv3.data.model.CommentItem) -> Unit,
+    /** 是否已登录（评论/弹幕的写操作需要）。 */
+    isLoggedIn: Boolean,
+    onStartPlay: () -> Unit,
+    onToggleFullscreen: () -> Unit,
+    onOpenSettings: () -> Unit,
+    /** 请求进入 PiP 小窗。 */
+    onEnterPip: () -> Boolean,
+    /** 是否已在 PiP 中（PiP 下隐藏设置齿轮等）。 */
+    isInPip: Boolean,
+    /** Activity 级播放器持有者（装配去重）。 */
+    holder: com.example.biliv3.player.PlayerHolder?,
+    /** 返回。传给 PlayerArea 的浮动返回按钮。 */
+    onBack: () -> Unit,
+    onToggleDesc: () -> Unit,
+    /** 左栏视图切换（true=评论，false=简介）。 */
+    commentTabSelected: Boolean,
+    onSelectCommentTab: (Boolean) -> Unit,
+    /** 右栏：发弹幕入口。 */
+    onSendDanmaku: () -> Unit,
+    onSelectPage: (Int) -> Unit,
+    onRetryPlay: () -> Unit,
+    onPlayerError: (String) -> Unit,
+    onLike: () -> Unit,
+    onCoin: () -> Unit,
+    onFavorite: () -> Unit,
+    onShare: () -> Unit,
+    onVideoClick: (String) -> Unit,
+    /** 点 UP 头像/名字 → 用户主页。 */
+    onOwnerClick: (Long) -> Unit,
+    /** 点元信息行的 ⋮ → 更多菜单（下载 / 稍后再看 / 分享渠道）。 */
+    onMoreClick: () -> Unit,
+) {
+    val colors = BiliTheme.colors
+
+    if (isFullscreen) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colors.playerBackground),
+        ) {
+            PlayerArea(
+                playState = playState,
+                player = player,
+                playerError = playerError,
+                coverUrl = detail.coverUrl(),
+                isFullscreen = true,
+                activeSubtitle = activeSubtitle,
+                danmaku = danmaku,
+                danmakuEnabled = danmakuEnabled,
+                danmakuAlpha = danmakuAlpha,
+                danmakuFontScale = danmakuFontScale,
+                danmakuArea = danmakuArea,
+                danmakuBlockModes = danmakuBlockModes,
+                danmakuBlockKeywords = danmakuBlockKeywords,
+                onStartPlay = onStartPlay,
+                onToggleFullscreen = onToggleFullscreen,
+                onOpenSettings = onOpenSettings,
+                onEnterPip = onEnterPip,
+                isInPip = isInPip,
+                onBack = onBack,
+                onRetryPlay = onRetryPlay,
+                onPlayerError = onPlayerError,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        return
+    }
+
+    // ================= 评论模式：独立布局 =================
+    //
+    // ⚠️ 为什么必须**跳出外层 LazyColumn**（这是一个真实的渲染 bug）
+    //
+    // 评论列表自己是 `LazyColumn`（要支持无限滚动）。
+    // 若把它当成外层 LazyColumn 的一个 item，它就落在
+    // **无限高度约束**下 —— 内层 LazyColumn 拿不到确定高度，
+    // 会塌成 0 高，表现为"点了评论一片空白"。
+    //
+    // 修法：评论模式下用 `Column` + `weight(1f)` 给评论区一个
+    // **确定的剩余高度**，播放器与工具条固定在上方。
+    // 这样内层滚动有界、无限滚动也才有正确的"触底"判定。
+    if (commentTabSelected) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                // C 方案：评论模式下，播放器 + 工具条 + 评论区之间留出
+                // 页面底色的间隙，让三块各自成为独立卡片。
+                .background(colors.bgBase),
+        ) {
+            // ---- 播放器（固定在顶部，不随评论滚动）----
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(playerAspectRatio(windowSize))
+                    .background(colors.playerBackground),
+            ) {
+                PlayerArea(
+                    playState = playState,
+                    player = player,
+                    playerError = playerError,
+                    coverUrl = detail.coverUrl(),
+                    isFullscreen = false,
+                    activeSubtitle = activeSubtitle,
+                    danmaku = danmaku,
+                    danmakuEnabled = danmakuEnabled,
+                    danmakuAlpha = danmakuAlpha,
+                    danmakuFontScale = danmakuFontScale,
+                    danmakuArea = danmakuArea,
+                    danmakuBlockModes = danmakuBlockModes,
+                    danmakuBlockKeywords = danmakuBlockKeywords,
+                    onStartPlay = onStartPlay,
+                    onToggleFullscreen = onToggleFullscreen,
+                    onOpenSettings = onOpenSettings,
+                    onEnterPip = onEnterPip,
+                    isInPip = isInPip,
+                    holder = holder,
+                    onBack = onBack,
+                    onRetryPlay = onRetryPlay,
+                    onPlayerError = onPlayerError,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            Spacer(Modifier.height(Space.x2))
+
+            // ---- 工具条（固定）----
+            VideoToolRow(
+                commentTabSelected = commentTabSelected,
+                commentCount = commentTotal,
+                onSelectTab = onSelectCommentTab,
+                danmakuEnabled = danmakuEnabled,
+                onToggleDanmaku = onToggleDanmaku,
+                onSendDanmaku = onSendDanmaku,
+                modifier = Modifier.padding(horizontal = Space.x3),
+            )
+
+            Spacer(Modifier.height(Space.x2))
+
+            // ---- 评论占满剩余高度（weight 给它确定高度）----
+            CommentSection(
+                comments = comments,
+                total = commentTotal,
+                loading = commentLoading,
+                loadingMore = commentLoadingMore,
+                hasMore = commentHasMore,
+                isLoggedIn = isLoggedIn,
+                onLoadMore = onLoadMoreComments,
+                onLike = onLikeComment,
+                onDelete = onDeleteComment,
+                onReply = onReplyComment,
+                sortMode = commentSort,
+                onSortChange = onSortChange,
+                onReport = onReportComment,
+                reportReasons = reportReasons,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = Space.x3),
+            )
+        }
+        return
+    }
+
+    LazyColumn(
+        contentPadding = PaddingValues(bottom = Space.x8),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        // ---- 播放器 / 封面（16:9）----
+        item(key = "player") {
+            // ---- 播放器 / 封面 ----
+            //
+            // ## ⚠️ 为什么竖屏用**更高的比例**而不是固定 16:9（用户反馈"画面太小"）
+            //
+            // 固定 16:9 在 1080×2400（20:9）手机上只占约 **25%** 屏高，
+            // 上方无内容、下方全是详情，观感就是"视频挤在顶上一条"。
+            //
+            // 官方在竖屏下也不是死守 16:9 —— 播放器会占据更接近
+            // "半屏以上"的区域，让画面成为主角。
+            //
+            // 这里按屏幕宽高比动态取：**竖屏取 4:3**（画面明显更大，
+            // 且横向视频用 FIT 缩放时会上下留黑边但整体更大），
+            // 横屏/桌面仍用 16:9（宽屏下 16:9 才是正确比例）。
+            //
+            // 用 `aspectRatio` 而不是固定高度：不同机型宽度不同，
+            // 固定高度会在小屏上过高、大屏上过矮。
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(playerAspectRatio(windowSize))
+                    .background(colors.playerBackground),
+            ) {
+                PlayerArea(
+                    playState = playState,
+                    player = player,
+                    playerError = playerError,
+                    coverUrl = detail.coverUrl(),
+                    isFullscreen = false,
+                    activeSubtitle = activeSubtitle,
+                    danmaku = danmaku,
+                    danmakuEnabled = danmakuEnabled,
+                    danmakuAlpha = danmakuAlpha,
+                    danmakuFontScale = danmakuFontScale,
+                    danmakuArea = danmakuArea,
+                    danmakuBlockModes = danmakuBlockModes,
+                    danmakuBlockKeywords = danmakuBlockKeywords,
+                    onStartPlay = onStartPlay,
+                    onToggleFullscreen = onToggleFullscreen,
+                    onOpenSettings = onOpenSettings,
+                    onEnterPip = onEnterPip,
+                    isInPip = isInPip,
+                    holder = holder,
+                    onRetryPlay = onRetryPlay,
+                    onPlayerError = onPlayerError,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
+        // ---- 左栏切换控件 + 右栏发弹幕（播放器正下方）----
+        //
+        // 对照官方结构：左边是"看什么"（简介/评论切换），
+        // 右边是"我要说什么"（发弹幕 + 开关）。
+        item(key = "tool-row") {
+            VideoToolRow(
+                commentTabSelected = commentTabSelected,
+                commentCount = commentTotal,
+                onSelectTab = onSelectCommentTab,
+                danmakuEnabled = danmakuEnabled,
+                onToggleDanmaku = onToggleDanmaku,
+                onSendDanmaku = onSendDanmaku,
+            )
+        }
+
+        // ================= 视图分支（需求：切到评论时只显示评论）=================
+        //
+        // ⚠️ 切到「评论」后**只保留评论区**：UP 信息、互动栏、分P、
+        // 相关推荐全部不渲染。
+        //
+        // 为什么：评论是"沉浸式阅读"场景。上方压着 UP 信息与互动栏
+        // 会挤掉大量可视区（手机竖屏尤其明显），用户明确要求专注评论。
+        //
+        // 切回「简介」时这些内容**自然恢复** —— 它们只是条件分支，
+        // 不涉及状态重建（数据仍在 ViewModel 里）。
+        if (!commentTabSelected) {
+            // ================= UP 信息区（垂直排列）=================
+            //
+            // 严格按用户要求的顺序自上而下：
+            //   头像 → 名字（头像右侧）→ 粉丝数·视频数 → 标题（右侧挂简介倒V）
+            //   → 播放量·发布时间·在看人数 → 互动按钮
+            item(key = "owner-meta") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Space.x3)
+                        // C 方案：UP 信息区 + 标题 + 简介是**同一张卡片**
+                        // （它们语义上属于"这个视频是什么"，不该被切成三块）
+                        .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
+                        .padding(
+                            start = Space.x4,
+                            end = Space.x4,
+                            top = Space.x3,
+                            bottom = Space.x3,
+                        ),
+                ) {
+                    // ---- ① 头像 + ② 名字 / ③ 粉丝数·视频数 ----
+                    //
+                    // ⚠️ 头像与名字**都可点**，进 UP 主主页。
+                    // 此前这里没有任何点击 —— 详情页的 UP 头像是全应用
+                    // 最显眼的"看着能点其实不能点"的元素之一。
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AsyncImage(
+                            model = detail.ownerFaceUrl(96),
+                            contentDescription = "进入 UP 主主页",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(OWNER_AVATAR)
+                                .clip(CircleShape)
+                                .background(colors.avatarPlaceholder)
+                                .clickable { onOwnerClick(detail.ownerMid) },
+                        )
+                        Spacer(Modifier.width(Space.x3))
+
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(Radius.badge))
+                                .clickable { onOwnerClick(detail.ownerMid) },
+                        ) {
+                            // ② 名字
+                            Text(
+                                text = detail.ownerName,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize = FontSize.body,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = colors.textPrimary,
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            // ③ 粉丝数 · 视频数
+                            //
+                            // ⚠️ 两项都是"增强信息"，取不到时**不显示该项**
+                            // 而不是显示 0 —— 显示"0 个视频"是**错误信息**
+                            // （UP 主明明有很多视频），比不显示更糟。
+                            //
+                            // 实测：粉丝数来自 `x/relation/stat`（可用）；
+                            // 视频数需要 WBI 签名的 `space/wbi/arc/search`，
+                            // 当前未接入 —— 所以只显示粉丝数。
+                            val meta = buildString {
+                                if (detail.ownerFans > 0) {
+                                    append(formatCount(detail.ownerFans)).append(" 粉丝")
+                                }
+                                if (detail.ownerVideoCount > 0) {
+                                    if (isNotEmpty()) append(" · ")
+                                    append(detail.ownerVideoCount).append(" 个视频")
+                                }
+                            }
+                            if (meta.isNotEmpty()) {
+                                Text(
+                                    text = meta,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontSize = FontSize.label,
+                                        color = colors.textSecondarySafe,
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(Space.x3))
+
+                    // ---- ④ 标题 + 最右侧的简介倒 V ----
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = detail.title,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = FontSize.titleMd,
+                                lineHeight = FontSize.titleMdLine,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.textPrimary,
+                            ),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // 简介入口：只在有简介时可点（没有简介则按钮无意义）
+                        if (detail.desc.isNotBlank()) {
+                            Spacer(Modifier.width(Space.x1))
+                            DescToggleButton(
+                                expanded = descExpanded,
+                                onClick = onToggleDesc,
+                            )
+                        }
+                    }
+
+                    // ---- 简介正文（默认隐藏，点倒 V 才展开）----
+                    if (descExpanded && detail.desc.isNotBlank()) {
+                        Spacer(Modifier.height(Space.x2))
+                        Text(
+                            text = detail.desc,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = FontSize.bodySm,
+                                lineHeight = FontSize.bodySmLine,
+                                color = colors.textSecondarySafe,
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(Radius.button))
+                                .background(colors.bgHover)
+                                .padding(Space.x3),
+                        )
+                    }
+
+                    Spacer(Modifier.height(Space.x2))
+
+                    // ---- ⑤ 播放量 · 弹幕 · 发布时间 · 在看人数（带图标）----
+                    //
+                    // ⚠️ 加图标的理由（用户要求"信息更直观"）：
+                    //
+                    // 原先是一串纯文字「287.5万 播放 · 4.7万 弹幕 · 3天前 · 156 人在看」，
+                    // 四段信息挤在同一个字号里，用户要逐字读才知道哪段是什么。
+                    //
+                    // 加上图标后每段有了**视觉锚点**：扫一眼就知道
+                    // "这排是数据"，不需要读文字。图标也承担了分隔作用，
+                    // 可以省掉中间的 `·`，横向更省空间。
+                    //
+                    // 图标统一用 `Outlined` 描边风格 + `iconSm` 尺寸 ——
+                    // 与 App 其它地方的线性图标一致，不会显得突兀。
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Space.x3),
+                    ) {
+                        // 播放量
+                        MetaItem(
+                            icon = Icons.Outlined.PlayCircleOutline,
+                            text = formatCount(detail.viewCount),
+                        )
+                        // 弹幕数
+                        if (detail.danmakuCount > 0) {
+                            MetaItem(
+                                icon = Icons.Outlined.ChatBubbleOutline,
+                                text = formatCount(detail.danmakuCount),
+                            )
+                        }
+                        // 发布时间
+                        val timeLabel = formatRelativeTime(detail.publishedAt)
+                        if (timeLabel.isNotEmpty()) {
+                            MetaItem(
+                                icon = Icons.Outlined.Schedule,
+                                text = timeLabel,
+                            )
+                        }
+                        // 在看人数
+                        if (detail.viewers > 0) {
+                            MetaItem(
+                                icon = Icons.Outlined.RemoveRedEye,
+                                text = "${formatCount(detail.viewers)} 人在看",
+                            )
+                        }
+
+                        Spacer(Modifier.weight(1f))
+
+                        // ---- 更多（⋮）----
+                        //
+                        // ⚠️ 这个入口此前**完全不存在** —— 于是「下载」与
+                        // 「稍后再看」两项功能虽然底层都写好了
+                        // （`VideoDownloader` 315 行、`addToView()`），
+                        // 却没有任何 UI 调用，用户完全够不到。
+                        //
+                        // 放在元信息行最右侧：它属于"对这个视频做点什么"，
+                        // 与播放量/时间同一行不冲突（左信息右动作）。
+                        Box(
+                            modifier = Modifier
+                                .size(Space.minTouchTarget)
+                                .clip(CircleShape)
+                                .clickable(onClick = onMoreClick),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.MoreVert,
+                                contentDescription = "更多操作",
+                                tint = colors.textSecondarySafe,
+                                modifier = Modifier.size(Sizes.iconLg),
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ---- ⑥ 互动栏 ----
+            item(key = "actions") {
+                InteractionBar(
+                    interaction = interaction,
+                    likeCount = detail.likeCount,
+                    coinCount = detail.coinCount,
+                    favoriteCount = detail.favoriteCount,
+                    shareCount = detail.shareCount,
+                    onLike = onLike,
+                    onCoin = onCoin,
+                    onFavorite = onFavorite,
+                    onShare = onShare,
+                )
+            }
+
+            // ---- 分P（仅多P）----
+            if (detail.isMultiPart) {
+                item(key = "pages") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Space.x3)
+                            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
+                            .padding(vertical = Space.x3),
+                    ) {
+                        Text(
+                            text = "选集（${detail.pages.size}）",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = FontSize.body,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.textPrimary,
+                            ),
+                            modifier = Modifier.padding(horizontal = Space.x4),
+                        )
+                        Spacer(Modifier.height(Space.x2))
+                        androidx.compose.foundation.lazy.LazyRow(
+                            contentPadding = PaddingValues(horizontal = Space.x4),
+                            horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                        ) {
+                            items(detail.pages.size) { index ->
+                                val page = detail.pages[index]
+                                PageChip(
+                                    label = "P${page.page}",
+                                    selected = index == currentPage,
+                                    onClick = { onSelectPage(index) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ---- 相关推荐 ----
+            //
+            // ⚠️ 整块必须有 bgCard 背景。
+            //
+            // 之前这一段的标题与卡片**没有设置背景**，直接落在页面底色
+            // bgBase（浅灰）上，而它上方的标题区/简介区/互动栏都是 bgCard（白）。
+            // 结果就是详情页中间突兀地出现一条灰色色带，
+            // 看起来像"这块没渲染好"——这就是「相关推荐颜色与主题不匹配」。
+            // ---- 评论 / 完整简介（左栏内容，由顶部标签决定）----
+            //
+            // ⚠️ 位置：必须在「相关推荐」**之前**。
+            //
+            // 之前放在整个列表最后（相关推荐之后），于是点「评论」标签后
+            // 评论确实渲染了、但在屏幕外 —— 用户要滚过全部相关推荐才看得到，
+            // 表现就是"点了评论没反应"。
+            //
+            // 现在紧跟互动栏：点击标签 → 内容就在眼前。
+            //
+            // 简介正文与标题右侧倒 V 展开的是同一份内容（`detail.desc`），
+            // 两个入口、一个数据源。
+            // ⚠️ 评论模式已在函数开头 `return`（走独立布局），
+            // 所以这里只可能是「简介」分支 —— 不再需要 if/else。
+            //
+            // 为什么评论不能留在本 LazyColumn 里：评论列表自己是
+            // `LazyColumn`（要无限滚动），嵌在外层 LazyColumn 的 item 里
+            // 会落在**无限高度约束**下、塌成 0 高 —— 表现就是"点了评论一片空白"。
+            item(key = "full-desc") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Space.x3)
+                            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
+                            .padding(horizontal = Space.x4, vertical = Space.x3),
+                    ) {
+                        Text(
+                            text = "视频简介",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = FontSize.body,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.textPrimary,
+                            ),
+                        )
+                        Spacer(Modifier.height(Space.x2))
+                        Text(
+                            text = detail.desc.ifBlank { "这个视频没有简介" },
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = FontSize.bodySm,
+                                lineHeight = FontSize.bodySmLine,
+                                color = colors.textSecondarySafe,
+                            ),
+                        )
+                    }
+                }
+
+            if (related.isNotEmpty()) {
+                item(key = "related-header") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            // C 方案：相关推荐标题不再单独铺一层 bgCard ——
+                            // 下方每张卡片自带容器，标题只需与上方互动栏留出间距。
+                            .padding(
+                                start = Space.x4,
+                                end = Space.x4,
+                                top = Space.x5,
+                                bottom = Space.x2,
+                            ),
+                    ) {
+                        Text(
+                            text = "相关推荐",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = FontSize.titleMd,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.textPrimary,
+                            ),
+                        )
+                    }
+                }
+                // ---- 相关推荐：两列网格 ----
+                //
+                // ⚠️ 首版是**单列全宽**：每张卡片铺满屏宽、封面 16:10
+                // → 单卡高约 240dp，一屏只能看 2 张，且大封面挤压了
+                // 标题与 UP 名的可读性。
+                //
+                // C 方案加了卡片容器后这个问题被放大（卡片边框让"巨卡"更明显）。
+                // 改为两列：与首页推荐流一致，一屏可见 4 张。
+                //
+                // 用 chunked 手工分行而不是 LazyVerticalGrid ——
+                // 外层已经是 LazyColumn，嵌套可滚动容器会导致
+                // 内层拿到无限高度约束（这正是评论区的坑，见文件顶部说明）。
+                items(
+                    items = related.chunked(2),
+                    key = { row -> row.joinToString("|") { it.bvid } },
+                    contentType = { "related-row" },
+                ) { row ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Space.x3, vertical = Space.x1),
+                        horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                    ) {
+                        row.forEach { video ->
+                            VideoCard(
+                                video = video,
+                                onClick = { onVideoClick(video.bvid) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        // 奇数个时补一个空位，避免最后一张被拉成整行宽
+                        if (row.size == 1) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+
+        }
+    }
+}
+
+/**
+ * 播放器区域：封面 / 画面 + 控制层。
+ *
+ * ## 未起播时显示封面 + 播放按钮
+ *
+ * 这是「点击后才进入视频」的落点：用户看到的是封面大图 + 中央播放键，
+ * 点一下才真正取流。比一进页面就自动播放更省流量、首屏也更快。
+ */
+@Composable
+private fun PlayerArea(
+    playState: PlayState,
+    player: ExoPlayer?,
+    playerError: String?,
+    coverUrl: String,
+    isFullscreen: Boolean,
+    activeSubtitle: com.example.biliv3.data.subtitle.SubtitleBody?,
+    danmaku: List<com.example.biliv3.data.danmaku.DanmakuItem>,
+    danmakuEnabled: Boolean,
+    danmakuAlpha: Float,
+    danmakuFontScale: Float,
+    danmakuArea: Float,
+    /** 本地屏蔽：弹幕类型（1=滚动 4=底部 5=顶部）。 */
+    danmakuBlockModes: Set<Int> = emptySet(),
+    /** 本地屏蔽：关键词。 */
+    danmakuBlockKeywords: List<String> = emptyList(),
+    onStartPlay: () -> Unit,
+    onToggleFullscreen: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onEnterPip: () -> Boolean,
+    isInPip: Boolean,
+    /** Activity 级播放器持有者（装配去重）。 */
+    holder: com.example.biliv3.player.PlayerHolder? = null,
+    /** 返回。浮动返回按钮用它（默认隐藏、点画面才浮现）。 */
+    onBack: () -> Unit = {},
+    onRetryPlay: () -> Unit,
+    onPlayerError: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = BiliTheme.colors
+    /**
+     * 控件与浮动返回按钮的**共享可见性**。
+     *
+     * 默认 alse：页面一进来就是**纯画面**（无任何浮层），
+     * 与官方结构一致。点一下画面才浮现返回按钮/控件，
+     * 再点或播放中 3 秒后自动淡出。
+     */
+    var chromeVisible by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        when {
+            playerError != null -> PlayerPlaceholder(
+                message = playerError,
+                onRetry = onRetryPlay,
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            playState is PlayState.Ready && player != null -> {
+                VideoPlayerSurface(
+                    info = playState.info,
+                    player = player,
+                    onError = onPlayerError,
+                    // 交给 holder 判断是否需要重新装配：
+                    // PiP 进出/页面重建时不重复 prepare，保住缓冲与进度
+                    holder = holder,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                // 弹幕层：在画面之上、字幕之下（弹幕不遮挡字幕）
+                DanmakuLayer(
+                    player = player,
+                    danmaku = danmaku,
+                    enabled = danmakuEnabled,
+                    alpha = danmakuAlpha,
+                    fontScale = danmakuFontScale,
+                    displayArea = danmakuArea,
+                    // 本地屏蔽规则（设置页可改，改完立即作用于当前播放）
+                    blockModes = danmakuBlockModes,
+                    blockKeywords = danmakuBlockKeywords,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                // 字幕层叠在弹幕之上（字幕优先可读）
+                SubtitleOverlay(
+                    player = player,
+                    body = activeSubtitle,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                PlayerControls(
+                    player = player,
+                    isFullscreen = isFullscreen,
+                    onToggleFullscreen = onToggleFullscreen,
+                    // 受控：与浮动返回按钮同步显隐
+                    controlsVisible = chromeVisible,
+                    onToggleControls = { chromeVisible = !chromeVisible },
+                    onAutoHide = { chromeVisible = false },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            playState is PlayState.Loading -> {
+                // 取流中仍显示封面，避免黑屏闪烁
+                CoverWithPlayButton(coverUrl = coverUrl, onClick = null, loading = true)
+            }
+
+            playState is PlayState.Failed -> PlayerPlaceholder(
+                message = playState.message,
+                onRetry = onRetryPlay,
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            // Ready 但 player 尚未创建（理论上不会发生，兜底显示封面）
+            // 以及 NotStarted：显示封面 + 播放键，等用户点击
+            else -> CoverWithPlayButton(coverUrl = coverUrl, onClick = onStartPlay)
+        }
+
+        // ================= 左上角浮动返回按钮 =================
+        //
+        // 页面已去掉固定顶栏（对照官方：播放器顶到状态栏）。
+        // 返回入口改为浮在画面上的圆钮，**与控件同步显隐**：
+        // 默认隐藏 → 点画面浮现 → 再点/3 秒后淡出。
+        //
+        // 系统返回手势始终可用，不依赖这个按钮（所以"默认隐藏"不会
+        // 让用户被困住）。
+        if (!isInPip) {
+            FloatingBackButton(
+                onClick = onBack,
+                visible = chromeVisible,
+                modifier = Modifier.align(Alignment.TopStart),
+            )
+        }
+
+        // ================= 右上角按钮组（小窗 + 齿轮）=================
+        //
+        // ⚠️ 改成**跟随 chromeVisible**（此前是常驻）。
+        //
+        // 理由：既然页面默认是"纯画面"，右上角常驻两个黑圆钮
+        // 就破坏了"无白栏、视频占满"的观感。现在与控件、
+        // 浮动返回按钮**同进同退**，点一下画面三个一起出现。
+        //
+        // PiP 下整组隐藏（小窗里点不中且挡画面）。
+        if (!isInPip) {
+            AnimatedVisibility(
+                visible = chromeVisible,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.TopEnd),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(Space.x2),
+                    horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // 小窗入口：只在可播放时显示（没画面时进 PiP 没意义）
+                    if (playState is PlayState.Ready && player != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(SETTINGS_BUTTON)
+                                .clip(CircleShape)
+                                .background(colors.overlayControl)
+                                .clickable { onEnterPip() },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.PictureInPictureAlt,
+                                contentDescription = "小窗播放",
+                                tint = colors.onOverlay,
+                                modifier = Modifier.size(Sizes.iconLg),
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(SETTINGS_BUTTON)
+                            .clip(CircleShape)
+                            .background(colors.overlayControl)
+                            .clickable(onClick = onOpenSettings),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = "播放设置与字幕",
+                            tint = colors.onOverlay,
+                            modifier = Modifier.size(Sizes.iconLg),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** 封面 + 中央播放按钮（未起播状态）。 */
+@Composable
+private fun CoverWithPlayButton(
+    coverUrl: String,
+    onClick: (() -> Unit)?,
+    loading: Boolean = false,
+) {
+    val colors = BiliTheme.colors
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colors.playerBackground)
+            .then(
+                if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        AsyncImage(
+            model = coverUrl,
+            contentDescription = "视频封面",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+
+        // 压暗，保证播放键与文字可读
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colors.overlayControl),
+        )
+
+        if (loading) {
+            androidx.compose.material3.CircularProgressIndicator(
+                color = colors.onOverlay,
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(Sizes.iconXl + Sizes.iconMd),
+            )
+        } else if (onClick != null) {
+            Box(
+                modifier = Modifier
+                    .size(PLAY_BUTTON)
+                    .clip(CircleShape)
+                    .background(colors.overlayControl),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = "播放",
+                    tint = colors.onOverlay,
+                    modifier = Modifier.size(Sizes.iconXl + Space.x2),
+                )
+            }
+        }
+
+        // 未起播时的提示
+        if (onClick != null) {
+            Text(
+                text = "点击播放",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = FontSize.label,
+                    color = colors.onOverlay,
+                ),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = Space.x4),
+            )
+        }
+    }
+}
+
+/** 分P / 清晰度的胶囊选项。 */
+@Composable
+internal fun PageChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = BiliTheme.colors
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium.copy(
+            fontSize = FontSize.label,
+            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+            color = if (selected) colors.textOnBrand else colors.textSecondarySafe,
+        ),
+        maxLines = 1,
+        modifier = Modifier
+            .clip(RoundedCornerShape(Radius.pill))
+            .background(if (selected) colors.brandPrimary else colors.bgHover)
+            .clickable(onClick = onClick)
+            .padding(horizontal = Space.x3, vertical = Space.x1 + 2.dp),
+    )
+}
+
+/** 详情页骨架：与真实布局同构，避免内容到达时跳动。 */
+@Composable
+private fun DetailSkeleton() {
+    val colors = BiliTheme.colors
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colors.bgBase),
+    ) {
+        SkeletonBox(
+            modifier = Modifier.fillMaxWidth(),
+            aspectRatio = 16f / 9f,
+            shape = RoundedCornerShape(0.dp),
+        )
+        Column(modifier = Modifier.padding(Space.x4)) {
+            SkeletonBox(Modifier.fillMaxWidth(), height = 16.dp)
+            Spacer(Modifier.height(Space.x2))
+            SkeletonBox(Modifier.fillMaxWidth(0.7f), height = 16.dp)
+            Spacer(Modifier.height(Space.x3))
+            SkeletonBox(Modifier.fillMaxWidth(0.4f), height = 12.dp)
+        }
+    }
+}
+
+/** UP 头像尺寸。比之前的 54dp 小，因为不再独占区域。 */
+/**
+ * UP 头像尺寸（新布局）。
+ *
+ * 48dp：比旧的 32dp 大 —— 新布局里头像与名字/粉丝数**垂直成组**，
+ * 是信息区的主视觉锚点，太小会显得零碎。
+ */
+private val OWNER_AVATAR = 48.dp
+
+private val UP_AVATAR = 32.dp
+
+/** 弹幕分片拉取的轮询间隔（播放中）。 */
+private const val DANMAKU_LOAD_POLL_MS = 3000L
+
+/** 未播放时的轮询间隔。比播放中间隔大，避免空转。 */
+private const val DANMAKU_IDLE_POLL_MS = 2000L
+
+/**
+ * 标题固定两行的高度。
+ *
+ * `titleMdLine` = 22sp，两行 = 44sp。用 dp 近似（22sp ≈ 22dp 在默认字号下），
+ * 取 44dp 保证 1 行标题时也占满两行高度，消除不同视频间的布局抖动。
+ */
+private val TITLE_TWO_LINES = 44.dp
+
+/** 未起播时中央播放按钮。 */
+private val PLAY_BUTTON = 64.dp
+
+/**
+ * 播放器右上角常驻设置按钮。
+ *
+ * 36dp：足够好点（配合外层 padding 接近 48dp 触摸目标），
+ * 又不至于在画面上太抢眼。
+ */
+private val SETTINGS_BUTTON = 36.dp
+
+/**
+ * 续播提示条。
+ *
+ * ```
+ * ┌────────────────────────────────────┐
+ * │ 上次看到 12:34        继续   从头   │
+ * └────────────────────────────────────┘
+ * ```
+ *
+ * ## 为什么两个按钮都要有
+ *
+ * 只有"继续"会让想从头看的用户没有出口；
+ * 只有"从头"则续播功能形同不存在。
+ *
+ * ## 为什么浮在顶部而不是塞进内容流
+ *
+ * 它是**瞬时提示**，不是常驻信息 —— 塞进 LazyColumn 会占掉
+ * 一整块布局并在用户滚动后留在原位（语义错乱）。
+ * 浮层点掉即消失，与官方行为一致。
+ */
+@Composable
+private fun ResumeBar(
+    positionMs: Long,
+    onResume: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = BiliTheme.colors
+    val totalSeconds = (positionMs / 1000).toInt()
+    val label = if (totalSeconds >= 3600) {
+        "${totalSeconds / 3600}:" +
+            "${(totalSeconds % 3600 / 60).toString().padStart(2, '0')}:" +
+            "${(totalSeconds % 60).toString().padStart(2, '0')}"
+    } else {
+        "${totalSeconds / 60}:${(totalSeconds % 60).toString().padStart(2, '0')}"
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .biliCard(shape = RoundedCornerShape(Radius.pill))
+            .padding(horizontal = Space.x4, vertical = Space.x2),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "上次看到 $label",
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.label,
+                color = colors.textPrimary,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = "继续",
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.label,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.textBrandSafe,
+            ),
+            modifier = Modifier
+                .clip(RoundedCornerShape(Radius.badge))
+                .clickable(onClick = onResume)
+                .padding(horizontal = Space.x2, vertical = Space.x1),
+        )
+        Spacer(Modifier.width(Space.x2))
+        Text(
+            text = "从头",
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.label,
+                color = colors.textSecondarySafe,
+            ),
+            modifier = Modifier
+                .clip(RoundedCornerShape(Radius.badge))
+                .clickable(onClick = onDismiss)
+                .padding(horizontal = Space.x2, vertical = Space.x1),
+        )
+    }
+}
+
+/**
+ * 复制文本到剪贴板（「复制链接」分享渠道用）。
+ *
+ * Android 13+ 系统会自动弹"已复制"提示，低版本没有 ——
+ * 这里统一给一个 Toast，两版本行为一致。
+ */
+private fun copyToClipboard(context: android.content.Context, text: String) {
+    runCatching {
+        val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+            as android.content.ClipboardManager
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("链接", text))
+        android.widget.Toast
+            .makeText(context, "链接已复制", android.widget.Toast.LENGTH_SHORT)
+            .show()
+    }.onFailure {
+        android.widget.Toast
+            .makeText(context, "复制失败", android.widget.Toast.LENGTH_SHORT)
+            .show()
+    }
+}
+
+/**
+ * 预览用的占位 PlayerHolder。 *
+ * 只在 Compose Preview（无 AppContainer）时生效 ——
+ * 真正的实例必须由导航层注入，否则 PiP / 切页继续播会失效。
+ */
+@Composable
+private fun rememberPreviewHolder(): com.example.biliv3.player.PlayerHolder {
+    val ctx = LocalContext.current
+    return remember { com.example.biliv3.player.PlayerHolder(ctx) }
+}
+
+/**
+ * 把 ExoPlayer 的错误翻译成用户看得懂的文案。
+ *
+ * ExoPlayer 的原始错误（如 `ERROR_CODE_IO_BAD_HTTP_STATUS`）对用户毫无意义，
+ * 但对定位问题极有价值，所以 logcat 里保留原始码，UI 上给中文原因。
+ */
+private fun describePlayerError(error: androidx.media3.common.PlaybackException): String =
+    when (error.errorCode) {
+        androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
+            "视频源返回错误（可能是取流地址已过期或需要登录）"
+
+        androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+        androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+        -> "网络连接失败，请检查网络后重试"
+
+        androidx.media3.common.PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ->
+            "视频源不存在或已被删除"
+
+        androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+        androidx.media3.common.PlaybackException.ERROR_CODE_DECODING_FAILED,
+        androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED,
+        -> "当前设备无法解码该视频（编码不兼容）"
+
+        androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+        androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+        -> "视频流格式异常，无法解析"
+
+        else -> "播放失败（${error.errorCodeName}）"
+    }

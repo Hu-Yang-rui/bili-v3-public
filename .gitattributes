@@ -1,0 +1,45 @@
+# ── 二进制文件：禁止任何换行符转换 / 文本规范化 ──────────────
+# core.autocrlf=true 的环境下，不加这段会把 .jks / .apk 当成文本
+# 做 CRLF 转换，导致密钥文件损坏、APK 校验失败。
+*.jks      binary
+*.keystore binary
+*.p12      binary
+*.pfx      binary
+*.apk      binary
+*.aab      binary
+*.jar      binary
+*.so       binary
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.webp     binary
+*.gif      binary
+*.ico      binary
+*.ttf      binary
+*.otf      binary
+*.woff     binary
+*.woff2    binary
+*.zip      binary
+*.gz       binary
+
+# ── 文本文件：仓库内统一 LF ─────────────────────────────────
+* text=auto eol=lf
+
+# Windows 脚本保留 CRLF（部分宿主按 ANSI 解析，换行敏感）
+*.ps1      text eol=crlf
+*.bat      text eol=crlf
+*.cmd      text eol=crlf
+
+# ── 语言统计 / diff 行为 ────────────────────────────────────
+*.md       text
+*.kt       text
+*.kts      text
+*.xml      text
+*.toml     text
+*.properties text
+
+# 二进制文件不参与 diff
+*.jks      -diff
+*.keystore -diff
+*.apk      -diff
+*.aab      -diff

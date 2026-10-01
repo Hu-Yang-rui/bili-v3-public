@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      深色启动主题。
+      关键差异：windowLightStatusBar = false —— 深色背景下状态栏图标必须是浅色，
+      否则时钟/信号图标（深色）压在 #0A0B0C 上几乎看不见。
+    -->
+    <style name="Theme.BiliV3" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/launch_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

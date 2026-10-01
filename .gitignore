@@ -1,0 +1,89 @@
+# ---- Gradle ----
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# ---- Kotlin ----
+.kotlin/
+
+# ---- 本地配置（含机器路径，不入库）----
+local.properties
+
+# ---- IDE ----
+.idea/
+*.iml
+.vscode/
+
+# ---- 临时 / 调试产物 ----
+_emu*.log
+emu-*.log
+_*.log
+_shots/
+_probe/
+*.hprof
+
+# ---- 签名密钥：绝不入库 ----
+#
+# ⚠️ 本仓库是 **public**，因此密钥与口令一律不入库。
+#
+# `biliv3-release.jks` 是 RSA 4096 / 30 年有效期的正式签名密钥。
+# 一旦公开，任何人都能用本项目的身份签发 APK（冒名分发、投毒），
+# 且 GitHub 会永久保留历史（即使事后删除也会被爬虫与 fork 留存）。
+# 唯一补救是吊销密钥换新证书 —— 代价是**所有已装用户无法覆盖升级**。
+#
+# 密钥本体请放在仓库外备份（如 `D:\deep\bili-v3-backup\`）。
+# 本地构建时这两项仍在磁盘上，签名能力不受影响。
+keystore/
+keystore.properties
+*.jks
+*.keystore
+*.p12
+*.pfx
+
+# ---- 安装包：不入库 ----
+#
+# 之前这里是 `!bili-v3-v*-debug.apk` / `!bili-v3-v*-release.apk` 白名单，
+# 理由是"私有仓库做异地备份"。改为 public 后该理由不再成立：
+# 20 个 APK 共 248 MB，且 release 包内嵌签名与版本信息。
+# APK 请通过 GitHub Releases 分发，不要提交进仓库。
+*.apk
+*.aab
+
+# ---- 系统 ----
+.DS_Store
+Thumbs.db
+
+# ---- 凭据 / 密钥：任何形态都不入库 ----
+#
+# 除上面的 keystore 系列外，这里再做一层兜底。
+# 本仓库是 public，任何"顺手放一下"的凭据都会永久留在 GitHub 历史里。
+*.env
+.env*
+secrets.properties
+credentials.json
+*.pem
+*.key
+*.p8
+*.mobileprovision
+*service-account*.json
+
+# ---- AI / 内部资料：不公开 ----
+#
+# 提示词、内部笔记、设计稿、分析报告等一律不入库。
+# 若确实需要版本管理，请放在仓库外的独立目录。
+*.prompt
+*.prompts
+prompts/
+_prompt/
+_prompts/
+notes/
+_internal/
+_docs-private/
+
+# ---- 项目内部技术文档 ----
+#
+# AGENTS.md 是给本地 Agent 看的工作约定（含本机绝对路径、签名密钥指纹、
+# 内部备注），不属于对外资料。README.md 才是公开介绍。
+# 文件仍在本地磁盘上，只是不参与版本控制。
+AGENTS.md
+CLAUDE.md

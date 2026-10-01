@@ -1,0 +1,261 @@
+package com.example.biliv3.data.auth
+
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+import com.example.biliv3.data.api.BiliHeaders
+import okhttp3.Cookie
+import okhttp3.CookieJar
+import okhttp3.HttpUrl
+
+/**
+ * 登录凭据存储。
+ *
+ * ## 为什么必须加密
+ *
+ * B 站登录态的载体是 Cookie 里的 `SESSDATA` —— **它就是账号密码的等价物**，
+ * 拿到即可冒充登录。明文落在 `/data/data/.../shared_prefs/` 下，
+ * root 设备或备份提取都能直接读走。
+ *
+ * `AGENTS.md` §4.3 合规边界明确要求「SESSDATA 走 Android Keystore 加密」，
+ * 所以这里用 [EncryptedSharedPreferences]，密钥由 Android Keystore 托管，
+ * 应用无法导出，卸载即销毁。
+ *
+ * ## 为什么不用 DataStore
+ *
+ * `EncryptedSharedPreferences` 是官方现成的加密 KV 方案；
+ * DataStore 没有等价的加密封装，自己实现要手写 KeyStore + AES-GCM，
+ * 容易出错。这里优先选成熟方案。
+ */
+class AuthStore(context: Context) {
+
+    private val prefs: SharedPreferences = run {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        EncryptedSharedPreferences.create(
+            context,
+            PREFS_NAME,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
+    }
+
+    /**
+     * 当前 Cookie 串（`k=v; k=v`）。
+     *
+     * 读公开、写仅限模块内 —— 只有 [AuthCookieJar] 应该写入，
+     * 其他调用方误写会破坏登录态。
+     */
+    var cookie: String
+        get() = prefs.getString(KEY_COOKIE, "").orEmpty()
+        internal set(value) {
+            prefs.edit().putString(KEY_COOKIE, value).apply()
+        }
+
+    /** 登录用户的 mid。0 表示未登录。 */
+    var mid: Long
+        get() = prefs.getLong(KEY_MID, 0L)
+        private set(value) {
+            prefs.edit().putLong(KEY_MID, value).apply()
+        }
+
+    var userName: String
+        get() = prefs.getString(KEY_NAME, "").orEmpty()
+        private set(value) {
+            prefs.edit().putString(KEY_NAME, value).apply()
+        }
+
+    var userFace: String
+        get() = prefs.getString(KEY_FACE, "").orEmpty()
+        private set(value) {
+            prefs.edit().putString(KEY_FACE, value).apply()
+        }
+
+    /** 是否已登录。 */
+    val isLoggedIn: Boolean get() = cookie.isNotEmpty()
+
+    /**
+     * CSRF token（cookie 里的 `bili_jct`）。
+     *
+     * 所有写操作（点赞 / 投币 / 收藏 / 分享）都必须带这个值，
+     * 否则服务端一律拒绝。它随登录 cookie 一起下发。
+     *
+     * 从 cookie 串里**现取**而不是单独存一份 ——
+     * 避免两处不同步（CookieJar 更新了 cookie 但没更新单独字段）。
+     */
+    val biliJct: String
+        get() = cookie
+            .split(';')
+            .mapNotNull { part ->
+                val idx = part.indexOf('=')
+                if (idx <= 0) return@mapNotNull null
+                part.substring(0, idx).trim() to part.substring(idx + 1).trim()
+            }
+            .firstOrNull { it.first == "bili_jct" }
+            ?.second
+            .orEmpty()
+
+    /** 保存登录结果。 */
+    fun save(cookie: String, mid: Long, name: String, face: String) {
+        prefs.edit()
+            .putString(KEY_COOKIE, cookie)
+            .putLong(KEY_MID, mid)
+            .putString(KEY_NAME, name)
+            .putString(KEY_FACE, face)
+            .apply()
+    }
+
+    /**
+     * 退出登录。
+     *
+     * 只清登录态，**保留 buvid**（设备指纹）——
+     * 清掉会让下次请求看起来像全新设备，反而更容易触发风控。
+     */
+    fun clear() {
+        prefs.edit()
+            .remove(KEY_COOKIE)
+            .remove(KEY_MID)
+            .remove(KEY_NAME)
+            .remove(KEY_FACE)
+            .apply()
+    }
+
+    /**
+     * 设备指纹 `buvid3` / `buvid4`。
+     *
+     * `Endpoints.FINGER_SPI` 的注释里早就写了「首次启动拿 buvid3/buvid4，
+     * 显著降低风控命中率」，但此前**代码从未调用过**，OkHttp 也没有 CookieJar。
+     * 这里补上。
+     */
+    var buvid3: String
+        get() = prefs.getString(KEY_BUVID3, "").orEmpty()
+        private set(value) {
+            prefs.edit().putString(KEY_BUVID3, value).apply()
+        }
+
+    var buvid4: String
+        get() = prefs.getString(KEY_BUVID4, "").orEmpty()
+        private set(value) {
+            prefs.edit().putString(KEY_BUVID4, value).apply()
+        }
+
+    /** 记录设备指纹。 */
+    fun saveBuvid(b3: String, b4: String) {
+        prefs.edit()
+            .putString(KEY_BUVID3, b3)
+            .putString(KEY_BUVID4, b4)
+            .apply()
+    }
+
+    /** 是否有设备指纹。 */
+    val hasBuvid: Boolean get() = buvid3.isNotEmpty()
+
+    private companion object {
+        const val PREFS_NAME = "biliv3_auth"
+        const val KEY_COOKIE = "cookie"
+        const val KEY_MID = "mid"
+        const val KEY_NAME = "user_name"
+        const val KEY_FACE = "user_face"
+        const val KEY_BUVID3 = "buvid3"
+        const val KEY_BUVID4 = "buvid4"
+    }
+}
+
+/**
+ * OkHttp CookieJar：把 Cookie 持久化到 [AuthStore]。
+ *
+ * ## 为什么必须有
+ *
+ * 此前 OkHttp **完全没有 CookieJar** —— 意味着：
+ * 1. 登录成功后拿到的 Set-Cookie 被直接丢弃，下一个请求又是未登录状态
+ * 2. 没有 `buvid3`，每个请求都像全新设备，风控命中率显著更高
+ *
+ * ## 为什么不用 OkHttp 的 `JavaNetCookieJar`
+ *
+ * 那个是内存态（或依赖 `CookieManager`），进程重启就丢，
+ * 而登录态必须**跨重启保持**（`AGENTS.md` §3.2
+ * 验收标准：「重启 App 仍是登录态」）。
+ */
+class AuthCookieJar(private val store: AuthStore) : CookieJar {
+
+    override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
+        if (cookies.isEmpty()) return
+
+        // 合并已有 cookie：只覆盖同名项，保留其他
+        val merged = LinkedHashMap<String, String>()
+        parseCookieString(store.cookie).forEach { (k, v) -> merged[k] = v }
+        cookies.forEach { merged[it.name] = it.value }
+
+        val value = merged.entries.joinToString("; ") { "${it.key}=${it.value}" }
+        store.cookie = value
+
+        // 单独抽出 buvid，便于 UI 展示与调试
+        val b3 = merged["buvid3"].orEmpty()
+        val b4 = merged["buvid4"].orEmpty()
+        if (b3.isNotEmpty() || b4.isNotEmpty()) {
+            store.saveBuvid(b3.ifEmpty { store.buvid3 }, b4.ifEmpty { store.buvid4 })
+        }
+    }
+
+    override fun loadForRequest(url: HttpUrl): List<Cookie> {
+        val raw = store.cookie
+        if (raw.isEmpty()) return emptyList()
+
+        // 用 bilibili 域名构造 Cookie，保证被接受
+        val host = url.host
+        return parseCookieString(raw).mapNotNull { (k, v) ->
+            Cookie.Builder()
+                .name(k)
+                .value(v)
+                .domain(host)
+                .path("/")
+                .build()
+        }
+    }
+
+    private fun parseCookieString(raw: String): Map<String, String> {
+        if (raw.isEmpty()) return emptyMap()
+        return raw.split(';')
+            .mapNotNull { part ->
+                val idx = part.indexOf('=')
+                if (idx <= 0) return@mapNotNull null
+                part.substring(0, idx).trim() to part.substring(idx + 1).trim()
+            }
+            .toMap()
+    }
+}
+
+/**
+ * 从 `Set-Cookie` 响应头里抽出登录凭据。
+ *
+ * 登录成功后 B 站会在 `poll` 响应的多个 `Set-Cookie` 里给出
+ * `SESSDATA` / `bili_jct` / `DedeUserID` 等。这里做一次汇总。
+ */
+object CookieExtractor {
+
+    /**
+     * 把一组 cookie 拼成请求头可用的字符串。
+     *
+     * 过滤掉 `bili_ticket` 等会话票据 —— 它们由服务端按需下发，
+     * 手动携带反而可能因过期导致校验失败。
+     */
+    fun build(cookies: List<Cookie>): String =
+        cookies
+            .filter { it.name in ESSENTIAL }
+            .joinToString("; ") { "${it.name}=${it.value}" }
+
+    /**
+     * 登录必需字段。
+     *
+     * `DedeUserID` 是账号 id，`SESSDATA` 是会话凭据，
+     * `bili_jct` 是 CSRF token（写操作必须带）。
+     */
+    private val ESSENTIAL = setOf("SESSDATA", "bili_jct", "DedeUserID", "DedeUserID__ckMd5", "sid")
+
+    /** 媒体请求也要带 Referer，这里复用统一头定义。 */
+    fun mediaHeaders(): Map<String, String> = BiliHeaders.media()
+}

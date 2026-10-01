@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  自适应图标**前景层**：只有白色播放三角，背景透明。
+
+  为什么背景透明：
+  自适应图标 = 背景层（纯品牌粉）+ 前景层（图形）。
+  前景若自带粉色底，会与背景层叠加、且在圆形/方形遮罩下露出边角。
+
+  安全区：108×108 画布中，中心 72×72 是安全区（各方向内缩 18）。
+  播放三角画在 36~72 范围内，任何遮罩形状下都不会被裁到。
+
+  ⚠️ 不使用 B 站 Logo / 商标 —— 纯几何三角。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M44,38 L72,54 L44,70 Z" />
+</vector>
