@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.data.api.BiliException
+import com.example.biliv3.data.NotLoggedInException
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
@@ -167,15 +168,28 @@ fun ErrorState(
  * 把异常翻译成用户看得懂的文案。
  *
  * UI 层只认这几种，具体 code 在这里统一翻译 —— 页面里不再写 when(code)。
+ *
+ * ## ⚠️ 未登录必须单独判（这是一个真实文案 bug）
+ *
+ * `NotLoggedInException` 是 `InteractionRepository` / `SpaceRepository` /
+ * `LibraryRepository` 在未登录时统一抛出的类型，它的 `message` 就是
+ * "请先登录"。但此前这里只判了网络类错误，未登录会掉进 `else` 分支，
+ * 被翻译成 **"加载失败，请稍后重试"** —— 语义完全错：
+ * 用户需要的是"去登录"，不是"重试"（重试多少次都不会成功）。
+ *
+ * 所以把它提到网络判断之前，直接返回 message（即"请先登录"）。
  */
 fun userMessageFor(error: Throwable): String = when (error) {
     is BiliException -> error.userMessage
+    is NotLoggedInException -> "请先登录"
     else -> {
         val s = error.message.orEmpty()
         when {
             s.contains("Unable to resolve host") || s.contains("timeout", true) ->
                 "网络不可用，请检查连接后重试"
             s.contains("Failed to connect") -> "连接服务器失败，请稍后重试"
+            // 兜底再判一次文案：有些仓库直接 throw IllegalStateException("请先登录")
+            s.contains("请先登录") -> "请先登录"
             else -> "加载失败，请稍后重试"
         }
     }

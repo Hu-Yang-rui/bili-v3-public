@@ -82,8 +82,11 @@ fun VideoToolRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            // C 方案：工具条是通栏卡片（elevation = 0，不浮起但要有卡片底）
-            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.button))
+            // C 方案：工具条是**卡片**，与下方 UP 信息卡 / 互动栏同列堆叠。
+            //
+            // ⚠️ 圆角用 `Radius.card`(16dp)，与相邻卡片一致。
+            // 此前是 `Radius.button`(12dp)，与邻居差 4dp —— 弧度对不上。
+            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
             .padding(horizontal = Space.x4, vertical = Space.x2),
         verticalAlignment = Alignment.CenterVertically,
     ) {

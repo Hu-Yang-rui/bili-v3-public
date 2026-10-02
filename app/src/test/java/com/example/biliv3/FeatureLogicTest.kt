@@ -1,10 +1,12 @@
 package com.example.biliv3
 
+import com.example.biliv3.data.NotLoggedInException
 import com.example.biliv3.data.PlaybackProgressStore
 import com.example.biliv3.data.Settings
 import com.example.biliv3.data.ThemeMode
 import com.example.biliv3.data.danmaku.DanmakuItem
 import com.example.biliv3.data.model.CoverUrls
+import com.example.biliv3.ui.component.userMessageFor
 import com.example.biliv3.ui.video.isBlocked
 import com.example.biliv3.ui.video.semanticMode
 import com.google.common.truth.Truth.assertThat
@@ -189,5 +191,31 @@ class FeatureLogicTest {
     fun `封面 URL——协议相对地址升级为 https`() {
         val url = CoverUrls.cover("//i0.hdslb.com/bfs/archive/abc.jpg", 480)
         assertThat(url).startsWith("https://")
+    }
+
+    // ---------------------------------------------------------------------
+    // 6. 未登录文案（回归：此前被误译成「加载失败」）
+    // ---------------------------------------------------------------------
+
+    @Test
+    fun `未登录异常必须提示去登录而不是加载失败`() {
+        // 回归：userMessageFor 此前只判网络类错误，NotLoggedInException
+        // 掉进 else 被翻译成「加载失败，请稍后重试」——
+        // 语义完全错：用户要的是"去登录"，重试多少次都不会成功。
+        assertThat(userMessageFor(NotLoggedInException())).isEqualTo("请先登录")
+    }
+
+    @Test
+    fun `以请先登录为文案的通用异常也要走登录提示`() {
+        // 有些仓库直接 throw IllegalStateException("请先登录")
+        assertThat(userMessageFor(IllegalStateException("请先登录"))).isEqualTo("请先登录")
+    }
+
+    @Test
+    fun `网络类异常仍走原有文案不被登录分支吃掉`() {
+        assertThat(userMessageFor(java.net.UnknownHostException("Unable to resolve host x")))
+            .isEqualTo("网络不可用，请检查连接后重试")
+        assertThat(userMessageFor(RuntimeException("something else")))
+            .isEqualTo("加载失败，请稍后重试")
     }
 }

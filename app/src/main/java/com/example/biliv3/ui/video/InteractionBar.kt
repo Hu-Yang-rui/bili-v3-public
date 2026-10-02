@@ -71,10 +71,14 @@ fun InteractionBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            // C 方案：互动栏是通栏卡片。投币/收藏激活色改用令牌
-            // （原 COIN_COLOR / FAVORITE_COLOR 是文件级私有硬编码色，
-            //  不随深浅主题切换 —— 深色下会偏暗）。
-            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.button))
+            // C 方案：互动栏是**卡片**，与上方 UP 信息卡 / 视频简介卡
+            // 同处一列纵向堆叠。
+            //
+            // ⚠️ 圆角必须用 `Radius.card`(16dp) 而不是 `Radius.button`(12dp)。
+            // 此前用 12dp，与相邻卡片的 16dp 差 4dp —— 单独看不出，
+            // 但两张卡上下紧挨时，左右两个角的弧度对不上，
+            // 观感就是"这一栏的圆框和别处不一样"。
+            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
             .padding(vertical = Space.x2),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,

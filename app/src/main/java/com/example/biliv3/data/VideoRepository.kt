@@ -29,11 +29,31 @@ class VideoRepository(
     private val api: BiliApi = BiliApi(),
 ) {
 
-    /** 视频详情。 */
+    /**
+     * 视频详情。
+     *
+     * ## 为什么同时接受 `av` 号
+     *
+     * `x/web-interface/view` 官方就支持 `aid` 与 `bvid` 二选一，
+     * 所以不需要"av→bv 换算"这种额外步骤（换算表本身还会随 av 号增长失效）。
+     *
+     * 用途：查成分（aicu）返回的评论只带 **av 号**（`oid` 是纯数字），
+     * 要让用户"回到 App 内看这条评论的上下文"，就得能用 av 号直接取详情。
+     * 约定：入参形如 `av123456` 时走 `aid`，否则一律当 bvid。
+     */
     suspend fun detail(bvid: String): VideoDetail {
+        val avId = bvid.removePrefix("av").takeIf { bvid.startsWith("av") }
+            ?.toLongOrNull()
+
+        val query = if (avId != null) {
+            mapOf("aid" to avId.toString())
+        } else {
+            mapOf("bvid" to bvid)
+        }
+
         val json = api.getOk(
             path = Endpoints.VIDEO_VIEW,
-            query = mapOf("bvid" to bvid),
+            query = query,
             signed = true,
         )
         val d = json.optJSONObject("data")

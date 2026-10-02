@@ -327,8 +327,14 @@ fun VideoDetailScreen(
      *
      * ⚠️ 注意这是**切换控件**的状态，不是"简介展开"。
      * 简介正文的展开由 `descExpanded`（标题右侧倒 V）控制，两者独立。
+     *
+     * ⚠️ 默认必须是 **false（简介）**。
+     * 此前是 `true`，于是点开任何视频第一眼看到的是评论区 ——
+     * 用户还没看到这个视频讲什么、谁发的，就先被评论占据整屏
+     * （而且评论模式下 UP 信息 / 互动栏全被隐藏，等于"信息最少的视图"
+     * 反而成了默认视图）。评论需用户主动切换。
      */
-    var commentTabSelected by remember { mutableStateOf(true) }
+    var commentTabSelected by remember { mutableStateOf(false) }
 
     /** 一次性提示（发弹幕入口用，复用现有 snackbar 通路）。 */
     var toastMessage by remember { mutableStateOf<String?>(null) }
@@ -613,6 +619,10 @@ fun VideoDetailScreen(
                     onOwnerClick = { mid ->
                         if (mid > 0) onOwnerClick(mid)
                     },
+                    // 未登录拦截：评论区与简介区的所有写操作都走这里。
+                    // 此前 DetailContent 内部拿不到这个回调，评论模式下
+                    // 「回复 / 点赞 / 举报」在未登录时只能静默失败（问题 9）。
+                    onLoginRequired = onLoginRequired,
                     // ⋮ → 下载 / 稍后再看 / 分享渠道
                     onMoreClick = { showMoreMenu = true },
                 )
@@ -937,6 +947,27 @@ private const val PLAYER_ASPECT_WIDE = 16f / 9f
  * 间距要明显小于项与项之间（`Space.x3`）——
  * 靠间距的**对比**建立分组，比加分隔线更轻。
  */
+/**
+ * 详情页里**所有卡片**统一的横向内缩量。
+ *
+ * ## ⚠️ 为什么必须抽成常量（一个真实的视觉不一致 bug）
+ *
+ * 此前各卡片各自写内缩，结果只有一部分内缩了：
+ *
+ * | 卡片 | 修复前 | 结果 |
+ * |---|---|---|
+ * | UP 信息 / 选集 / 视频简介 | `Space.x3` | 内缩 ✅ |
+ * | 工具条（简介·评论切换） | **无** | 通栏贴边 ❌ |
+ * | 互动栏（点赞/投币/收藏/分享） | **无** | 通栏贴边 ❌ |
+ *
+ * 同一屏里两种卡片宽度 —— 用户看到的就是
+ * 「为什么点赞那里的框没收，其他区域却收缩了」。
+ *
+ * 抽成常量后，新增卡片只要用 [CARD_INSET] 就自动对齐，
+ * 不会再出现"漏写一处"（漏写时是通栏，视觉上很明显但不报错）。
+ */
+private val CARD_INSET = Space.x3
+
 @Composable
 private fun MetaItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -1098,6 +1129,11 @@ private fun DetailContent(
     onVideoClick: (String) -> Unit,
     /** 点 UP 头像/名字 → 用户主页。 */
     onOwnerClick: (Long) -> Unit,
+    /**
+     * 未登录拦截：评论区的回复 / 点赞 / 举报在未登录时走这里，
+     * 由上层导航到登录页并给提示。
+     */
+    onLoginRequired: () -> Unit = {},
     /** 点元信息行的 ⋮ → 更多菜单（下载 / 稍后再看 / 分享渠道）。 */
     onMoreClick: () -> Unit,
 ) {
@@ -1156,6 +1192,10 @@ private fun DetailContent(
                 // C 方案：评论模式下，播放器 + 工具条 + 评论区之间留出
                 // 页面底色的间隙，让三块各自成为独立卡片。
                 .background(colors.bgBase),
+            // 与简介模式用同一套间距节奏（问题 11）：
+            // 手写的 `Spacer(height = Space.x2)` 容易漏、且与 LazyColumn
+            // 分支不一致。统一用 arrangement 表达"卡片间距"。
+            verticalArrangement = Arrangement.spacedBy(Space.x2),
         ) {
             // ---- 播放器（固定在顶部，不随评论滚动）----
             Box(
@@ -1191,8 +1231,6 @@ private fun DetailContent(
                 )
             }
 
-            Spacer(Modifier.height(Space.x2))
-
             // ---- 工具条（固定）----
             VideoToolRow(
                 commentTabSelected = commentTabSelected,
@@ -1201,12 +1239,21 @@ private fun DetailContent(
                 danmakuEnabled = danmakuEnabled,
                 onToggleDanmaku = onToggleDanmaku,
                 onSendDanmaku = onSendDanmaku,
-                modifier = Modifier.padding(horizontal = Space.x3),
+                modifier = Modifier.padding(horizontal = CARD_INSET),
             )
 
-            Spacer(Modifier.height(Space.x2))
-
             // ---- 评论占满剩余高度（weight 给它确定高度）----
+            //
+            // ⚠️ 这里必须与下面 LazyColumn 分支传**同一套回调**。
+            //
+            // 此前这条分支漏传了三个：
+            // - `onAvatarClick`  → 评论模式点头像完全没反应（问题 7）
+            // - `onLoginRequired`→ 未登录点回复/点赞/举报静默无提示（问题 9）
+            // - `onViewAllReplies`→「查看全部 N 条回复」是死入口
+            //
+            // 而 `commentTabSelected` 默认是 true，也就是说**默认视图**走的
+            // 正是这条漏传的分支 —— 问题被放大到"每次进视频都命中"。
+            // 现在两条分支参数对齐，任何一条都不再是"功能残缺版"。
             CommentSection(
                 comments = comments,
                 total = commentTotal,
@@ -1222,6 +1269,9 @@ private fun DetailContent(
                 onSortChange = onSortChange,
                 onReport = onReportComment,
                 reportReasons = reportReasons,
+                onAvatarClick = onAvatarClick,
+                onViewAllReplies = onViewAllReplies,
+                onLoginRequired = onLoginRequired,
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = Space.x3),
@@ -1232,6 +1282,16 @@ private fun DetailContent(
 
     LazyColumn(
         contentPadding = PaddingValues(bottom = Space.x8),
+        // ⚠️ 卡片之间必须有稳定间距（问题 11 的根因）。
+        //
+        // 此前所有 item 紧贴在一起，而每个 item 自己都是一张
+        // 带描边/投影的卡片 —— 视觉上糊成一整块"卡片墙"，
+        // 用户的反馈是"点开视频后整体 UI 很突出、很抢眼"。
+        //
+        // 用 `verticalArrangement` 统一给间距，而不是在每个 item 里
+        // 手写 Spacer：后者必然会漏几处（此前就漏了 tool-row 与
+        // owner-meta 之间），且改一次要动多处。
+        verticalArrangement = Arrangement.spacedBy(Space.x2),
         modifier = Modifier.fillMaxSize(),
     ) {
         // ---- 播放器 / 封面（16:9）----
@@ -1297,6 +1357,11 @@ private fun DetailContent(
                 danmakuEnabled = danmakuEnabled,
                 onToggleDanmaku = onToggleDanmaku,
                 onSendDanmaku = onSendDanmaku,
+                // ⚠️ 必须与其它卡片用同一个横向内缩量（见下方 CARD_INSET 说明）。
+                // 此前这里没有 padding，于是工具条是**通栏贴边**的，
+                // 而紧邻的 UP 信息卡是内缩的 —— 两张卡左右边缘不齐，
+                // 视觉上像"有一块没做完"。
+                modifier = Modifier.padding(horizontal = CARD_INSET),
             )
         }
 
@@ -1320,7 +1385,7 @@ private fun DetailContent(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Space.x3)
+                        .padding(horizontal = CARD_INSET)
                         // C 方案：UP 信息区 + 标题 + 简介是**同一张卡片**
                         // （它们语义上属于"这个视频是什么"，不该被切成三块）
                         .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
@@ -1402,13 +1467,21 @@ private fun DetailContent(
                     Spacer(Modifier.height(Space.x3))
 
                     // ---- ④ 标题 + 最右侧的简介倒 V ----
+                    //
+                    // ⚠️ 字重从 SemiBold 降到 Medium（问题 11）。
+                    //
+                    // 详情页是"看视频"的页面，视频画面才是主角；
+                    // 标题用 SemiBold + titleMd 在 1080p 屏上非常"砸眼"，
+                    // 与下方一堆卡片叠加后整体观感过于浓重。
+                    // Medium 仍足以建立层级（标题比正文大且更亮），
+                    // 但不再抢画面。
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = detail.title,
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontSize = FontSize.titleMd,
                                 lineHeight = FontSize.titleMdLine,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Medium,
                                 color = colors.textPrimary,
                             ),
                             maxLines = 2,
@@ -1531,6 +1604,10 @@ private fun DetailContent(
                     onCoin = onCoin,
                     onFavorite = onFavorite,
                     onShare = onShare,
+                    // ⚠️ 与其它卡片统一内缩。此前这里是通栏贴边的，
+                    // 而"视频简介"卡是内缩的 —— 同一屏里两种卡片宽度，
+                    // 用户看到的就是"为什么只有点赞那栏没收缩"。
+                    modifier = Modifier.padding(horizontal = CARD_INSET),
                 )
             }
 
@@ -1540,7 +1617,7 @@ private fun DetailContent(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = Space.x3)
+                            .padding(horizontal = CARD_INSET)
                             .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
                             .padding(vertical = Space.x3),
                     ) {
@@ -1601,7 +1678,7 @@ private fun DetailContent(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = Space.x3)
+                            .padding(horizontal = CARD_INSET)
                             .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
                             .padding(horizontal = Space.x4, vertical = Space.x3),
                     ) {

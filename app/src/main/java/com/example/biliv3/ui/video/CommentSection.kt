@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -17,8 +18,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.Delete
@@ -38,6 +41,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -325,10 +330,19 @@ fun CommentSection(
 }
 
 /**
- * 排序胶囊。
+ * 排序切换项。
  *
- * 选中态用**底色 + 加粗**双重表达（不只靠颜色）——
- * 色弱用户也要能看出当前选的是哪个（§4.6）。
+ * ## ⚠️ 为什么从"胶囊"改成纯文字（问题 6 的根因）
+ *
+ * 首版选中态是 `brandPrimaryDim` 粉底 + 粉字 + 半粗体，未选中是 `bgHover` 灰底。
+ * 结果是评论区顶部出现**两个带底色的胶囊**，在一片文字里非常抢眼 ——
+ * 用户的反馈正是"评论热度的顶框很突出"。
+ *
+ * 排序只是一个**轻量辅助控件**，不该比评论内容本身还显眼。改为纯文字：
+ * - 选中：`textPrimary` + Medium
+ * - 未选中：`textTertiary` + Normal
+ *
+ * 仍然保留**颜色 + 字重**两个维度（不只靠颜色），色弱用户也能分辨。
  */
 @Composable
 private fun SortChip(
@@ -341,14 +355,13 @@ private fun SortChip(
         text = label,
         style = MaterialTheme.typography.labelMedium.copy(
             fontSize = FontSize.label,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (selected) colors.textBrandSafe else colors.textSecondarySafe,
+            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+            color = if (selected) colors.textPrimary else colors.textTertiary,
         ),
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.pill))
-            .background(if (selected) colors.brandPrimaryDim else colors.bgHover)
+            .clip(RoundedCornerShape(Radius.badge))
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x1 + 2.dp),
+            .padding(horizontal = Space.x2, vertical = Space.x1),
     )
 }
 
@@ -363,6 +376,18 @@ private fun SortChip(
  *
  * 但**这里没有 IME 需求**，用 Dialog 其实也无害 —— 之所以仍用浮层，
  * 是为了让"弹层的返回手势优先级"与其它弹层完全一致（统一心智）。
+ *
+ * ## ⚠️ 为什么要收敛尺寸与字重（问题 3 的根因）
+ *
+ * 首版每一行理由都是 `bodyMedium`(14sp) + 上下 `Space.x3`(12dp) 内边距，
+ * 十来个理由铺满整屏，配上半粗体标题 —— 视觉上比视频页任何内容都重，
+ * 用户的反馈是"举报后的 UI 太突出、太抢眼"。
+ *
+ * 举报是个**低频、辅助性**操作，不该喧宾夺主。改为：
+ * - 理由行降到 `bodySm`(13sp) + 更紧的行距，整屏能放下更多且更轻
+ * - 标题降为 `label`(12sp) + `textSecondarySafe`（不再是 SemiBold 主色）
+ * - 面板限高 + 可滚动，避免理由多时撑满全屏
+ * - 顶部加一个把手（grabber），视觉上明确"这是个可下拉关闭的薄面板"
  */
 @Composable
 private fun ReportReasonSheet(
@@ -386,42 +411,66 @@ private fun ReportReasonSheet(
                 // 阻止点击穿透到遮罩（点面板内部不应关闭）
                 .clickable(enabled = false) {}
                 .navigationBarsPadding()
-                .padding(vertical = Space.x3),
+                .padding(top = Space.x2, bottom = Space.x2),
         ) {
+            // 把手：暗示这是可下拉关闭的薄面板，降低"大弹窗"观感
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .width(GRABBER_WIDTH)
+                    .height(GRABBER_HEIGHT)
+                    .clip(RoundedCornerShape(Radius.pill))
+                    .background(colors.borderStrong),
+            )
+
+            Spacer(Modifier.height(Space.x2))
+
             Text(
                 text = "举报理由",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = FontSize.label,
+                    color = colors.textSecondarySafe,
                 ),
-                modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
+                modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x1),
             )
-            reasons.forEach { (code, label) ->
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
-                        color = colors.textPrimary,
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onPick(code) }
-                        .padding(horizontal = Space.x4, vertical = Space.x3),
-                )
-            }
+
             Spacer(Modifier.height(Space.x1))
+
+            // 理由列表：限高 + 可滚动（理由多时不会撑满整屏）
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = REPORT_SHEET_MAX_HEIGHT)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                reasons.forEach { (code, label) ->
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = FontSize.bodySm,
+                            color = colors.textPrimary,
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(code) }
+                            .padding(horizontal = Space.x4, vertical = Space.x2),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(Space.x1))
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(onClick = onDismiss)
-                    .padding(vertical = Space.x3),
+                    .padding(vertical = Space.x2),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "取消",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = FontSize.bodySm,
                         color = colors.textSecondarySafe,
                     ),
                 )
@@ -507,32 +556,85 @@ private fun CommentRow(
             Spacer(Modifier.width(Space.x2))
 
             Column(modifier = Modifier.weight(1f)) {
-                // ---- 昵称 + UP 标记 ----
+                // ---- 昵称 + UP 标记 ············· 时间 · IP属地 ----
+                //
+                // ⚠️ 时间与 IP 属地放在**昵称行右侧**，不再占用操作行
+                // （用户反馈："X天前 有点挡住 回复栏那里了"）。
+                //
+                // 布局约定：
+                // - 第 1 行：昵称 [UP]  ← 昵称可截断，右侧信息不被挤压
+                // - 第 2 行：正文
+                // - 第 3 行：只放操作（回复 / 举报 / 点赞）
+                //
+                // 为什么这样最稳：时间与属地是**只读辅助信息**，
+                // 与"回复/举报/点赞"性质不同；混在一行时窄屏上必然互相挤。
+                // 拆开后操作行只剩按钮，任何屏宽下都不会被文字顶到。
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = comment.userName,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
-                            color = colors.textSecondarySafe,
-                            fontWeight = FontWeight.Medium,
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (comment.isUp) {
-                        Spacer(Modifier.width(Space.x1))
+                    // 昵称 + UP 标记：整组吃剩余宽度（可截断）
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f),
+                    ) {
                         Text(
-                            text = "UP",
+                            text = comment.userName,
                             style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
-                                color = colors.textOnBrand,
+                                fontSize = FontSize.label,
+                                color = colors.textSecondarySafe,
                                 fontWeight = FontWeight.Medium,
                             ),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(Radius.badge))
-                                .background(colors.brandPrimary)
-                                .padding(horizontal = 4.dp, vertical = 1.dp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        if (comment.isUp) {
+                            Spacer(Modifier.width(Space.x1))
+                            Text(
+                                text = "UP",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontSize = FontSize.badge,
+                                    color = colors.textOnBrand,
+                                    fontWeight = FontWeight.Medium,
+                                ),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(Radius.badge))
+                                    .background(colors.brandPrimary)
+                                    .padding(horizontal = 4.dp, vertical = 1.dp),
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.width(Space.x2))
+
+                    // 时间（非 weight：永远完整可见）
+                    Text(
+                        text = formatRelativeTime(comment.ctime),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = FontSize.badge,
+                            // ⚠️ 首版用 textTertiary（浅色 #AEB3B9），实测截图里
+                            // "5天前""4天前"淡到几乎看不见 —— 它比 textSecondary
+                            // 还浅，而 README 早就警告过 textSecondary 只有 2.9:1。
+                            // 改用 textSecondarySafe（浅色 #6B6470，5.8:1）。
+                            color = colors.textSecondarySafe,
+                        ),
+                        maxLines = 1,
+                    )
+
+                    // ---- IP 属地（B 站 APP 样式：紧跟时间，小号灰字）----
+                    //
+                    // 无属地时**整段不渲染**（含分隔间距），不留空位。
+                    // 未登录时接口不返回该字段，所以看不到属属是正常的，
+                    // 不是渲染 bug（实测 `reply_control.location` 仅登录态存在）。
+                    if (comment.hasIpLocation) {
+                        Spacer(Modifier.width(Space.x2))
+                        Text(
+                            text = "IP属地：${comment.ipLocation}",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontSize = FontSize.badge,
+                                color = colors.textSecondarySafe,
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            // 属地是只读信息，不加 clickable
                         )
                     }
                 }
@@ -558,40 +660,14 @@ private fun CommentRow(
 
                 Spacer(Modifier.height(Space.x1))
 
-                // ---- 元信息行：时间 · IP属地 · 回复 · 点赞 · 删除 ----
+                // ---- 操作行：回复 · 举报 · 删除 · 点赞 ----
+                //
+                // ⚠️ 这一行**只放可点操作**，不再放时间与 IP 属地
+                // （用户反馈"X天前 有点挡住回复栏"）。
+                // 时间/属地已移到昵称行右侧，见上方。
+                //
+                // 这样任何屏宽下操作都不会被文字挤压或遮挡。
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = formatRelativeTime(comment.ctime),
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
-                            // ⚠️ 首版用 textTertiary（浅色 #AEB3B9），实测截图里
-                            // "5天前""4天前"淡到几乎看不见 —— 它比 textSecondary
-                            // 还浅，而 README 早就警告过 textSecondary 只有 2.9:1。
-                            // 改用 textSecondarySafe（浅色 #6B6470，5.8:1）。
-                            color = colors.textSecondarySafe,
-                        ),
-                    )
-
-                    // ---- IP 属地（B 站 APP 样式：紧跟时间，小号灰字）----
-                    //
-                    // 位置：与时间同一行、时间右侧 —— 与 B 站 APP 一致。
-                    // 样式：与时间完全相同的字号/颜色令牌，不抢眼。
-                    // 无属地时**整段不渲染**（含分隔点），不留空位。
-                    if (comment.hasIpLocation) {
-                        Spacer(Modifier.width(Space.x2))
-                        Text(
-                            text = "IP属地：${comment.ipLocation}",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
-                                color = colors.textSecondarySafe,
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            // 属地是只读信息，不加 clickable
-                        )
-                    }
-
-                    Spacer(Modifier.width(Space.x3))
                     Text(
                         text = "回复",
                         style = MaterialTheme.typography.labelMedium.copy(
@@ -619,10 +695,9 @@ private fun CommentRow(
                         )
                     }
 
-                    Spacer(Modifier.weight(1f))
-
                     // 删除：只对自己发的评论显示（由 UI 层判断 owner）
                     if (comment.isOwn) {
+                        Spacer(Modifier.width(Space.x3))
                         Icon(
                             imageVector = Icons.Outlined.Delete,
                             contentDescription = "删除评论",
@@ -631,8 +706,11 @@ private fun CommentRow(
                                 .size(Sizes.iconSm + Space.x1)
                                 .clickable { onDelete() },
                         )
-                        Spacer(Modifier.width(Space.x3))
                     }
+
+                    // 点赞推到最右：回复/举报在左、点赞在右，
+                    // 与官方评论区一致，也让长评论下操作区不挤在一起。
+                    Spacer(Modifier.weight(1f))
 
                     // 点赞：已赞用填充图标 + 变色（不依赖颜色单一维度）
                     Icon(
@@ -657,6 +735,7 @@ private fun CommentRow(
                                 fontSize = FontSize.badge,
                                 color = if (comment.liked) colors.brandPrimary else colors.textSecondarySafe,
                             ),
+                            maxLines = 1,
                         )
                     }
                 }
@@ -664,7 +743,27 @@ private fun CommentRow(
         }
 
         // ---- 内嵌回复：**默认折叠** ----
-        if (comment.hasReplies) {
+        //
+        // ⚠️ 嵌套层（isReply=true）**不再渲染折叠开关**（问题 4 的根因）：
+        //
+        // 首版对所有层都渲染「展开 N 条回复」，但嵌套层的调用点传的是
+        // `onToggleReplies = {}`（空 lambda）。于是当接口在某些评论上
+        // 返回了二级 replies 时，嵌套行里会出现一个**点了完全没反应**的
+        // 「展开 N 条回复」—— 就是用户看到的"假回复"。
+        //
+        // 根因不是数据问题，而是"开关渲染了但回调是空的"。
+        // 修法：嵌套层既然已经处在展开区内，就不再套开关，其子回复
+        // **直接平铺**；真正的深层分页由顶层「查看全部」进楼中楼详情页完成。
+        //
+        // 同时把 `repliesExpanded` 的判定收紧为「有回复 且 需要展开」，
+        // 避免"没有更多回复却还显示按钮"。
+        val showReplyToggle = !isReply && comment.hasReplies
+        val showInlineReplies = when {
+            isReply -> comment.hasReplies
+            else -> comment.hasReplies && repliesExpanded
+        }
+
+        if (showReplyToggle) {
             Spacer(Modifier.height(Space.x1))
 
             // 折叠态按钮：`展开 N 条回复 ▾` / `收起 ▴`
@@ -685,64 +784,95 @@ private fun CommentRow(
                     .clickable(onClick = onToggleReplies)
                     .padding(horizontal = Space.x1, vertical = 2.dp),
             )
+        }
 
-            if (repliesExpanded) {
-                Spacer(Modifier.height(Space.x1))
-                Column(
-                    modifier = Modifier
-                        .padding(start = COMMENT_AVATAR + Space.x2)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(Radius.button))
-                        .background(colors.bgHover),
-                    verticalArrangement = Arrangement.spacedBy(0.dp),
-                ) {
-                    comment.replies
-                        .let { if (repliesFullyExpanded) it else it.take(MAX_INLINE_REPLIES) }
-                        .forEach { r ->
-                        CommentRow(
-                            comment = r,
-                            repliesExpanded = false,
-                            onToggleReplies = {},
-                            isLoggedIn = isLoggedIn,
-                            onLike = onLike,
-                            onDelete = onDelete,
-                            onReply = onReply,
-                            onReport = onReport,
-                            onAvatarClick = onAvatarClick,
-                            onViewAllReplies = onViewAllReplies,
-                            onLoginRequired = onLoginRequired,
-                            onExpandAll = onExpandAll,
-                            isReply = true,
+        if (showInlineReplies) {
+            Spacer(Modifier.height(Space.x1))
+            // 层级竖线颜色：用 hairline 描边色（深浅主题各自成立，
+            // 不引入新的硬编码色值 —— 对照 design/tokens）。
+            val replyGuideColor = colors.borderStrong
+            Column(
+                modifier = Modifier
+                    // 嵌套层不再额外缩进 —— 它已经在父级缩进区内，
+                    // 再缩一次会形成"越缩越窄"的阶梯（问题 5）。
+                    .then(
+                        if (isReply) Modifier.fillMaxWidth()
+                        else Modifier
+                            .padding(start = COMMENT_AVATAR + Space.x2)
+                            .fillMaxWidth(),
+                    )
+                    // ⚠️ 去掉 `bgHover` 实底（问题 5 的根因）。
+                    //
+                    // 首版给回复区铺了一层 `bgHover` 灰底 + 圆角，
+                    // 在已是 `bgCard` 的评论卡片上又叠一块色块 ——
+                    // 形成"卡中卡"，视觉上非常突兀，用户反馈"回复区域很突出"。
+                    //
+                    // 改为：**不铺底**，只靠左侧一条 2dp 竖线做层级提示。
+                    // 这比整块色底轻得多，也符合"缩进清晰但不抢眼"的要求。
+                    .drawBehind {
+                        val x = 2.dp.toPx()
+                        drawLine(
+                            color = replyGuideColor,
+                            start = Offset(x, 0f),
+                            end = Offset(x, size.height),
+                            strokeWidth = 2.dp.toPx(),
                         )
                     }
-                    // 回复数超过内嵌上限时给出"查看全部"入口
-                    //
-                    // ⚠️ 首版这里是**死入口** —— 渲染了一个蓝色可点的样子，
-                    // 但 `Modifier` 里没有任何 `clickable`，点了完全没反应。
-                    //
-                    // 修法：复用 `onToggleReplies` 之外的新回调 `onExpandAll`，
-                    // 由 ViewModel 去拉该楼的完整回复（接口层暂无"按 rpid 拉子评论"，
-                    // 所以当前实现是**就地展开全部已加载的回复** —— 至少点了有反应，
-                    // 不会再是死入口）。
-                    if (comment.replyCount > comment.replies.size && !repliesFullyExpanded) {
-                        Text(
-                            text = "查看全部 ${comment.replyCount} 条回复",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
-                                color = colors.textLinkSafe,
-                                fontWeight = FontWeight.Medium,
-                            ),
-                            modifier = Modifier
-                                .padding(
-                                    start = Space.x4,
-                                    bottom = Space.x2,
-                                )
-                                .clip(RoundedCornerShape(Radius.badge))
-                                // 跳楼中楼详情页（真正分页拉全量）
-                                .clickable { onViewAllReplies() }
-                                .padding(horizontal = Space.x1, vertical = 2.dp),
-                        )
-                    }
+                    .padding(start = Space.x3),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
+            ) {
+                comment.replies
+                    .let { if (repliesFullyExpanded) it else it.take(MAX_INLINE_REPLIES) }
+                    .forEach { r ->
+                    CommentRow(
+                        comment = r,
+                        repliesExpanded = false,
+                        onToggleReplies = {},
+                        isLoggedIn = isLoggedIn,
+                        onLike = onLike,
+                        onDelete = onDelete,
+                        onReply = onReply,
+                        onReport = onReport,
+                        onAvatarClick = onAvatarClick,
+                        onViewAllReplies = onViewAllReplies,
+                        onLoginRequired = onLoginRequired,
+                        onExpandAll = onExpandAll,
+                        isReply = true,
+                    )
+                }
+                // 回复数超过内嵌上限时给出"查看全部"入口
+                //
+                // ⚠️ 首版这里是**死入口** —— 渲染了一个蓝色可点的样子，
+                // 但 `Modifier` 里没有任何 `clickable`，点了完全没反应。
+                //
+                // 修法：跳楼中楼详情页，由 `x/v2/reply/reply` 真正分页拉全量。
+                //
+                // ⚠️ 条件必须用 `replyCount > 已展示条数`：
+                // 只有"确实还有没展示的回复"时才给入口，否则会出现
+                // 「已全部展示却仍写着查看全部 N 条」的信息不实。
+                val shownCount = if (repliesFullyExpanded) {
+                    comment.replies.size
+                } else {
+                    minOf(MAX_INLINE_REPLIES, comment.replies.size)
+                }
+                if (!isReply && comment.replyCount > shownCount) {
+                    Text(
+                        text = "查看全部 ${comment.replyCount} 条回复",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = FontSize.badge,
+                            color = colors.textLinkSafe,
+                            fontWeight = FontWeight.Medium,
+                        ),
+                        modifier = Modifier
+                            .padding(
+                                start = Space.x4,
+                                bottom = Space.x2,
+                            )
+                            .clip(RoundedCornerShape(Radius.badge))
+                            // 跳楼中楼详情页（真正分页拉全量）
+                            .clickable { onViewAllReplies() }
+                            .padding(horizontal = Space.x1, vertical = 2.dp),
+                    )
                 }
             }
         }
@@ -757,3 +887,15 @@ private val REPLY_AVATAR = 24.dp
 
 /** 内嵌回复最多显示几条（接口通常给 3 条）。 */
 private const val MAX_INLINE_REPLIES = 3
+
+/** 举报面板的把手尺寸（视觉暗示"可下拉关闭的薄面板"）。 */
+private val GRABBER_WIDTH = 32.dp
+private val GRABBER_HEIGHT = 4.dp
+
+/**
+ * 举报面板理由列表的最大高度。
+ *
+ * 举报理由是长列表（实测 10 条上下），不设上限会撑满整屏 ——
+ * 一个低频辅助操作占据整屏是问题 3 观感突兀的直接来源。
+ */
+private val REPORT_SHEET_MAX_HEIGHT = 320.dp

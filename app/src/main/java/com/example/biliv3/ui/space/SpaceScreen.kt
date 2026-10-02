@@ -2,6 +2,8 @@ package com.example.biliv3.ui.space
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +30,8 @@ import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -111,16 +115,34 @@ fun SpaceScreen(
     val dynamicLoading by viewModel.dynamicLoading.collectAsStateWithLifecycle()
     val following by viewModel.following.collectAsStateWithLifecycle()
     val fans by viewModel.fans.collectAsStateWithLifecycle()
+    val toast by viewModel.toast.collectAsStateWithLifecycle()
 
     var tab by remember { mutableStateOf(0) }
+
+    // ⚠️ ViewModel 里的 toast 必须有人渲染（问题 9 的根因）。
+    //
+    // 此前 SpaceViewModel 认真地在未登录时写 `_toast = "请先登录"`，
+    // 但 SpaceScreen **完全没有消费这个 flow** —— 没有 SnackbarHost、
+    // 没有 LaunchedEffect。于是"未登录点关注"从用户视角就是**毫无反应**：
+    // 事件发出去了，UI 层没有接收者，静默丢弃。
+    //
+    // 这是"状态有、渲染无"的典型缺口，与详情页 UP 头像不可点同类。
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(toast) {
+        toast?.let {
+            snackbar.showSnackbar(it)
+            viewModel.consumeToast()
+        }
+    }
 
     // 切到动态 Tab 才拉动态（避免进页面就打三个接口）
     LaunchedEffect(tab) {
         if (tab == 1) viewModel.loadDynamics()
     }
 
+    Box(modifier = modifier.fillMaxSize()) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(colors.bgBase),
     ) {
@@ -300,6 +322,15 @@ fun SpaceScreen(
             }
         }
     }
+
+        // ---- 一次性提示（关注成功 / 未登录拦截）----
+        SnackbarHost(
+            hostState = snackbar,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = Space.x12),
+        )
+    }
 }
 
 @Composable
@@ -403,7 +434,26 @@ private fun ProfileHeader(
 
         Spacer(Modifier.height(Space.x3))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // ---- 操作行：关注 · 发私信 · 查成分（同一行）----
+        //
+        // ⚠️ 布局修正（问题 10）：此前「查成分」被单独放在**第二行**，
+        // 理由是"上面那行窄屏会挤"。但用户明确要求它在**发私信右方**，
+        // 且实测这一行放得下 —— 挤的根源其实是内边距过大（`Space.x4`
+        // 横向 + 图标），不是按钮数量。
+        //
+        // 修法：
+        // 1. 三个入口收进同一行，横向内边距 `x4 → x3`，按钮间距 `x3 → x2`
+        // 2. 整行 `horizontalScroll` 兜底 —— 极窄屏/大字号下不会把
+        //    任一入口挤出屏幕（比换行更符合"并排"的语义）
+        // 3. 「数据来自 aicu.cc」降为第二行的极小字注脚，
+        //    既不丢来源标注（合规要求），也不再占据操作行宽度
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Space.x2),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+        ) {
             if (showFollowButton) {
                 BrandButton(
                     label = if (isFollowing) "已关注" else "关注",
@@ -411,7 +461,6 @@ private fun ProfileHeader(
                     variant = if (isFollowing) BrandButtonVariant.Outline
                     else BrandButtonVariant.Filled,
                 )
-                Spacer(Modifier.width(Space.x3))
             } else {
                 Text(
                     text = "这是你自己",
@@ -419,81 +468,75 @@ private fun ProfileHeader(
                         fontSize = FontSize.label,
                         color = colors.textTertiary,
                     ),
+                    maxLines = 1,
                 )
-                Spacer(Modifier.width(Space.x3))
             }
 
             // 发私信：自己的主页上不显示（不能给自己发私信）
             if (!isSelf) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.button))
-                        .background(colors.bgHover)
-                        .clickable(onClick = onChatClick)
-                        .padding(horizontal = Space.x4, vertical = Space.x2 + 2.dp),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Outlined.MailOutline,
-                            contentDescription = null,
-                            tint = colors.textSecondarySafe,
-                            modifier = Modifier.size(Sizes.iconMd),
-                        )
-                        Spacer(Modifier.width(Space.x1))
-                        Text(
-                            text = "发私信",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = FontSize.body,
-                                color = colors.textSecondarySafe,
-                            ),
-                        )
-                    }
-                }
+                HeaderActionChip(
+                    icon = Icons.Outlined.MailOutline,
+                    label = "发私信",
+                    onClick = onChatClick,
+                )
             }
-        }
 
-        // ---- 第二行工具入口：查成分 ----
-        //
-        // 放在独立一行而不是挤进上面那行，原因有两个：
-        // 1. 上面那行在窄屏上已经很挤（关注 + 发私信 + 自己的主页文案）
-        // 2. 「查成分」与「关注/私信」不是同一类动作 ——
-        //    前两个是站内社交，它是第三方数据查询，混排会让人误以为同源
-        Spacer(Modifier.height(Space.x3))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.button))
-                    .background(colors.bgHover)
-                    .clickable(onClick = onAicuClick)
-                    .padding(horizontal = Space.x4, vertical = Space.x2 + 2.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ManageSearch,
-                        contentDescription = null,
-                        tint = colors.textSecondarySafe,
-                        modifier = Modifier.size(Sizes.iconMd),
-                    )
-                    Spacer(Modifier.width(Space.x1))
-                    Text(
-                        text = "查成分",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.body,
-                            color = colors.textSecondarySafe,
-                        ),
-                    )
-                }
-            }
-            Spacer(Modifier.width(Space.x2))
-            Text(
-                // 数据来源必须标注 —— aicu 是第三方站点，不能让用户以为这是官方数据
-                text = "数据来自 aicu.cc",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = colors.textTertiary,
-                ),
+            // 查成分：第三方数据查询，不依赖 B 站登录态
+            HeaderActionChip(
+                icon = Icons.AutoMirrored.Outlined.ManageSearch,
+                label = "查成分",
+                onClick = onAicuClick,
             )
         }
+
+        // 来源标注（合规要求：第三方数据必须标明出处）
+        Spacer(Modifier.height(Space.x2))
+        Text(
+            text = "查成分数据来自 aicu.cc（第三方）",
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.badge,
+                color = colors.textTertiary,
+            ),
+        )
+    }
+}
+
+/**
+ * 主页操作行的次要入口胶囊（发私信 / 查成分）。
+ *
+ * 抽出来是因为两者样式完全一致 —— 内联两份必然会漂移
+ * （此前它们就是各写一份，横向内边距也一样）。
+ */
+@Composable
+private fun HeaderActionChip(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+) {
+    val colors = BiliTheme.colors
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(Radius.button))
+            .background(colors.bgHover)
+            .clickable(onClick = onClick)
+            .padding(horizontal = Space.x3, vertical = Space.x2),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = colors.textSecondarySafe,
+            modifier = Modifier.size(Sizes.iconMd),
+        )
+        Spacer(Modifier.width(Space.x1))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = FontSize.body,
+                color = colors.textSecondarySafe,
+            ),
+            maxLines = 1,
+        )
     }
 }
 

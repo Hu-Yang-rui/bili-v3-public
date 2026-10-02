@@ -987,6 +987,15 @@ fun MainShell(
                     // 外链走系统浏览器：aicu 的评论/弹幕最终指向 B 站官方页，
                     // 内嵌 WebView 会变成"套壳浏览器"且登录态串味。
                     onOpenUrl = { url -> openExternalUrl(context, url) },
+                    // 站内跳转（问题 8）：aicu 的评论只带 **av 号**，
+                    // 而视频详情路由走 bvid —— 这里统一转成 `av{n}` 形式，
+                    // 由 VideoRepository.detail 识别后用 `aid` 参数请求
+                    // （官方 view 接口支持 aid/bvid 二选一，无需换算表）。
+                    onOpenCommentInApp = { avId, _ ->
+                        if (avId.isNotEmpty()) {
+                            navController.navigate(Routes.video("av$avId"))
+                        }
+                    },
                     viewModel = viewModel(
                         // uid 进 key：从不同用户主页分别进来时，
                         // 各保留自己的查询状态，不会串数据。

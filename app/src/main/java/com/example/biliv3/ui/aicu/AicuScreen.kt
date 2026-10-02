@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Subtitles
 import androidx.compose.material3.CircularProgressIndicator
@@ -106,6 +107,20 @@ fun AicuScreen(
     onOpenUrl: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AicuViewModel,
+    /**
+     * 「查看评论」——在**站内**打开该条评论所在的视频详情页（问题 8）。
+     *
+     * ## 为什么需要这个入口
+     *
+     * 查成分的价值是"这个人发过什么评论"，但看到一条评论后，
+     * 用户真正想做的是**回到上下文里看原视频**。此前只提供
+     * 「在原站查看」→ 跳系统浏览器，等于把用户踢出 App。
+     *
+     * 参数是 **av 号（纯数字字符串）**，由调用方负责转成 bvid 再导航 ——
+     * 这里不引 `VideoRepository`，保持 aicu 页面只依赖它自己的 ViewModel。
+     * 非视频类评论（专栏 / 动态）没有站内页，传 null 时不显示该入口。
+     */
+    onOpenCommentInApp: (avId: String, rpid: String) -> Unit = { _, _ -> },
 ) {
     val colors = BiliTheme.colors
 
@@ -275,7 +290,14 @@ fun AicuScreen(
                                 }
                             } else {
                                 items(replies, key = { "r-${it.rpid}" }) { r ->
-                                    ReplyCard(reply = r, onOpen = onOpenUrl)
+                                    ReplyCard(
+                                        reply = r,
+                                        onOpen = onOpenUrl,
+                                        // 站内跳转：仅当该评论挂在**视频**上时可用
+                                        // （dyn.type == 1 才有 bvid 可导航）。
+                                        // 专栏/动态没有对应的站内页，只能走外链。
+                                        onOpenInApp = onOpenCommentInApp,
+                                    )
                                 }
                             }
                         }
@@ -696,22 +718,22 @@ private fun MarkRow(label: String, value: String) {
  * 用户看到一堆上下文缺失的短句会完全看不懂。
  */
 @Composable
-private fun ReplyCard(reply: AicuReply, onOpen: (String) -> Unit) {
+private fun ReplyCard(
+    reply: AicuReply,
+    onOpen: (String) -> Unit,
+    onOpenInApp: (String, String) -> Unit = { _, _ -> },
+) {
     val colors = BiliTheme.colors
     val canOpen = reply.targetUrl.isNotEmpty()
+    // 只有视频类评论能站内跳（dyn.type == 1，oid 即 av 号）。
+    // 专栏 / 动态在 App 内没有对应页面，硬跳会得到空白页。
+    val canOpenInApp = reply.dynType == 1 && reply.oid.isNotEmpty()
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Space.x3, vertical = Space.x1)
             .biliCard(shape = RoundedCornerShape(Radius.card))
-            .then(
-                if (canOpen) {
-                    Modifier.clickable { onOpen(reply.targetUrl) }
-                } else {
-                    Modifier
-                },
-            )
             .padding(Space.x4),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -760,23 +782,74 @@ private fun ReplyCard(reply: AicuReply, onOpen: (String) -> Unit) {
             overflow = TextOverflow.Ellipsis,
         )
 
-        if (canOpen) {
+        // ---- 操作行：站内看评论（优先） · 原站查看（兜底）----
+        //
+        // ⚠️ 为什么不再是"整卡片可点 + 一行提示"（问题 8）：
+        //
+        // 首版整张卡片 `clickable { onOpen(targetUrl) }` 直接甩到系统浏览器。
+        // 用户想"看这条评论的上下文"时被踢出 App，且卡片上没有
+        // 任何"我会打开浏览器"的提示，点了才知道。
+        //
+        // 现在改为**显式两个动作**，站内优先：
+        // - 「在 App 内看评论」：只有视频类评论才有（有站内页）
+        // - 「原站查看」：始终可用，但明确标注是外部打开
+        if (canOpen || canOpenInApp) {
             Spacer(Modifier.height(Space.x2))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
-                    contentDescription = null,
-                    tint = colors.textBrandSafe,
-                    modifier = Modifier.size(Sizes.iconSm),
-                )
-                Spacer(Modifier.width(Space.x1))
-                Text(
-                    text = "在原站查看",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textBrandSafe,
-                    ),
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Space.x4),
+            ) {
+                if (canOpenInApp) {
+                    // 站内：带视频图标，主色，视觉上优先
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(Radius.badge))
+                            .clickable { onOpenInApp(reply.oid, reply.rpid) }
+                            .padding(vertical = 2.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.PlayCircleOutline,
+                            contentDescription = null,
+                            tint = colors.textBrandSafe,
+                            modifier = Modifier.size(Sizes.iconSm),
+                        )
+                        Spacer(Modifier.width(Space.x1))
+                        Text(
+                            text = "在 App 内看评论",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontSize = FontSize.badge,
+                                color = colors.textBrandSafe,
+                                fontWeight = FontWeight.Medium,
+                            ),
+                        )
+                    }
+                }
+
+                if (canOpen) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(Radius.badge))
+                            .clickable { onOpen(reply.targetUrl) }
+                            .padding(vertical = 2.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
+                            contentDescription = null,
+                            tint = colors.textTertiary,
+                            modifier = Modifier.size(Sizes.iconSm),
+                        )
+                        Spacer(Modifier.width(Space.x1))
+                        Text(
+                            text = "原站查看",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontSize = FontSize.badge,
+                                color = colors.textTertiary,
+                            ),
+                        )
+                    }
+                }
             }
         }
     }
