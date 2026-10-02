@@ -171,6 +171,13 @@ const val SETTINGS = "settings"
     /** 构造 aicu 路由。[uid] 为 null 时进页面后由用户自己输入。 */
     fun aicu(uid: Long? = null): String =
         if (uid != null && uid > 0L) "aicu?$AICU_ARG_UID=$uid" else "aicu"
+
+    /**
+     * 切换账号（多账号管理）。
+     *
+     * 无参数：列表从加密存储读，页面自己管状态。
+     */
+    const val ACCOUNTS = "accounts"
 }
 
 /**

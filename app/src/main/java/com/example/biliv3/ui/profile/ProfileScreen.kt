@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.outlined.ManageSearch
 import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SwitchAccount
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -205,6 +206,11 @@ private fun GuestPanel(
                 // 设置页不依赖登录态（播放/隐私/通知都是本地偏好），
                 // 所以未登录也必须能进。
                 Entry("设置", Icons.Outlined.Settings, "settings"),
+                // 「切换账号」未登录时**同样要能进** ——
+                // 它不只是"切换"，也是"添加新账号"的入口。
+                // 未登录时点进去会看到空列表 + 「添加新账号」，
+                // 而不是"点了没反应"（需求明确要求未登录要引导登录）。
+                Entry("切换账号", Icons.Outlined.SwitchAccount, "accounts"),
             ),
             enabled = true,
             onNavigate = onNavigate,
@@ -304,6 +310,10 @@ private fun LoggedInPanel(
         EntryGroup(
             entries = listOf(
                 Entry("设置", Icons.Outlined.Settings, "settings"),
+                // 「切换账号」放在设置同级：它是账号级操作，
+                // 与历史/收藏这类"内容入口"性质不同，不该混在一起。
+                // 未登录时也可见（进去能添加新账号），所以 enabled = true。
+                Entry("切换账号", Icons.Outlined.SwitchAccount, "accounts"),
             ),
             enabled = true,
             onNavigate = onNavigate,

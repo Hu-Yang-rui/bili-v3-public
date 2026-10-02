@@ -206,8 +206,14 @@ fun MainShell(
                 // - 「回复我的」未读（受设置项 `notifyReply` 控制）
                 //
                 // 未登录时 `unread()` 直接返回全 0，红点自然不亮。
+                //
+                // 账号版本号进 key：未读数按账号隔离，切号后必须重建，
+                // 否则首页铃铛红点仍来自上一个账号。
+                val accVersionHome by container.accountSync.version
+                    .collectAsStateWithLifecycle()
                 val unreadVm: com.example.biliv3.ui.message.UnreadBadgeViewModel =
                     viewModel(
+                        key = "unread-$accVersionHome",
                         factory = com.example.biliv3.ui.message.UnreadVmFactory(
                             container.pmRepository,
                         ),
@@ -544,7 +550,21 @@ fun MainShell(
             composable(Routes.LOGIN) {
                 LoginScreen(
                     onBack = { navController.popBackStack() },
-                    onLoggedIn = { navController.popBackStack() },
+                    onLoggedIn = {
+                        // ⚠️ 所有登录方式（扫码 / 手机号 / 密码 / WebView）
+                        // 都汇聚到这一个回调 —— 在这里做两件事，保证不漏：
+                        //
+                        // 1. 把新账号**存入多账号列表**（否则「切换账号」里
+                        //    看不到刚登录的号）
+                        // 2. 广播账号变化 —— 首页/收藏/历史等订阅方重新加载
+                        //
+                        // 放在这里而不是各登录分支里：登录入口有 4 种，
+                        // 分散写必然漏掉其中一两种（"扫码登录后列表里没有
+                        // 这个号"就是这么来的）。
+                        container.accountSwitcher.rememberCurrent()
+                        container.accountSync.notifyChanged()
+                        navController.popBackStack()
+                    },
                     viewModel = viewModel(
                         factory = LoginViewModelFactory(container.authRepository),
                     ),
@@ -555,10 +575,14 @@ fun MainShell(
             composable(Routes.DYNAMIC) {
                 // ⚠️ 此前是 PlaceholderScreen("动态页依赖登录态，将在后续阶段接入")
                 // —— **一个底部 Tab 点进去是占位图**。
+                // 动态流来自"关注的 UP 主"，完全按账号隔离 ——
+                // 切号后必须重建，否则看到上一个账号的关注动态。
+                val accVersion by container.accountSync.version.collectAsStateWithLifecycle()
                 DynamicScreen(
                     onLoginRequired = { navController.navigate(Routes.LOGIN) },
                     onVideoClick = { bvid -> navController.navigate(Routes.video(bvid)) },
                     viewModel = viewModel(
+                        key = "dynamic-$accVersion",
                         factory = com.example.biliv3.ui.dynamic.DynamicVmFactory(
                             container.dynamicRepository,
                         ),
@@ -652,12 +676,20 @@ fun MainShell(
             composable(Routes.PROFILE) {
                 // 每次回到本页都重查登录态：从登录页返回时状态会变
                 val profileVm: ProfileViewModel = viewModel(
-                    factory = ProfileViewModelFactory(container.authRepository),
+                    factory = ProfileViewModelFactory(
+                        repo = container.authRepository,
+                        // 退出登录走 switcher（保留账号到多账号列表）
+                        switcher = container.accountSwitcher,
+                        // 切号后本页自动刷新，避免显示旧账号
+                        accountSync = container.accountSync,
+                    ),
                 )
                 // ⚠️ 收藏版本号也参与触发：在详情页收藏/取消后，
                 // 「我的」页的收藏数等统计需要同步，否则显示的是旧值。
                 val favVersion by container.favoritesSync.version.collectAsStateWithLifecycle()
-                LaunchedEffect(currentRoute, favVersion) {
+                // ⚠️ 账号版本号同样参与：切号后必须重拉用户信息
+                val accVersion by container.accountSync.version.collectAsStateWithLifecycle()
+                LaunchedEffect(currentRoute, favVersion, accVersion) {
                     if (currentRoute == Routes.PROFILE) profileVm.refresh()
                 }
                 ProfileScreen(
@@ -751,7 +783,12 @@ fun MainShell(
 
             // ---------- 历史记录 ----------
             composable(Routes.HISTORY) {
+                // ⚠️ 账号版本号进 key：切号后强制重建 VM → 重新拉新账号的历史。
+                // 不这么做的话，切号后这里仍显示**上一个账号**的历史记录
+                // （典型的"串号"）。
+                val accVersion by container.accountSync.version.collectAsStateWithLifecycle()
                 val vm: HistoryViewModel = viewModel(
+                    key = "history-$accVersion",
                     factory = LibraryViewModelFactory(container.libraryRepository),
                 )
                 val entries by vm.entries.collectAsStateWithLifecycle()
@@ -780,9 +817,12 @@ fun MainShell(
                 // 这是"状态联动"落地的关键。不这样的话，
                 // 用户在详情页收藏后回到这里，列表还是旧的。
                 val favVersion by container.favoritesSync.version.collectAsStateWithLifecycle()
+                // 账号版本号同样进 key：切号后收藏夹属于新账号，
+                // 必须重建（否则看到的是旧账号的收藏）
+                val accVersion by container.accountSync.version.collectAsStateWithLifecycle()
 
                 val vm: FavoriteViewModel = viewModel(
-                    key = "fav-overview-$favVersion",
+                    key = "fav-overview-$favVersion-$accVersion",
                     factory = LibraryViewModelFactory(container.libraryRepository),
                 )
                 val folders by vm.folders.collectAsStateWithLifecycle()
@@ -898,7 +938,10 @@ fun MainShell(
 
             // ---------- 稍后再看 ----------
             composable(Routes.TO_VIEW) {
+                // 账号版本号进 key：稍后再看是按账号存的，切号必须重建
+                val accVersion by container.accountSync.version.collectAsStateWithLifecycle()
                 val vm: ToViewViewModel = viewModel(
+                    key = "toview-$accVersion",
                     factory = LibraryViewModelFactory(container.libraryRepository),
                 )
                 val videos by vm.videos.collectAsStateWithLifecycle()
@@ -920,7 +963,10 @@ fun MainShell(
             // 不属于高频一级入口）。放「我的」页与历史/收藏同级，
             // 符合"个人相关功能聚在一起"的信息架构。
             composable(Routes.MESSAGES) {
+                // 私信按账号隔离，切号必须重建 VM
+                val accVersion by container.accountSync.version.collectAsStateWithLifecycle()
                 val vm: com.example.biliv3.ui.message.MessageListViewModel = viewModel(
+                    key = "messages-$accVersion",
                     factory = com.example.biliv3.ui.message.MessageVmFactory(
                         container.pmRepository,
                     ),
@@ -1003,6 +1049,24 @@ fun MainShell(
                         factory = com.example.biliv3.ui.aicu.AicuVmFactory(
                             repo = container.aicuRepository,
                             initialUid = uid,
+                        ),
+                    ),
+                )
+            }
+
+            // ---------- 切换账号 ----------
+            composable(Routes.ACCOUNTS) {
+                com.example.biliv3.ui.accounts.AccountsScreen(
+                    onBack = { navController.popBackStack() },
+                    // 添加新账号 = 去登录页；登录成功后由 LOGIN 的
+                    // onLoggedIn 自动 rememberCurrent + 广播，回来就能看到新账号
+                    onAddAccount = { navController.navigate(Routes.LOGIN) },
+                    viewModel = viewModel(
+                        key = "accounts",
+                        factory = com.example.biliv3.ui.accounts.AccountsVmFactory(
+                            switcher = container.accountSwitcher,
+                            // 每次读实时值（切号后立刻变化），不缓存快照
+                            currentMid = { container.authStore.mid },
                         ),
                     ),
                 )

@@ -28,7 +28,7 @@ import okhttp3.HttpUrl
  * DataStore 没有等价的加密封装，自己实现要手写 KeyStore + AES-GCM，
  * 容易出错。这里优先选成熟方案。
  */
-class AuthStore(context: Context) {
+class AuthStore(context: Context) : AuthState {
 
     private val prefs: SharedPreferences = run {
         val masterKey = MasterKey.Builder(context)
@@ -50,26 +50,26 @@ class AuthStore(context: Context) {
      * 读公开、写仅限模块内 —— 只有 [AuthCookieJar] 应该写入，
      * 其他调用方误写会破坏登录态。
      */
-    var cookie: String
+    override var cookie: String
         get() = prefs.getString(KEY_COOKIE, "").orEmpty()
         internal set(value) {
             prefs.edit().putString(KEY_COOKIE, value).apply()
         }
 
     /** 登录用户的 mid。0 表示未登录。 */
-    var mid: Long
+    override var mid: Long
         get() = prefs.getLong(KEY_MID, 0L)
         private set(value) {
             prefs.edit().putLong(KEY_MID, value).apply()
         }
 
-    var userName: String
+    override var userName: String
         get() = prefs.getString(KEY_NAME, "").orEmpty()
         private set(value) {
             prefs.edit().putString(KEY_NAME, value).apply()
         }
 
-    var userFace: String
+    override var userFace: String
         get() = prefs.getString(KEY_FACE, "").orEmpty()
         private set(value) {
             prefs.edit().putString(KEY_FACE, value).apply()
@@ -100,7 +100,7 @@ class AuthStore(context: Context) {
             .orEmpty()
 
     /** 保存登录结果。 */
-    fun save(cookie: String, mid: Long, name: String, face: String) {
+    override fun save(cookie: String, mid: Long, name: String, face: String) {
         prefs.edit()
             .putString(KEY_COOKIE, cookie)
             .putLong(KEY_MID, mid)
@@ -115,7 +115,7 @@ class AuthStore(context: Context) {
      * 只清登录态，**保留 buvid**（设备指纹）——
      * 清掉会让下次请求看起来像全新设备，反而更容易触发风控。
      */
-    fun clear() {
+    override fun clear() {
         prefs.edit()
             .remove(KEY_COOKIE)
             .remove(KEY_MID)

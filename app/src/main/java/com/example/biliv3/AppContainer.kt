@@ -58,6 +58,28 @@ class AppContainer(context: Context) {
     val authStore: AuthStore = AuthStore(appContext)
 
     /**
+     * 多账号列表存储（同样加密）。
+     *
+     * 与 [authStore] 分工：[authStore] 存"**当前**生效账号"，
+     * 本类存"曾经登录过的**全部**账号"，供「切换账号」使用。
+     */
+    val accountStore: com.example.biliv3.data.auth.AccountStore =
+        com.example.biliv3.data.auth.AccountStore(appContext)
+
+    /**
+     * 账号切换的全局广播。
+     *
+     * 切号后所有展示登录态数据的页面（首页推荐 / 收藏 / 历史 /
+     * 消息 / 私信 / 个人中心…）订阅它并重新加载，避免旧账号数据残留。
+     */
+    val accountSync: com.example.biliv3.data.auth.AccountSync =
+        com.example.biliv3.data.auth.AccountSync()
+
+    /** 账号切换器：多账号读写的唯一入口（保证"先存旧、再写新、后广播"顺序）。 */
+    val accountSwitcher: com.example.biliv3.data.auth.AccountSwitcher =
+        com.example.biliv3.data.auth.AccountSwitcher(authStore, accountStore, accountSync)
+
+    /**
      * CookieJar：读写均落到 [AuthStore]，登录态跨重启保持。
      *
      * `AGENTS.md` §3.2 验收标准要求「重启 App 仍是登录态」。
