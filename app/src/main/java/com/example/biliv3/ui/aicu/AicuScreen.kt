@@ -119,8 +119,12 @@ fun AicuScreen(
      * 参数是 **av 号（纯数字字符串）**，由调用方负责转成 bvid 再导航 ——
      * 这里不引 `VideoRepository`，保持 aicu 页面只依赖它自己的 ViewModel。
      * 非视频类评论（专栏 / 动态）没有站内页，传 null 时不显示该入口。
+     *
+     * 同时把 `rpid` 与 `dynType` 一起传出：
+     * - `rpid` 让详情页能**定位到那条评论**（否则只是打开视频）
+     * - `dynType` 让调用方判断能否用视频页承载（只有 1=视频 可以）
      */
-    onOpenCommentInApp: (avId: String, rpid: String) -> Unit = { _, _ -> },
+    onOpenCommentInApp: (avId: String, rpid: String, dynType: Int) -> Unit = { _, _, _ -> },
 ) {
     val colors = BiliTheme.colors
 
@@ -721,7 +725,7 @@ private fun MarkRow(label: String, value: String) {
 private fun ReplyCard(
     reply: AicuReply,
     onOpen: (String) -> Unit,
-    onOpenInApp: (String, String) -> Unit = { _, _ -> },
+    onOpenInApp: (String, String, Int) -> Unit = { _, _, _ -> },
 ) {
     val colors = BiliTheme.colors
     val canOpen = reply.targetUrl.isNotEmpty()
@@ -805,7 +809,7 @@ private fun ReplyCard(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .clip(RoundedCornerShape(Radius.badge))
-                            .clickable { onOpenInApp(reply.oid, reply.rpid) }
+                            .clickable { onOpenInApp(reply.oid, reply.rpid, reply.dynType) }
                             .padding(vertical = 2.dp),
                     ) {
                         Icon(

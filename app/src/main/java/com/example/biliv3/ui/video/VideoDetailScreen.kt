@@ -45,6 +45,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.alpha
+import com.example.biliv3.design.tokens.Motion
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -117,6 +122,14 @@ import com.example.biliv3.ui.component.VideoCard
 fun VideoDetailScreen(
     bvid: String,
     windowSize: WindowSize,
+    /**
+     * 进入后要定位的评论 rpid（空 = 不定位）。
+     *
+     * 来自「AI 查成分 → 在 APP 内查看」：只打开视频是不够的，
+     * 用户还得自己在几百条评论里翻。带上它后会自动切评论 Tab、
+     * 翻页找到该评论、滚动并短暂高亮。
+     */
+    focusRpid: String = "",
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
     onVideoClick: (String) -> Unit = {},
@@ -165,6 +178,10 @@ fun VideoDetailScreen(
     onOwnerClick: (Long) -> Unit = {},
     /** 「查看全部 N 条回复」→ 楼中楼详情页。(oid, root, upMid) */
     onViewAllReplies: (com.example.biliv3.data.model.CommentItem) -> Unit = {},
+    /** 要定位的评论 rpid（null = 不定位）。AI 查成分「在 APP 内查看」用。 */
+    focusCommentRpid: String? = null,
+    /** 定位完成（滚动+高亮）后回调，上层清空定位目标。 */
+    onFocusCommentHandled: () -> Unit = {},
     /**
      * 打开楼中楼详情页（oid, root, upMid）。
      *
@@ -339,6 +356,20 @@ fun VideoDetailScreen(
      * 反而成了默认视图）。评论需用户主动切换。
      */
     var commentTabSelected by remember { mutableStateOf(false) }
+
+    // ---- 定位到指定评论（AI 查成分「在 APP 内查看」）----
+    //
+    // 进来时若带了 focusRpid：切到评论 Tab 并请求 ViewModel 翻页找到它。
+    // 用 `focusRpid` 作 key —— 同一个页面被不同评论复用时会重新触发。
+    LaunchedEffect(focusRpid) {
+        if (focusRpid.isNotEmpty()) {
+            commentTabSelected = true
+            viewModel.focusComment(focusRpid)
+        }
+    }
+
+    val focusCommentRpid by viewModel.focusCommentRpid.collectAsStateWithLifecycle()
+    val focusingComment by viewModel.focusingComment.collectAsStateWithLifecycle()
 
     /** 一次性提示（发弹幕入口用，复用现有 snackbar 通路）。 */
     var toastMessage by remember { mutableStateOf<String?>(null) }
@@ -593,6 +624,9 @@ fun VideoDetailScreen(
                     interaction = interaction,
                     descExpanded = descExpanded,
                     isFullscreen = isFullscreen,
+                    // 定位到指定评论（AI 查成分「在 APP 内查看」）
+                    focusCommentRpid = focusCommentRpid,
+                    onFocusCommentHandled = viewModel::consumeFocusComment,
                     activeSubtitle = activeSubtitle,
                     danmaku = danmaku,
                     danmakuEnabled = danmakuEnabled,
@@ -1127,6 +1161,29 @@ private fun MetaItem(
  * 内层画 36dp 的可见圆 —— 直接给可见圆钮设 48dp 会让它视觉变大，
  * 那正是这次要修的问题。
  */
+/**
+ * 播放器左上角返回键。
+ *
+ * ## ⚠️ 为什么**不能用 `AnimatedVisibility` 控制可点性**（修过的一个真 bug）
+ *
+ * 此前实现是 `AnimatedVisibility(visible = chromeVisible) { ...clickable... }`。
+ * `AnimatedVisibility(visible = false)` 会把整棵子树**移出组合**（不只是变透明），
+ * 于是：
+ *
+ * - 默认进页面 `chromeVisible = false` → **返回键根本不存在**，点左上角是点空气
+ * - 自动隐藏 3 秒后再次消失 → 又要先点一下画面才能点返回
+ *
+ * 用户感受就是「退出键时灵时不灵」—— 其实是「有时压根没有这个按钮」。
+ *
+ * ## 现在的做法：**常驻可点，只让视觉淡出**
+ *
+ * 用 `alpha` 控制可见度，组件**始终在组合里、始终可点**。
+ * 淡出到 0 时用户看不见它，但左上角依然是有效退出区 ——
+ * 这与 YouTube / 官方客户端的肌肉记忆一致（左上角永远是退出）。
+ *
+ * ⚠️ 不要改回 `AnimatedVisibility`。若确实要"不可见时也不可点"，
+ * 必须先想清楚：那时用户要靠什么退出？
+ */
 @Composable
 private fun FloatingBackButton(
     onClick: () -> Unit,
@@ -1134,37 +1191,35 @@ private fun FloatingBackButton(
     modifier: Modifier = Modifier,
 ) {
     val colors = BiliTheme.colors
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(),
-        exit = fadeOut(),
-        modifier = modifier,
+    // 视觉淡入淡出，但组件不离开组合 → 命中区始终存在
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(Motion.PAGE_FADE_MS, easing = Motion.standard),
+        label = "backButtonAlpha",
+    )
+
+    Box(
+        modifier = modifier
+            .statusBarsPadding()
+            .padding(start = Space.x2, top = Space.x2)
+            .size(PLAYER_CHROME_TOUCH)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        // 外层：只负责撑出 ≥48dp 的可点区域（视觉不可见）
         Box(
             modifier = Modifier
-                .statusBarsPadding()
-                .padding(start = Space.x2, top = Space.x2)
-                .size(PLAYER_CHROME_TOUCH)
-                .clickable(onClick = onClick),
+                .size(PLAYER_CHROME_BUTTON)
+                .alpha(alpha)
+                .clip(CircleShape)
+                .background(colors.overlayControl),
             contentAlignment = Alignment.Center,
         ) {
-            // 内层：真正的视觉圆钮，尺寸与右上角一致
-            Box(
-                modifier = Modifier
-                    .size(PLAYER_CHROME_BUTTON)
-                    .clip(CircleShape)
-                    .background(colors.overlayControl),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "返回",
-                    tint = colors.onOverlay,
-                    // 图标比圆钮小一档，留出视觉呼吸（与右上角同规格）
-                    modifier = Modifier.size(Sizes.iconMd),
-                )
-            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "返回",
+                tint = colors.onOverlay,
+                modifier = Modifier.size(Sizes.iconMd),
+            )
         }
     }
 }
@@ -1183,6 +1238,15 @@ private fun DetailContent(
     interaction: com.example.biliv3.data.api.InteractionState,
     descExpanded: Boolean,
     isFullscreen: Boolean,
+    /**
+     * 要定位的评论 rpid（null = 不定位）。
+     *
+     * 来自「AI 查成分 → 在 APP 内查看」：只打开视频不够，
+     * 用户还得自己在几百条评论里翻。
+     */
+    focusCommentRpid: String?,
+    /** 定位完成（滚动 + 高亮）后回调，上层据此清空定位目标。 */
+    onFocusCommentHandled: () -> Unit,
     activeSubtitle: com.example.biliv3.data.subtitle.SubtitleBody?,
     danmaku: List<com.example.biliv3.data.danmaku.DanmakuItem>,
     danmakuEnabled: Boolean,
@@ -1403,6 +1467,9 @@ private fun DetailContent(
                 reportReasons = reportReasons,
                 onAvatarClick = onAvatarClick,
                 onViewAllReplies = onViewAllReplies,
+                // 定位到指定评论（AI 查成分「在 APP 内查看」）
+                focusRpid = focusCommentRpid,
+                onFocusHandled = onFocusCommentHandled,
                 onLoginRequired = onLoginRequired,
                 modifier = Modifier
                     .weight(1f)
@@ -1890,6 +1957,62 @@ private fun DetailContent(
 }
 
 /**
+ * 播放器顶部安全区（刘海 / 灵动岛 / 挖孔）。
+ *
+ * ## 为什么只有视频页需要
+ *
+ * 视频页是**唯一**全屏纯黑（播放器顶到状态栏）的页面，所以：
+ * - 黑带与画面同色 → 视觉上是播放器的自然延伸，不突兀
+ * - 状态栏图标在这里必须**浅色**（黑底 + 深色图标 = 看不见）
+ *
+ * 而首页/我的/搜索是浅色页面，凭空加黑带非常突兀
+ * （试过全局加，结论是错的）。所以黑带只属于视频页。
+ *
+ * ## 两件事一起做
+ *
+ * 1. **画一条状态栏高度的黑带** —— 盖住"内容铺到状态栏底下"的那一段
+ * 2. **把状态栏图标切成浅色** —— 否则黑底上图标隐形
+ *
+ * ⚠️ 高度取 `WindowInsets.statusBars` 的**实时值**，不写死：
+ * 灵动岛机型比普通刘海更高，写死必然错位。
+ *
+ * ⚠️ 状态栏图标颜色是**全局窗口属性**，必须在离开页面时**还原**，
+ * 否则会把"浅色图标"泄漏给后续的浅色页面（那里需要深色图标）。
+ */
+@Composable
+private fun PlayerSafeAreaTop() {
+    val colors = BiliTheme.colors
+    val view = androidx.compose.ui.platform.LocalView.current
+    val statusBarHeight = WindowInsets.statusBars
+        .asPaddingValues()
+        .calculateTopPadding()
+
+    // 进入本页 → 浅色图标（配黑底）；离开 → 还原成主题原本的设置
+    DisposableEffect(view) {
+        val window = (view.context as? android.app.Activity)?.window
+        val controller = window?.let {
+            androidx.core.view.WindowCompat.getInsetsController(it, view)
+        }
+        val prev = controller?.isAppearanceLightStatusBars
+        controller?.isAppearanceLightStatusBars = false
+        onDispose {
+            // 还原而不是硬编码 true：深色主题下原本就是 false，
+            // 硬写 true 会让深色主题的状态栏图标变深、同样看不见。
+            if (prev != null) controller.isAppearanceLightStatusBars = prev
+        }
+    }
+
+    if (statusBarHeight > 0.dp) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(statusBarHeight)
+                .background(colors.playerBackground),
+        )
+    }
+}
+
+/**
  * 播放器区域：封面 / 画面 + 控制层。
  *
  * ## 未起播时显示封面 + 播放按钮
@@ -1931,11 +2054,13 @@ private fun PlayerArea(
     /**
      * 控件与浮动返回按钮的**共享可见性**。
      *
-     * 默认 alse：页面一进来就是**纯画面**（无任何浮层），
+     * 默认 false：页面一进来就是**纯画面**（无任何浮层），
      * 与官方结构一致。点一下画面才浮现返回按钮/控件，
      * 再点或播放中 3 秒后自动淡出。
      */
     var chromeVisible by remember { mutableStateOf(false) }
+
+    PlayerSafeAreaTop()
 
     Box(modifier = modifier) {
         when {
@@ -2265,27 +2390,31 @@ private const val DANMAKU_IDLE_POLL_MS = 2000L
  */
 private val TITLE_TWO_LINES = 44.dp
 
-/** 未起播时中央播放按钮。 */
-private val PLAY_BUTTON = 64.dp
+/**
+ * 未起播时中央播放按钮。
+ *
+ * 56dp（原 64dp）：64dp 在一个 16:9 的播放器里视觉占比过大，
+ * 用户反馈"播放区被按钮占了"。56dp 仍然一眼可见且好点。
+ */
+private val PLAY_BUTTON = 56.dp
 
 /**
  * 播放器浮层按钮的**统一视觉尺寸**（返回 / 小窗 / 全屏 / 齿轮共用）。
  *
- * 36dp：足够辨识，又不至于在画面上太抢眼。
+ * 32dp（原 36dp）：播放区要"更大更干净"，浮层元素整体收一档。
+ * 32dp 是 Material 图标的标准档位，辨识度不受影响。
  *
  * 抽成常量而不是各自写死：此前返回键用 `Space.minTouchTarget`(48dp)、
  * 右上角那组用 36dp —— 同一层浮层里两种圆钮大小，
  * 左上角明显比右上角大一圈，用户反馈"退出键过大、太抢眼"。
- *
- * 现在四颗按钮视觉完全一致，改一处即全局生效。
  */
-private val PLAYER_CHROME_BUTTON = 36.dp
+private val PLAYER_CHROME_BUTTON = 32.dp
 
 /**
  * 播放器浮层按钮的**触摸目标**尺寸（≥48dp，满足无障碍最小点击区）。
  *
  * 视觉只有 [PLAYER_CHROME_BUTTON]，但命中区要够大 ——
- * 做法是外层透明 Box 撑到 48dp、内层画 36dp 的圆。
+ * 做法是外层透明 Box 撑到 48dp、内层画 32dp 的圆。
  * 直接给可见圆钮设 48dp 会让它视觉上变大（就是这次要修的问题）。
  */
 private val PLAYER_CHROME_TOUCH = Space.minTouchTarget

@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.DownloadDone
 import androidx.compose.material.icons.automirrored.outlined.ManageSearch
-import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.SmartDisplay
 import androidx.compose.material.icons.outlined.Settings
@@ -177,7 +176,9 @@ private fun GuestPanel(
                 Entry("历史记录", Icons.Filled.History, null),
                 Entry("我的收藏", Icons.Filled.Star, null),
                 Entry("稍后再看", Icons.Outlined.Schedule, null),
-                Entry("我的消息", Icons.Outlined.MailOutline, null),
+                // ⚠️ 这里**刻意不放**「我的消息」。
+                // 消息入口统一在首页右上角铃铛（那里还有未读红点），
+                // 两处入口是重复的 —— 重复入口会让用户以为"两个地方不一样"。
             ),
             enabled = false,
         )
@@ -301,9 +302,12 @@ private fun LoggedInPanel(
                 // `VideoDownloader`（315 行）写好了却没有任何页面能进。
                 // 它不依赖登录态（本地文件），所以未登录也该能进。
                 Entry("离线缓存", Icons.Outlined.DownloadDone, "downloads"),
-                // 私信入口放这里（与历史/收藏同级）而不是底部导航：
-                // 底部已有 3 个 tab，再加会挤；私信也不是高频一级入口。
-                Entry("我的消息", Icons.Outlined.MailOutline, "messages"),
+                // ⚠️ 这里**刻意不放**「我的消息」。
+                //
+                // 消息入口统一到**首页右上角铃铛**：那里还带未读红点，
+                // 是唯一能提示"有新消息"的地方。在「我的」再放一个是
+                // 重复入口 —— 用户会疑惑两处是否不同，且红点只在一处出现，
+                // 从「我的」进去看不到任何未读提示。
                 // 「查成分」同样不依赖登录态（第三方 aicu 聚合），
                 // 但已登录用户更可能用它查别人，所以两处都放。
                 Entry("查成分", Icons.AutoMirrored.Outlined.ManageSearch, "aicu"),

@@ -275,6 +275,19 @@ private fun FolderGroup(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+
+            // ---- 公开 / 私密标识 ----
+            //
+            // 紧跟标题右侧（不是贴最右）—— 它是**标题的属性**，
+            // 与标题同属一组信息；贴最右会和"内容数 + 箭头"混在一起，
+            // 看起来像独立的第三列。
+            //
+            // 视觉刻意低调：小字号 + 弱底色胶囊，不抢标题。
+            // 用文字而不是图标：图标需要额外学习成本，且"公开/私密"
+            // 只有两个状态，文字最直白。
+            Spacer(Modifier.width(Space.x2))
+            VisibilityBadge(isPrivate = folder.isPrivate)
+
             Spacer(Modifier.width(Space.x2))
             Text(
                 text = "· ${folder.mediaCount}个内容",
@@ -335,10 +348,42 @@ private fun FolderGroup(
     }
 }
 
+/**
+ * 收藏夹的「公开 / 私密」标识。
+ *
+ * ## 为什么用文字而不是图标
+ *
+ * 只有两个状态，文字最直白、零学习成本；图标（锁 / 地球）需要用户
+ * 自己建立映射，反而慢。官方也是文字。
+ *
+ * ## 视觉为什么这么弱
+ *
+ * 它只是标题的**附属属性**，不该和标题抢视觉。所以：
+ * - 字号用最小的 `FontSize.badge`
+ * - 私密用中性底色 + 次文字色，**不用品牌粉** —— 粉色在这套主题里
+ *   表示"可交互/激活"，拿来标记"私密"会让用户误以为可点
+ * - 圆角用 `Radius.badge`(2dp) 的小标签规格，不是胶囊
+ */
+@Composable
+private fun VisibilityBadge(isPrivate: Boolean) {
+    val colors = BiliTheme.colors
+    Text(
+        text = if (isPrivate) "私密" else "公开",
+        style = MaterialTheme.typography.labelMedium.copy(
+            fontSize = FontSize.badge,
+            color = colors.textTertiary,
+        ),
+        maxLines = 1,
+        modifier = Modifier
+            .clip(RoundedCornerShape(Radius.badge))
+            .background(colors.bgHover)
+            .padding(horizontal = 4.dp, vertical = 1.dp),
+    )
+}
+
 /** 收藏夹预览格：封面 + 标题一行。 */
 @Composable
-private fun FavPreviewCell(
-    entry: FavoriteEntry,
+private fun FavPreviewCell(    entry: FavoriteEntry,
     onClick: () -> Unit,
 ) {
     val colors = BiliTheme.colors
@@ -528,7 +573,12 @@ private fun FavoriteRow(
             // 失效视频没有可跳转的详情页，禁用点击而不是跳过去报错
             .clickable(enabled = !entry.isInvalid, onClick = onClick)
             .padding(horizontal = Space.x3, vertical = Space.x3),
-        verticalAlignment = Alignment.Top,
+        // ⚠️ Bottom：⋮ 要贴**右下角**，不是垂直居中。
+        //
+        // 居中时它会浮在行高中间，与右侧文字列"对齐但不贴合"，
+        // 看起来像悬空的一颗点。贴右下角后与卡片右下角对齐，
+        // 视觉上有明确的落点（官方也是右下）。
+        verticalAlignment = Alignment.Bottom,
     ) {
         Box(
             modifier = Modifier
@@ -615,6 +665,10 @@ private fun FavoriteRow(
         // ---- 更多菜单（⋮）----
         // 用 ⋮ 而不是删除图标：删除是破坏性操作，不适合裸暴露在列表上；
         // 且 ⋮ 可承载多个动作（分享 / 查看 UP / 取消收藏）
+        //
+        // 视觉 18dp（比原先的 iconLg 更小）—— 它只是次要操作入口，
+        // 不该在列表里抢视觉。命中区仍是 48dp（外层透明 Box 撑开），
+        // 所以"看着小、点着准"。
         Box(
             modifier = Modifier
                 .size(Space.minTouchTarget)
@@ -626,7 +680,7 @@ private fun FavoriteRow(
                 imageVector = Icons.Filled.MoreVert,
                 contentDescription = "更多操作",
                 tint = colors.textTertiary,
-                modifier = Modifier.size(Sizes.iconLg),
+                modifier = Modifier.size(Sizes.iconMd),
             )
         }
     }

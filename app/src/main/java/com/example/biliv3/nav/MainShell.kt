@@ -15,6 +15,12 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -120,6 +126,33 @@ fun MainShell(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
+    /**
+     * 统一的「安全返回」。
+     *
+     * ## 为什么不能直接用 `navController.popBackStack()`
+     *
+     * `popBackStack()` 在**栈里只剩当前页**时返回 `false` 且什么都不做 ——
+     * 页面就**卡住了**：返回键点了没反应、手势也退不出去。
+     * 这不是理论风险，而是本项目的真实症状（登录后卡在「我的」页）。
+     *
+     * 触发场景：
+     * - 进程被系统回收后重建，恢复的栈里只有登录页/二级页
+     * - deep link / 通知直接拉起二级页
+     * - 从 tab 反复横跳后栈被 popUpTo 清空
+     *
+     * 所以：弹栈失败就**兜底回首页**，保证任何页面都能退出去。
+     */
+    val safeBack: () -> Unit = {
+        if (!navController.popBackStack()) {
+            navController.navigate(Routes.HOME) {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    inclusive = false
+                }
+                launchSingleTop = true
+            }
+        }
+    }
+
     val tabRoutes = listOf(Routes.HOME, Routes.DYNAMIC, Routes.PROFILE)
     // PiP 下不显示底栏
     val showBottomNav = !isInPip && windowSize.hasBottomNav && currentRoute in tabRoutes
@@ -131,6 +164,15 @@ fun MainShell(
         // inset 由各页面自行消费（HomeScreen 的顶栏要 statusBars），
         // 这里只处理底栏的 navigationBars。
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        // ⚠️ 这里**刻意不画顶部安全区**。
+        //
+        // 曾经在 Scaffold 的 topBar 上铺过一条全局黑带，想"一处生效、全页面覆盖"。
+        // 结果是错的：只有**视频播放页**需要它（那里本来就是纯黑播放器，
+        // 黑带是画面的自然延伸）；而首页/我的/搜索这些**浅色页面**
+        // 凭空多一条黑带非常突兀，像没画完。
+        //
+        // 需要黑带的是视频详情页 —— 见 `VideoDetailScreen` 里
+        // `PlayerSafeAreaTop` 的实现与说明。
         bottomBar = {
             if (showBottomNav) {
                 BottomNav(
@@ -249,8 +291,21 @@ fun MainShell(
                     onSeeRanking = { navController.navigate(Routes.RANKING) },
                     onMessageClick = { navController.navigate(Routes.MESSAGES) },
                     onProfileClick = {
+                        // ⚠️ 必须与底部导航用**同一套 tab 语义**（popUpTo +
+                        // launchSingleTop + restoreState），不能裸 navigate。
+                        //
+                        // 裸 navigate 会把「我的」当成普通页面**再压一个栈帧**，
+                        // 于是栈里同时存在两个 profile：
+                        //   - 底栏进入的那个（带 restoreState）
+                        //   - 右上角头像进入的那个（裸压栈）
+                        // 之后从登录页 popBackStack() 会落在哪一个不确定，
+                        // 表现就是「登录完卡在『我的』页、返回无效」。
                         navController.navigate(Routes.PROFILE) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
                             launchSingleTop = true
+                            restoreState = true
                         }
                     },
                     onNavItemClick = { label ->
@@ -258,7 +313,16 @@ fun MainShell(
                         when (label) {
                             "番剧" -> navController.navigate(Routes.BANGUMI)
                             "直播" -> navController.navigate(Routes.LIVE)
-                            "动态" -> navController.navigate(Routes.DYNAMIC)
+                            // ⚠️ 「动态」是底部 tab，必须走 tab 语义而不是裸
+                            // navigate —— 理由同 onProfileClick：裸压栈会让
+                            // 栈里出现重复的 tab 帧，返回时落点不确定。
+                            "动态" -> navController.navigate(Routes.DYNAMIC) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                             // 「首页」是当前页，不跳；「游戏中心 / 会员购」
                             // 第三方客户端无对应能力（游戏中心需 App 端 SDK、
                             // 会员购属电商），**保持不跳转但不留假入口** ——
@@ -363,7 +427,7 @@ fun MainShell(
                         danmakuAlpha = vSettings.danmakuAlpha,
                         danmakuFontScale = vSettings.danmakuFontScale,
                         activeSubtitle = null,
-                        onBack = { navController.popBackStack() },
+                        onBack = safeBack,
                         onPageChanged = vm::onPageChanged,
                         onPreload = vm::preload,
                         onLike = vm::toggleLike,
@@ -408,9 +472,19 @@ fun MainShell(
             // ---------- 视频详情 ----------
             composable(
                 route = Routes.VIDEO,
-                arguments = listOf(navArgument(Routes.VIDEO_ARG_BVID) { type = NavType.StringType }),
+                arguments = listOf(
+                    navArgument(Routes.VIDEO_ARG_BVID) { type = NavType.StringType },
+                    // 可选：进入后定位到这条评论（AI 查成分「在 APP 内查看」用）
+                    navArgument(Routes.VIDEO_ARG_FOCUS_RPID) {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                ),
             ) { backStackEntry ->
                 val bvid = backStackEntry.arguments?.getString(Routes.VIDEO_ARG_BVID).orEmpty()
+                val focusRpid = backStackEntry.arguments
+                    ?.getString(Routes.VIDEO_ARG_FOCUS_RPID)
+                    .orEmpty()
 
                 /**
                  * ⚠️ 离开视频路由时释放播放器。
@@ -499,6 +573,9 @@ fun MainShell(
                     VideoDetailScreen(
                         bvid = bvid,
                         windowSize = windowSize,
+                        // AI 查成分「在 APP 内查看」带过来的评论 id。
+                        // 非空时详情页会自动切评论 Tab、翻页定位并高亮。
+                        focusRpid = focusRpid,
                         settings = settings,
                         // Activity 级播放器：PiP / 切页继续播都依赖它
                         holder = container.playerHolder,
@@ -546,7 +623,7 @@ fun MainShell(
                                 container.settingsStore.setDanmakuArea(area)
                             }
                         },
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     // 详情页里点相关推荐 → 再进一个详情页。
                     //
                     // ⚠️ 用 popUpTo 视频页 + 恢复保存状态，而不是无限累加。
@@ -596,7 +673,7 @@ fun MainShell(
             // ---------- 搜索 ----------
             composable(Routes.SEARCH) {
                 SearchScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     onVideoClick = { bvid -> navController.navigate(Routes.video(bvid)) },
                 )
             }
@@ -618,7 +695,7 @@ fun MainShell(
                 val upMid = entry.arguments?.getLong(Routes.REPLY_ARG_UP) ?: 0L
 
                 ReplyDetailScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     onAvatarClick = { mid ->
                         if (mid > 0) navController.navigate(Routes.space(mid))
                     },
@@ -654,7 +731,7 @@ fun MainShell(
                 CategoryScreen(
                     title = name.ifEmpty { "分区" },
                     windowSize = windowSize,
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     onVideoClick = { bvid -> navController.navigate(Routes.video(bvid)) },
                     viewModel = viewModel(
                         key = "category-$rid",
@@ -669,7 +746,9 @@ fun MainShell(
             // ---------- 扫码登录 ----------
             composable(Routes.LOGIN) {
                 LoginScreen(
-                    onBack = { navController.popBackStack() },
+                    // 登录页可能是栈底（进程重建后直接落在登录页）——
+                    // safeBack 会兜底回首页，不会卡住。
+                    onBack = safeBack,
                     onLoggedIn = {
                         // ⚠️ 所有登录方式（扫码 / 手机号 / 密码 / WebView）
                         // 都汇聚到这一个回调 —— 在这里做两件事，保证不漏：
@@ -683,7 +762,10 @@ fun MainShell(
                         // 这个号"就是这么来的）。
                         container.accountSwitcher.rememberCurrent()
                         container.accountSync.notifyChanged()
-                        navController.popBackStack()
+
+                        // 用 safeBack：登录页若已是栈底，裸 popBackStack 返回
+                        // false 且无动作 → 用户**卡在登录页出不去**（主症状）。
+                        safeBack()
                     },
                     viewModel = viewModel(
                         factory = LoginViewModelFactory(container.authRepository),
@@ -719,7 +801,7 @@ fun MainShell(
             ) { entry ->
                 val mid = entry.arguments?.getLong(Routes.SPACE_ARG_MID) ?: 0L
                 SpaceScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     onVideoClick = { bvid -> navController.navigate(Routes.video(bvid)) },
                     onLoginRequired = { navController.navigate(Routes.LOGIN) },
                     onChat = { talkerId, talkerName ->
@@ -742,7 +824,7 @@ fun MainShell(
             composable(Routes.LIVE) {
                 LiveScreen(
                     windowSize = windowSize,
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     // ⚠️ 打开**官方直播间**（系统浏览器）。
                     // 本项目不做直播流播放（缺 FLV/HLS 依赖），
                     // 硬做会得到"点进去黑屏"——比没有这个功能更差。
@@ -776,7 +858,7 @@ fun MainShell(
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     DownloadScreen(
-                        onBack = { navController.popBackStack() },
+                        onBack = safeBack,
                         // 离线播放：直接进详情页（播放器会优先用本地源，
                         // 见 VideoDetailViewModel 的本地源选择）
                         onPlay = { item -> navController.navigate(Routes.video(item.bvid)) },
@@ -836,7 +918,7 @@ fun MainShell(
                     items = items,
                     loading = loading,
                     error = error,
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     onSelectTab = vm::selectTab,
                     // 番剧条目 → 番剧详情页（此前是 `onItemClick = { }` 空 lambda，
                     // 即明确的死入口）。
@@ -859,7 +941,7 @@ fun MainShell(
             ) { entry ->
                 val seasonId = entry.arguments?.getLong(Routes.BANGUMI_ARG_SEASON) ?: 0L
                 BangumiDetailScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     // 有 bvid 的集 → 直接跳视频详情页播放
                     onEpisodePlayable = { bvid -> navController.navigate(Routes.video(bvid)) },
                     // 没有 bvid 的集 → 打开官方页面（不做假的可点状态）
@@ -894,7 +976,7 @@ fun MainShell(
                     videos = videos,
                     loading = loading,
                     error = error,
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     onSelectTab = vm::selectTab,
                     onVideoClick = { bvid -> navController.navigate(Routes.video(bvid)) },
                     onRetry = vm::retry,
@@ -922,7 +1004,7 @@ fun MainShell(
                     loadingMore = loadingMore,
                     hasMore = hasMore,
                     isLoggedIn = vm.isLoggedIn,
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     onLoadMore = vm::loadMore,
                     onVideoClick = { bvid -> navController.navigate(Routes.video(bvid)) },
                     onLoginRequired = { navController.navigate(Routes.LOGIN) },
@@ -957,7 +1039,7 @@ fun MainShell(
                         previews = previews,
                         loading = loading,
                         isLoggedIn = vm.isLoggedIn,
-                        onBack = { navController.popBackStack() },
+                        onBack = safeBack,
                         onOpenFolder = { f ->
                             navController.navigate(Routes.favFolder(f.id, f.title))
                         },
@@ -1024,7 +1106,7 @@ fun MainShell(
                         loadingMore = loadingMore,
                         hasMore = hasMore,
                         isLoggedIn = vm.isLoggedIn,
-                        onBack = { navController.popBackStack() },
+                        onBack = safeBack,
                         onLoadMore = vm::loadMore,
                         onRemove = vm::removeFavorite,
                         onVideoClick = { bvid -> navController.navigate(Routes.video(bvid)) },
@@ -1071,7 +1153,7 @@ fun MainShell(
                     videos = videos,
                     loading = loading,
                     isLoggedIn = vm.isLoggedIn,
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     onVideoClick = { bvid -> navController.navigate(Routes.video(bvid)) },
                     onLoginRequired = { navController.navigate(Routes.LOGIN) },
                 )
@@ -1092,7 +1174,7 @@ fun MainShell(
                     ),
                 )
                 com.example.biliv3.ui.message.MessageListScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     onOpenChat = { s ->
                         navController.navigate(Routes.chat(s.talkerId, s.talkerName))
                     },
@@ -1127,7 +1209,7 @@ fun MainShell(
                 )
                 com.example.biliv3.ui.message.ChatScreen(
                     talkerName = talkerName.ifEmpty { "用户$talkerId" },
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     onLogin = { navController.navigate(Routes.LOGIN) },
                     viewModel = vm,
                 )
@@ -1149,7 +1231,7 @@ fun MainShell(
                 val uid = entry.arguments?.getLong(Routes.AICU_ARG_UID)?.takeIf { it > 0L }
 
                 AicuScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     // 外链走系统浏览器：aicu 的评论/弹幕最终指向 B 站官方页，
                     // 内嵌 WebView 会变成"套壳浏览器"且登录态串味。
                     onOpenUrl = { url -> openExternalUrl(context, url) },
@@ -1157,9 +1239,26 @@ fun MainShell(
                     // 而视频详情路由走 bvid —— 这里统一转成 `av{n}` 形式，
                     // 由 VideoRepository.detail 识别后用 `aid` 参数请求
                     // （官方 view 接口支持 aid/bvid 二选一，无需换算表）。
-                    onOpenCommentInApp = { avId, _ ->
+                    //
+                    // ⚠️ 必须把 `rpid` 一起带上（原实现用 `_` 丢掉了它）——
+                    // 否则只是"打开视频"，用户还得自己在几百条评论里翻。
+                    // 带 rpid 后详情页会切到评论 Tab、翻页找到它、滚动并高亮。
+                    onOpenCommentInApp = { avId, rpid, dynType ->
                         if (avId.isNotEmpty()) {
-                            navController.navigate(Routes.video("av$avId"))
+                            // 只有 `dynType == 1`（视频）才能用视频详情页定位评论；
+                            // 专栏(12)/动态(17) 的 oid 不在视频 id 空间，
+                            // 硬跳视频页会因 bvid 非法而报错 → 退化为外链。
+                            if (dynType == 1) {
+                                navController.navigate(
+                                    Routes.videoAtComment("av$avId", rpid),
+                                )
+                            } else {
+                                openExternalUrl(
+                                    context,
+                                    com.example.biliv3.data.AicuRepository
+                                        .replyTargetUrl(dynType, avId, rpid),
+                                )
+                            }
                         }
                     },
                     viewModel = viewModel(
@@ -1177,7 +1276,7 @@ fun MainShell(
             // ---------- 切换账号 ----------
             composable(Routes.ACCOUNTS) {
                 com.example.biliv3.ui.accounts.AccountsScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     // 添加新账号 = 去登录页；登录成功后由 LOGIN 的
                     // onLoggedIn 自动 rememberCurrent + 广播，回来就能看到新账号
                     onAddAccount = { navController.navigate(Routes.LOGIN) },
@@ -1211,7 +1310,7 @@ fun MainShell(
                 LaunchedEffect(Unit) { recalcCache() }
 
                 SettingsScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = safeBack,
                     cacheLabel = cacheLabel,
                     onClearImageCache = {
                         cacheScope.launch {

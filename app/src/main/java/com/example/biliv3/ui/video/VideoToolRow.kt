@@ -86,8 +86,11 @@ fun VideoToolRow(
             //
             // ⚠️ 圆角用 `Radius.card`(16dp)，与相邻卡片一致。
             // 此前是 `Radius.button`(12dp)，与邻居差 4dp —— 弧度对不上。
+            //
+            // 纵向内边距从 `Space.x2`(8dp) 收到 `Space.x1`(4dp)：
+            // 这条工具条紧贴播放器下方，每多 4dp 都是从画面里抢的。
             .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            .padding(horizontal = Space.x4, vertical = Space.x1),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // ================= 左栏：视图切换 =================

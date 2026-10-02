@@ -26,11 +26,34 @@ object Routes {
 
     // ---- 二级页 ----
 
-    /** 视频详情 + 播放。参数：bvid。 */
+    /**
+     * 视频详情 + 播放。参数：bvid（+ 可选 focusRpid）。
+     *
+     * ## focusRpid：进入后定位到某条评论
+     *
+     * 「AI 查成分」查到某条评论后点「在 APP 内查看」，只打开视频是不够的 ——
+     * 用户还得自己在几百条评论里翻。带上 `rpid` 后详情页会：
+     * 1. 自动切到「评论」Tab
+     * 2. 拉到该评论所在页（游标翻页直到命中，有上限）
+     * 3. 滚动到它并**短暂高亮**
+     *
+     * 默认空串 = 不定位（普通进详情页的行为）。
+     * 用 query 参数而不是路径段：它可选，且不影响既有 `video/{bvid}` 路由。
+     */
     const val VIDEO_ARG_BVID = "bvid"
-    const val VIDEO = "video/{$VIDEO_ARG_BVID}"
+    const val VIDEO_ARG_FOCUS_RPID = "focusRpid"
+    const val VIDEO = "video/{$VIDEO_ARG_BVID}?$VIDEO_ARG_FOCUS_RPID={$VIDEO_ARG_FOCUS_RPID}"
 
+    /** 普通进视频详情（不定位评论）。 */
     fun video(bvid: String): String = "video/$bvid"
+
+    /**
+     * 进视频详情并定位到指定评论。
+     *
+     * ⚠️ 空 rpid 时退化为 [video]，避免产生 `?focusRpid=` 这种无意义参数。
+     */
+    fun videoAtComment(bvid: String, rpid: String): String =
+        if (rpid.isEmpty()) video(bvid) else "video/$bvid?$VIDEO_ARG_FOCUS_RPID=$rpid"
 
     /** 搜索页。 */
     const val SEARCH = "search"

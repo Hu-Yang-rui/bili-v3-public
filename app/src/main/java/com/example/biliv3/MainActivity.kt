@@ -94,6 +94,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         container = AppContainer(this)
         enableEdgeToEdge()
+
+        // ⚠️ 状态栏图标颜色**不做全局覆盖**，交给主题
+        // （浅色主题 windowLightStatusBar=true → 深色图标；
+        //  深色主题 false → 浅色图标）。绝大多数页面是浅色底，
+        // 主题的默认选择就是对的。
+        //
+        // 只有**视频详情页**顶部是纯黑（播放器 + 安全区），那里需要浅色图标 ——
+        // 由该页面自己按需切换（见 VideoDetailScreen 的 PlayerSafeAreaTop），
+        // 离开时还原，避免污染其他页面。
+
         setContent {
             BiliApp(container, pipState)
         }

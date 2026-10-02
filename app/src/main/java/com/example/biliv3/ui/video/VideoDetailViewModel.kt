@@ -448,6 +448,95 @@ class VideoDetailViewModel(
         }
     }
 
+    // ---------------- 定位到指定评论（AI 查成分「在 APP 内查看」）----------------
+
+    /**
+     * 要定位的评论 rpid。UI 观察它决定"滚到哪条"。
+     *
+     * 定位完成后由 UI 调 [consumeFocusComment] 清空，
+     * 避免用户手动滚动后又被拉回去。
+     */
+    private val _focusCommentRpid = MutableStateFlow<String?>(null)
+    val focusCommentRpid: StateFlow<String?> = _focusCommentRpid.asStateFlow()
+
+    /** 定位是否还在进行（UI 可显示"正在定位评论…"）。 */
+    private val _focusingComment = MutableStateFlow(false)
+    val focusingComment: StateFlow<Boolean> = _focusingComment.asStateFlow()
+
+    /** UI 完成滚动+高亮后调用，清掉一次性定位目标。 */
+    fun consumeFocusComment() {
+        _focusCommentRpid.value = null
+        _focusingComment.value = false
+    }
+
+    /**
+     * 翻页找到指定评论并请求定位。
+     *
+     * ## 为什么要翻页而不是"直接请求那条评论"
+     *
+     * 评论接口没有"按 rpid 取单条"的能力，只有游标分页。
+     * 所以只能从第一页开始逐页拉，直到命中 —— 或者达到上限放弃。
+     *
+     * ## 为什么必须有上限
+     *
+     * 热评视频有几千条评论，全量翻页会：
+     * - 打几十个请求（对 B 站是压力，也容易被风控）
+     * - 让用户等很久，期间界面没反馈
+     *
+     * 所以最多翻 [MAX_FOCUS_PAGES] 页（约 200 条）。找不到就**如实告知**
+     * "该评论在更靠后的位置，已加载到第 N 页" —— 比无限转圈好。
+     */
+    fun focusComment(rpid: String) {
+        if (rpid.isEmpty()) return
+        val cr = commentRepo ?: return
+        val cur = _state.value
+        if (cur !is DetailUiState.Content) return
+
+        _focusCommentRpid.value = rpid
+        _focusingComment.value = true
+
+        viewModelScope.launch {
+            var cursor = 0L
+            var pages = 0
+
+            while (pages < MAX_FOCUS_PAGES) {
+                // 已在已加载列表里 → 直接命中，不用再请求
+                if (_comments.value.any { it.rpid.toString() == rpid }) {
+                    _focusingComment.value = false
+                    return@launch
+                }
+
+                val page = runCatching {
+                    cr.comments(
+                        oid = cur.detail.aid,
+                        upMid = cur.detail.ownerMid,
+                        next = cursor,
+                        mode = _commentSort.value,
+                    )
+                }.getOrNull() ?: break
+
+                // 合并（去重，与 loadMoreComments 同规则）
+                val seen = _comments.value.mapTo(HashSet()) { it.rpid }
+                _comments.value = _comments.value + page.comments.filter { it.rpid !in seen }
+                commentCursor = page.nextCursor
+                _commentHasMore.value = !page.isEnd
+                pages++
+
+                if (_comments.value.any { it.rpid.toString() == rpid }) {
+                    _focusingComment.value = false
+                    return@launch
+                }
+                if (page.isEnd) break
+                cursor = page.nextCursor
+            }
+
+            // 走到这里说明没找到
+            _focusingComment.value = false
+            _focusCommentRpid.value = null
+            toast("该评论位置较靠后，已加载 $pages 页仍未找到")
+        }
+    }
+
     /**
      * 举报评论。
      *
@@ -942,3 +1031,11 @@ const val COMMENT_SORT_HOT = 3
 
 /** 评论排序：按时间。 */
 const val COMMENT_SORT_TIME = 2
+
+/**
+ * 定位评论时最多翻几页。
+ *
+ * 约 20 条/页 → 200 条。不设上限会为一条评论打几十个请求，
+ * 既给 B 站压力也容易触发风控，且用户要干等。
+ */
+const val MAX_FOCUS_PAGES = 10

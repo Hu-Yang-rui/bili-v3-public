@@ -30,6 +30,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import com.example.biliv3.design.tokens.Motion
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -123,6 +127,17 @@ fun CommentSection(
      */
     onViewAllReplies: (CommentItem) -> Unit = {},
     listState: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState(),
+    /**
+     * 要定位并高亮的评论 rpid（null = 不定位）。
+     *
+     * 由「AI 查成分 → 在 APP 内查看」传入。命中时：
+     * 1. 滚动到该条（居中）
+     * 2. 短暂高亮底色
+     * 3. 通知上层清空定位目标（避免用户之后手动滚动又被拉回）
+     */
+    focusRpid: String? = null,
+    /** 完成定位（滚动+高亮）后回调，上层据此清空 focusRpid。 */
+    onFocusHandled: () -> Unit = {},
 ) {
     val colors = BiliTheme.colors
 
@@ -145,6 +160,28 @@ fun CommentSection(
      * 用一个状态同时承载两者，避免"选了理由却不知道举报谁"。
      */
     var reportTarget by remember { mutableStateOf<CommentItem?>(null) }
+
+    /**
+     * 滚动到定位评论，并短暂高亮。
+     *
+     * ## 为什么要 `snapshotFlow` 等待列表出现
+     *
+     * `focusRpid` 可能在评论**还没加载完**时就设好了（详情页刚进、
+     * 评论还在拉第一页）。此时 `comments` 里还没有那一条，
+     * 直接 `scrollToItem` 会因索引越界而静默失败 —— 用户看不到任何效果。
+     *
+     * 所以等 `comments` 里真的出现该 rpid 再滚。
+     */
+    LaunchedEffect(focusRpid, comments) {
+        val target = focusRpid ?: return@LaunchedEffect
+        val index = comments.indexOfFirst { it.rpid.toString() == target }
+        if (index < 0) return@LaunchedEffect
+
+        listState.animateScrollToItem(index)
+        // 高亮持续 2s 后自动淡出：够用户看到，又不会一直"亮着"显得脏
+        delay(2000)
+        onFocusHandled()
+    }
 
     Column(
         modifier = modifier
@@ -233,6 +270,8 @@ fun CommentSection(
                         repliesExpanded = c.rpid in expandedReplies,
                         // 点了「查看全部」后不再截断
                         repliesFullyExpanded = c.rpid in expandedFully,
+                        // 定位目标：短暂高亮，帮用户一眼找到
+                        highlighted = focusRpid != null && c.rpid.toString() == focusRpid,
                         onToggleReplies = {
                             expandedReplies = if (c.rpid in expandedReplies) {
                                 expandedReplies - c.rpid
@@ -519,8 +558,17 @@ private fun CommentRow(
     /** 是否已突破内嵌上限（点了「查看全部」）。 */
     repliesFullyExpanded: Boolean = false,
     isReply: Boolean = false,
+    /** 是否为"定位目标"评论（短暂高亮，帮用户一眼找到）。 */
+    highlighted: Boolean = false,
 ) {
     val colors = BiliTheme.colors
+
+    // 高亮底色的淡入淡出。用动画而不是硬切：突然出现一块色块很突兀。
+    val highlightAlpha by animateFloatAsState(
+        targetValue = if (highlighted) 1f else 0f,
+        animationSpec = tween(Motion.PAGE_FADE_MS, easing = Motion.standard),
+        label = "commentHighlight",
+    )
 
     Column(
         modifier = Modifier
@@ -532,6 +580,11 @@ private fun CommentRow(
                 if (isReply) Modifier else Modifier
                     .padding(horizontal = Space.x3, vertical = Space.x1)
                     .biliCard(elevation = 1.dp, shape = RoundedCornerShape(Radius.button)),
+            )
+            // 定位高亮：用品牌色的低透明度铺底，不改文字色 ——
+            // 改文字色会破坏对比度约束（见 §5.2 的"文字安全版"）。
+            .background(
+                colors.brandPrimary.copy(alpha = HIGHLIGHT_ALPHA * highlightAlpha),
             )
             .padding(
                 start = Space.x4,
@@ -881,6 +934,14 @@ private fun CommentRow(
 
 /** 评论头像尺寸。 */
 private val COMMENT_AVATAR = 32.dp
+
+/**
+ * 「定位评论」高亮的底色透明度。
+ *
+ * 0.14f：低到"看得见但不刺眼"。再高会盖住文字影响阅读，
+ * 再低则与卡片底色区分不出来（等于没高亮）。
+ */
+private const val HIGHLIGHT_ALPHA = 0.14f
 
 /** 回复头像尺寸（小一号）。 */
 private val REPLY_AVATAR = 24.dp

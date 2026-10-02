@@ -256,13 +256,18 @@ class LibraryRepository(
         val out = ArrayList<FavFolder>(arr.length())
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
+            // ⚠️ `attr` 是**位标志**，不是枚举值。
+            // 原实现写 `attr == 1` 只在"恰好只有默认位"时成立；
+            // 一旦同时带私密位（attr = 3），默认夹会被判成非默认。
+            val attr = o.optInt("attr", 0)
             out.add(
                 FavFolder(
                     id = o.optLong("id"),
                     title = o.optString("title"),
                     mediaCount = o.optInt("media_count", 0),
                     cover = o.optString("cover"),
-                    isDefault = o.optInt("attr", 0) == 1,
+                    isDefault = (attr and ATTR_DEFAULT) != 0,
+                    isPrivate = (attr and ATTR_PRIVATE) != 0,
                 ),
             )
         }
@@ -409,6 +414,24 @@ class LibraryRepository(
             else -> 0
         }
     }
+
+    companion object {
+        /**
+         * `fav/folder/created/list-all` 的 `attr` **位标志**。
+         *
+         * 它是位组合而不是枚举 —— 一个夹可以同时是「默认」且「私密」
+         * （此时 `attr = 3`）。用 `== 1` 判断默认夹会在这种组合下失效。
+         */
+        private const val ATTR_DEFAULT = 1
+
+        /**
+         * bit1 = 私密。
+         *
+         * ⚠️ 按公开资料实现，**未实测** —— 该接口只返回本人收藏夹，
+         * 未登录拿到空列表，无法匿名验证。详见 `FavFolder.isPrivate`。
+         */
+        private const val ATTR_PRIVATE = 2
+    }
 }
 
 /** 历史记录条目。 */
@@ -445,6 +468,19 @@ data class FavFolder(
     val mediaCount: Int,
     val cover: String,
     val isDefault: Boolean,
+    /**
+     * 是否私密。
+     *
+     * ⚠️ **语义未实测**：接口的 `attr` 是位标志，按公开资料
+     * `bit0(1)=默认夹`、`bit1(2)=私密`。
+     * 但 `fav/folder/created/list-all` **只返回本人收藏夹** ——
+     * 实测 `up_mid=1` / `up_mid=2` 均 `code=0` 但 `list=[]`，
+     * 所以匿名无法验证这个位。
+     *
+     * 代码按文档语义实现，**登录后需实测确认**。
+     * 若判断反了，只改 [LibraryRepository.favoriteFolders] 一处。
+     */
+    val isPrivate: Boolean = false,
 )
 
 /** 收藏夹内容分页。 */
