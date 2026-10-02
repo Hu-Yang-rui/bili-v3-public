@@ -89,7 +89,29 @@ if (-not $existing) {
     $rel = $existing
 }
 
-$apks = @("bili-v3-$tag-release.apk", "bili-v3-$tag-debug.apk")
+# ONLY the release APK is published.
+#
+# Why the debug APK is deliberately excluded (security, not size):
+#   - It is built with android:debuggable="true"  -> `adb run-as` can read
+#     the app's private data (incl. the encrypted-prefs store).
+#   - It is signed with the PUBLIC Android debug key (CN=Android Debug),
+#     so ANYONE can sign an APK with the same package name + same cert and
+#     a device will treat it as a legitimate upgrade over this one.
+# Both properties make it unsafe to distribute. Debug builds stay local.
+$apks = @("bili-v3-$tag-release.apk")
+
+# Safety net: if a debug asset ever sneaks into this release, delete it.
+try {
+    $cur = Invoke-RestMethod -Uri "https://api.github.com/repos/$owner/$repo/releases/$($rel.id)" -Headers $hdr -TimeoutSec 30
+    foreach ($a in $cur.assets) {
+        if ($a.name -match 'debug') {
+            Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$owner/$repo/releases/assets/$($a.id)" -Headers $hdr -TimeoutSec 60 | Out-Null
+            Write-Host ("removed debug asset: {0}" -f $a.name)
+        }
+    }
+} catch {
+    Write-Host ("debug-asset sweep skipped: {0}" -f $_.Exception.Message)
+}
 
 foreach ($a in $apks) {
     $path = Join-Path $root $a
