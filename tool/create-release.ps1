@@ -48,21 +48,55 @@ $hdr = @{
     Accept        = 'application/vnd.github+json'
 }
 
-# Release body. Kept inline (no separate .md file) -- this repo intentionally
-# has exactly one doc file (AGENTS.md).
+# ---- release body: read from tool/release-notes.md (UTF-8, Chinese) ----
 #
-# ASCII-only: see the header note. Release body is intentionally English-free
-# of non-ASCII so this script stays safe under GBK-reading PowerShell.
-$notes = @"
-## BiliV3 $tag
+# The script itself must stay pure ASCII (PowerShell 5.1 reads .ps1 as
+# ANSI/GBK and would mangle any non-ASCII literal, breaking string
+# terminators). Reading an external UTF-8 file is how we get Chinese notes
+# without making the script unsafe.
+$notesPath = Join-Path $root 'tool\release-notes.md'
+if (-not (Test-Path $notesPath)) { throw "missing release notes: $notesPath" }
 
-versionName = $ver / versionCode = $code
+# ---- changelog: derived from git so it can never drift or be forgotten ----
+#
+# Native command output is decoded using [Console]::OutputEncoding; commit
+# subjects here are Chinese, so force UTF-8 first or they come back as '?'.
+$prevEnc = [Console]::OutputEncoding
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+try {
+    # Tags are created by the GitHub API, so they exist on the remote but not
+    # necessarily in this clone. Fetch them or the range lookup below silently
+    # falls back to "first release" and the changelog would be wrong.
+    & git -C $root fetch --tags --quiet origin 2>$null | Out-Null
 
-Install packages and signing details: see AGENTS.md in the repository.
+    # Newest tag by version that is not the tag we are about to publish.
+    $tags = @(& git -C $root tag -l 'v*' --sort=-v:refname 2>$null) |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { $_ -and $_ -ne $tag }
+    $prevTag = if ($tags.Count -gt 0) { $tags[0] } else { '' }
 
-> Personal-use third-party client. Not publicly distributed, not on any store,
-> not commercialized, does not bypass any paywall.
-"@
+    if ($prevTag) {
+        Write-Host ("changelog range: {0}..HEAD" -f $prevTag)
+        $subjects = & git -C $root log "$prevTag..HEAD" --no-merges --pretty=format:%s 2>$null
+    } else {
+        Write-Host 'changelog range: first release (last 15 commits)'
+        $subjects = & git -C $root log -15 --no-merges --pretty=format:%s 2>$null
+    }
+
+    $lines = @($subjects | Where-Object { $_ -and $_.Trim() -ne '' } | ForEach-Object { "- " + $_.Trim() })
+    if ($lines.Count -eq 0) { $lines = @('- (no commit subjects found)') }
+    $changes = $lines -join "`n"
+    Write-Host ("changelog entries: {0}" -f $lines.Count)
+} finally {
+    [Console]::OutputEncoding = $prevEnc
+}
+
+$notes = [System.IO.File]::ReadAllText($notesPath, [System.Text.Encoding]::UTF8)
+$notes = $notes.Replace('{{TAG}}', $tag).
+                Replace('{{VERSION}}', $ver).
+                Replace('{{CODE}}', $code).
+                Replace('{{CHANGES}}', $changes)
+if ($notes -match '\{\{') { throw 'unsubstituted placeholder left in release-notes.md' }
 
 $existing = $null
 try {
@@ -86,7 +120,13 @@ if (-not $existing) {
     $rel = Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/$owner/$repo/releases" -Headers $hdr -Body $bytes -ContentType 'application/json; charset=utf-8' -TimeoutSec 60
     Write-Host ("created release id={0} tag={1}" -f $rel.id, $rel.tag_name)
 } else {
-    $rel = $existing
+    # Re-running must be able to FIX an existing release (e.g. the body was
+    # written in English before release-notes.md existed). Without this the
+    # script would silently keep the stale body.
+    $payload = @{ name = "BiliV3 $tag"; body = $notes } | ConvertTo-Json
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
+    $rel = Invoke-RestMethod -Method Patch -Uri "https://api.github.com/repos/$owner/$repo/releases/$($existing.id)" -Headers $hdr -Body $bytes -ContentType 'application/json; charset=utf-8' -TimeoutSec 60
+    Write-Host ("updated release id={0} body+name" -f $rel.id)
 }
 
 # ONLY the release APK is published.
