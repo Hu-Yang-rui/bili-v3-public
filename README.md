@@ -105,19 +105,30 @@ echo 'sdk.dir=/path/to/android-sdk' > local.properties
 # 单测 + debug + release 全量
 ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
 
-# 安装
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+# 安装（**用 release 包**，原因见下）
+adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
 | 产物 | 大小 | 说明 |
 |---|---|---|
-| `app-debug.apk` | ~23 MB | debug 证书 |
-| `app-release.apk` | ~2.9 MB | R8 + 资源压缩，**需自备签名** |
+| `app-release.apk` | ~2.9 MB | R8 + 资源压缩，`debuggable=no`，**推荐** |
+| `app-debug.apk` | ~23 MB | 仅本地调试用，**不要对外分发**（见下） |
 
-> ⚠️ debug 与 release 证书不同，**不能互相覆盖安装**。换签名类型前先卸载：
-> `adb uninstall com.example.biliv3`
+> ⚠️ **为什么公开渠道只发 release 包**
+>
+> debug 包不适合分发，有三个实际问题：
+> 1. 它用 Android **公开**调试密钥签名（口令 `android`、别名
+>    `androiddebugkey` 都是公开值），任何人都能签出同包名 APK，
+>    而设备会把它当作**合法更新**接受 —— 属于供应链投毒入口
+> 2. `debuggable=true`，`adb run-as` 可读取其私有数据
+> 3. 与 release **签名不同**，两者互装必须先卸载；而本项目
+>    `allowBackup="false"`，**卸载即丢登录态与设置**
+>
+> 因此 [Releases](https://github.com/Hu-Yang-rui/bili-v3-public/releases)
+> 只提供 release 包。需要 debug 包请自行构建。
 
-也可以直接从 [Releases](https://github.com/Hu-Yang-rui/bili-v3-public/releases) 下载已签名 APK。
+> ✅ 同签名 + versionCode 递增（如 11 → 12 → 13）**可直接覆盖安装**，
+> 登录态与设置保留，无需卸载。这是正常升级路径。
 
 ---
 
