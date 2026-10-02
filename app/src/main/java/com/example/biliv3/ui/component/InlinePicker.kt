@@ -109,13 +109,17 @@ fun <K> InlinePicker(
     Column(modifier = modifier.fillMaxWidth()) {
         // ================= 选择框本体 =================
         //
-        // C 方案：选择框本身也是卡片（与展开区同族圆角）。
-        // 这样"点开"的观感是**卡片内部长出一块**，而不是两个独立控件上下排列。
+        // ⚠️ 选择框**不再是卡片** —— 与设置页的其它行（开关/信息/动作）统一。
+        //
+        // 之前只有选择框套卡、其它行扁平，同一屏出现**两种行型**：
+        // 开关行是裸的、下拉行带框，视觉上像"只有这几项被特别标注"，
+        // 反而更乱。现在全部走扁平行，靠留白分组。
+        //
+        // 展开区（下方）仍然自带卡片 —— 它是"临时展开的内容"，
+        // 需要与常规行区分开。
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Space.x3, vertical = Space.x1)
-                .biliCard(shape = RoundedCornerShape(Radius.card))
                 // 整行可点（触摸目标大）
                 .clickable(onClick = onToggle)
                 .padding(horizontal = Space.x4, vertical = Space.x3),

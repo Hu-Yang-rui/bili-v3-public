@@ -551,9 +551,9 @@ private fun TabRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x2)
-            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.button))
-            .padding(vertical = Space.x1),
+            // ⚠️ 标签条**不再是卡片** —— 它是一条切换栏，不是独立内容块。
+            // 套卡会立刻多一个框。
+            .padding(horizontal = Space.x4, vertical = Space.x1),
         horizontalArrangement = Arrangement.spacedBy(Space.x5),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -613,9 +613,8 @@ fun DynamicCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
-            .padding(Space.x4),
+            // ⚠️ 投稿列表行**不再是卡片** —— 列表用留白分组。
+            .padding(horizontal = Space.x4, vertical = Space.x3),
     ) {
         // ---- 作者行 ----
         Row(verticalAlignment = Alignment.CenterVertically) {

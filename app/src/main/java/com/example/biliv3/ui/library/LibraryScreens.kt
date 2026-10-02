@@ -567,16 +567,20 @@ private fun FavoriteRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // C 方案：每行是独立卡片
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
+            // ⚠️ 收藏行**不再是卡片**（原为每行一张 `biliCard`）。
+            //
+            // 收藏夹里通常几十上百条，每行一张卡 = 一屏 5~6 个框。
+            // 框多了以后内容反而退到次要位置，是"臃肿"的主要来源。
+            //
+            // 现在：行与行靠留白分隔。**列表用留白分组，不用卡片分组。**
+            //
             // 失效视频没有可跳转的详情页，禁用点击而不是跳过去报错
             .clickable(enabled = !entry.isInvalid, onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x3),
+            .padding(horizontal = Space.x4, vertical = Space.x2),
         // ⚠️ Bottom：⋮ 要贴**右下角**，不是垂直居中。
         //
         // 居中时它会浮在行高中间，与右侧文字列"对齐但不贴合"，
-        // 看起来像悬空的一颗点。贴右下角后与卡片右下角对齐，
+        // 看起来像悬空的一颗点。贴右下角后与行的右下角对齐，
         // 视觉上有明确的落点（官方也是右下）。
         verticalAlignment = Alignment.Bottom,
     ) {
@@ -820,11 +824,10 @@ private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // C 方案：每行独立卡片
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
+            // ⚠️ 列表行**不再是卡片** —— 与收藏行同一原则：
+            // 列表用留白分组，不用卡片分组。
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x3),
+            .padding(horizontal = Space.x4, vertical = Space.x2),
         verticalAlignment = Alignment.Top,
     ) {
         // 封面 + 底部进度条
@@ -908,11 +911,10 @@ private fun VideoRow(video: VideoItem, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // C 方案：每行独立卡片
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
+            // ⚠️ 列表行**不再是卡片** —— 与收藏行同一原则：
+            // 列表用留白分组，不用卡片分组。
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x3),
+            .padding(horizontal = Space.x4, vertical = Space.x2),
         verticalAlignment = Alignment.Top,
     ) {
         Box(

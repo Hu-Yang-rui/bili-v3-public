@@ -412,10 +412,10 @@ private fun AccountRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
+            // ⚠️ 账号行**不再是卡片** —— 列表用留白分组。
             // 切换中禁用整行，避免连点导致切换交错
             .clickable(enabled = !anySwitching, onClick = onClick)
-            .padding(Space.x4),
+            .padding(horizontal = Space.x4, vertical = Space.x3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AsyncImage(

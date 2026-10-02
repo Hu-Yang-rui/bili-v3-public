@@ -247,9 +247,9 @@ private fun RootCommentCard(comment: CommentItem, onAvatarClick: (Long) -> Unit)
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x2)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
-            .padding(Space.x3),
+            // ⚠️ 楼中楼的主评论**不再是卡片** —— 它是列表里的一行。
+            // 列表用留白分组，不用卡片分组。
+            .padding(horizontal = Space.x4, vertical = Space.x3),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
@@ -308,9 +308,9 @@ private fun ReplyRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
-            .padding(Space.x3),
+            // ⚠️ 楼中楼的每条回复**不再是卡片** —— 同「列表用留白分组」原则。
+            // 每条回复都套卡会形成"卡片墙"，且与主评论卡重复。
+            .padding(horizontal = Space.x4, vertical = Space.x2),
         verticalAlignment = Alignment.Top,
     ) {
         AsyncImage(

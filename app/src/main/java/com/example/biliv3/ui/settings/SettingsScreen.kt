@@ -587,9 +587,12 @@ private fun SwitchRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // C 方案：每个设置项是独立卡片（与 InlinePicker 的卡片外观对齐）
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
+            // ⚠️ 设置项**不再是卡片** —— 它是列表里的一行。
+            //
+            // 每个开关/信息/动作都套卡时，一屏设置项 = 一屏框，
+            // 且框之间还要留缝，纵向空间被大量浪费（设置页因此特别长）。
+            //
+            // 现在：靠分组标题 + 留白组织，行与行之间不画框。
             .clickable(enabled = enabled) { onCheckedChange(!checked) }
             .padding(horizontal = Space.x4, vertical = Space.x3),
         verticalAlignment = Alignment.CenterVertically,
@@ -705,8 +708,7 @@ private fun KeywordBlockRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Space.x3, vertical = Space.x1)
-                .biliCard(shape = RoundedCornerShape(Radius.card))
+                // ⚠️ 设置项不再是卡片（同「列表用留白分组」原则）
                 .clickable(onClick = onToggleEdit)
                 .padding(horizontal = Space.x4, vertical = Space.x3),
             verticalAlignment = Alignment.CenterVertically,
@@ -749,8 +751,7 @@ private fun KeywordBlockRow(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = Space.x3, vertical = Space.x1)
-                    .biliCard(shape = RoundedCornerShape(Radius.card))
+                    // ⚠️ 关键词编辑区不再是卡片 —— 同「列表用留白分组」原则
                     .padding(horizontal = Space.x4, vertical = Space.x3),
             ) {
                 androidx.compose.foundation.text.BasicTextField(
@@ -795,8 +796,7 @@ private fun ActionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
+            // ⚠️ 设置项不再是卡片（同「列表用留白分组」原则）
             .clickable(onClick = onClick)
             .padding(horizontal = Space.x4, vertical = Space.x3),
         verticalAlignment = Alignment.CenterVertically,

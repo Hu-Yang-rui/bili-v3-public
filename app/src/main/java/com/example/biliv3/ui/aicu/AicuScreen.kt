@@ -583,6 +583,8 @@ private fun UserCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            // ⚠️ 用户资料卡**保留卡片** —— 它是页面上独立成块的内容
+            // （整个查询对象的信息），不是列表里的一行。
             .padding(horizontal = Space.x3, vertical = Space.x2)
             .biliCard(shape = RoundedCornerShape(Radius.card))
             .padding(Space.x4),
@@ -736,9 +738,9 @@ private fun ReplyCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
-            .padding(Space.x4),
+            // ⚠️ 评论/弹幕**不再是卡片** —— 它们是列表里的一行。
+            // 列表用留白分组，不用卡片分组。
+            .padding(horizontal = Space.x4, vertical = Space.x3),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (reply.isNested) {
@@ -868,12 +870,11 @@ private fun VideoDanmakuCard(item: AicuVideoDanmaku, onOpen: (String) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
+            // ⚠️ 弹幕列表行**不再是卡片** —— 列表用留白分组。
             .then(
                 if (canOpen) Modifier.clickable { onOpen(item.targetUrl) } else Modifier,
             )
-            .padding(Space.x4),
+            .padding(horizontal = Space.x4, vertical = Space.x3),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -936,9 +937,9 @@ private fun LiveDanmakuCard(item: AicuLiveDanmaku, onOpen: (String) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
-            .padding(Space.x4),
+            // ⚠️ 评论/弹幕**不再是卡片** —— 它们是列表里的一行。
+            // 列表用留白分组，不用卡片分组。
+            .padding(horizontal = Space.x4, vertical = Space.x3),
     ) {
         // 房间头
         Row(verticalAlignment = Alignment.CenterVertically) {

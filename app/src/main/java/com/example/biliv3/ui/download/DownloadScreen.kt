@@ -224,8 +224,7 @@ private fun RunningRow(task: DownloadTask, onCancel: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
+            // ⚠️ 下载任务行**不再是卡片** —— 列表用留白分组，不用卡片分组。
             .padding(horizontal = Space.x4, vertical = Space.x3),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -292,8 +291,7 @@ private fun FailedRow(task: DownloadTask) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
+            // ⚠️ 列表行不再是卡片（同「列表用留白分组」原则）
             .padding(horizontal = Space.x4, vertical = Space.x3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -332,10 +330,9 @@ private fun DownloadedRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
+            // ⚠️ 列表行不再是卡片（同「列表用留白分组」原则）
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x3),
+            .padding(horizontal = Space.x4, vertical = Space.x2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(

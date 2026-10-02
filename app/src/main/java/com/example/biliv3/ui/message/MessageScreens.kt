@@ -207,11 +207,15 @@ private fun SessionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // C 方案：每行独立卡片
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
+            // ⚠️ 会话行**不再是卡片**（原为每行一张 `biliCard`）。
+            //
+            // 一屏 6~8 个会话 = 6~8 个框，每个框都带玻璃底 + 高光边。
+            // 这是"列表页臃肿"的典型形态 —— 框比内容还抢眼。
+            //
+            // 现在：行与行靠留白分隔，整行可点。
+            // **列表用留白分组，不用卡片分组。**
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x3),
+            .padding(horizontal = Space.x4, vertical = Space.x3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AsyncImage(
