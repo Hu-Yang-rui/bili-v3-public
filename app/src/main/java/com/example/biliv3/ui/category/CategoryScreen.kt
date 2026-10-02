@@ -179,6 +179,8 @@ fun CategoryScreen(
 
             videos.isEmpty() -> EmptyState(
                 title = "这个分区暂时没有内容",
+                // 终端风：列表为空的次要状态，轻量提示符行
+                terminalStyle = true,
                 description = "换个档位或稍后再试",
                 modifier = Modifier.fillMaxSize(),
             )

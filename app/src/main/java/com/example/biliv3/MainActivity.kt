@@ -9,6 +9,7 @@ import android.util.Rational
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -104,10 +105,30 @@ class MainActivity : ComponentActivity() {
         // 由该页面自己按需切换（见 VideoDetailScreen 的 PlayerSafeAreaTop），
         // 离开时还原，避免污染其他页面。
 
+        /**
+         * 设备性能档位。
+         *
+         * 只探测**一次**（读系统服务，不适合反复执行），之后全程不变。
+         * 由 `BiliApp` 通过 `LocalDeviceTier` 注入，驱动视觉降级：
+         * 低端关模糊与微光、中端降模糊半径、高端满配。
+         *
+         * 在 `onCreate` 里算而不是放进 Composable —— 后者每次重组都会读一次
+         * `ActivityManager`。
+         */
+        deviceTier = com.example.biliv3.design.detectDeviceTier(this)
+
         setContent {
-            BiliApp(container, pipState)
+            CompositionLocalProvider(
+                com.example.biliv3.design.LocalDeviceTier provides deviceTier,
+            ) {
+                BiliApp(container, pipState)
+            }
         }
     }
+
+    /** 设备性能档位，启动时探测一次。 */
+    private var deviceTier: com.example.biliv3.design.DeviceTier =
+        com.example.biliv3.design.DeviceTier.High
 
     /**
      * 请求进入 PiP。

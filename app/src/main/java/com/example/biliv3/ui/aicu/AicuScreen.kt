@@ -288,6 +288,9 @@ fun AicuScreen(
                                 item(key = "empty") {
                                     EmptyState(
                                         title = "该 UID 没有公开的评论",
+                                        // 终端风：这是"列表为空"的次要状态，
+                                        // 一屏可能反复出现，用轻量提示符行而非大图标
+                                        terminalStyle = true,
                                         description = "可能从未发过评论，或评论已被删除",
                                         compact = true,
                                     )
@@ -311,6 +314,7 @@ fun AicuScreen(
                                 item(key = "empty") {
                                     EmptyState(
                                         title = "该 UID 没有公开的视频弹幕",
+                                        terminalStyle = true,
                                         description = "弹幕数据来自 aicu 的聚合，可能不完整",
                                         compact = true,
                                     )
@@ -327,6 +331,7 @@ fun AicuScreen(
                                 item(key = "empty") {
                                     EmptyState(
                                         title = "该 UID 没有公开的直播弹幕",
+                                        terminalStyle = true,
                                         description = "仅统计被 aicu 收录过的直播间",
                                         compact = true,
                                     )

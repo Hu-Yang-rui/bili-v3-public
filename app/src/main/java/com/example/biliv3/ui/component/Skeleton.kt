@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -133,6 +134,24 @@ val LocalShimmerPhase = staticCompositionLocalOf<State<Float>> {
  */
 @Composable
 fun ProvideShimmer(content: @Composable () -> Unit) {
+    val tier = com.example.biliv3.design.LocalDeviceTier.current
+
+    // ⚠️ 低端设备：**不做微光动画**，直接渲染静态灰块。
+    //
+    // 微光即使共享相位，仍是一次持续的每帧重绘。低端机上
+    // 骨架屏往往出现在"正在加载"这种本来就吃性能的时刻，
+    // 再叠一个全屏动画是雪上加霜。
+    //
+    // 静态灰块同样传达"内容还没来"，语义不变。
+    if (!tier.canShimmer) {
+        CompositionLocalProvider(
+            LocalShimmerPhase provides remember { mutableStateOf(0f) },
+        ) {
+            content()
+        }
+        return
+    }
+
     val transition = rememberInfiniteTransition(label = "skeleton-shared")
     // 注意：这里必须用 animateFloat 的 State 重载并把 State 往下传，
     // **不要**用 `by` 委托展开成 Float —— 那会在组合阶段读值，

@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.NotLoggedInException
+import com.example.biliv3.design.tokens.FontFamilies
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
@@ -43,6 +44,11 @@ import com.example.biliv3.design.tokens.Space
  *
  * **文案必须具体** —— 「还没有推荐内容」而不是「暂无数据」。
  * 空态不是错误，不出现红色或警告语义。
+ *
+ * ## 视觉
+ *
+ * 图标 + 标题 + 可选说明 + 可选动作。图标用 `textTertiary`（弱化），
+ * 因为空态是"这里暂时没东西"，不该抢视觉。
  */
 @Composable
 fun EmptyState(
@@ -53,8 +59,30 @@ fun EmptyState(
     onAction: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     compact: Boolean = false,
+    /**
+     * 是否用极客风的**提示符行**替代图标。
+     *
+     * 开启后显示 `$ 这里还没有内容` 而不是图标 + 大标题 ——
+     * 更轻、更"系统在说话"。适合**列表为空**这类次要空态。
+     *
+     * ⚠️ 主页面空态（如"未登录"）建议保持默认（图标版）：
+     * 那种场景需要更明确的视觉重量。
+     */
+    terminalStyle: Boolean = false,
 ) {
     val colors = BiliTheme.colors
+
+    if (terminalStyle) {
+        TerminalEmptyState(
+            title = title,
+            description = description,
+            actionLabel = actionLabel,
+            onAction = onAction,
+            modifier = modifier,
+            compact = compact,
+        )
+        return
+    }
 
     Column(
         modifier = modifier
@@ -161,6 +189,125 @@ fun ErrorState(
                 variant = BrandButtonVariant.Outline,
             )
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 终端风状态（极客点缀，克制版）
+// ---------------------------------------------------------------------------
+
+/**
+ * 终端风空态。
+ *
+ * ```
+ * $ 这个收藏夹是空的
+ *   换个收藏夹看看，或先收藏几个视频
+ * ```
+ *
+ * ## 为什么用提示符而不是图标
+ *
+ * 图标空态有"视觉重量"—— 适合主页面（未登录、加载失败）。
+ * 但**列表为空**是次要状态，一屏里可能出现多次，用大图标会喧宾夺主。
+ * 提示符行更轻，且天然表达"系统在跟你说话"。
+ *
+ * ## 约束
+ *
+ * - 提示符**只有一行**，不做多行"命令行输出"
+ * - 不加闪烁光标（空态不是"进行中"）
+ * - 不铺满屏（`compact` 默认行为就是小面积）
+ */
+@Composable
+private fun TerminalEmptyState(
+    title: String,
+    description: String?,
+    actionLabel: String?,
+    onAction: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
+    val colors = BiliTheme.colors
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = Space.x4,
+                vertical = if (compact) Space.x5 else Space.x8,
+            ),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        PromptLine(
+            text = title,
+            symbol = "$",
+            textColor = colors.textSecondarySafe,
+        )
+        if (description != null) {
+            Spacer(Modifier.height(Space.x2))
+            // 说明行缩进对齐提示符之后的文字（不重复画 $）
+            Row {
+                Spacer(Modifier.width(Space.x4 + Space.x2))
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = FontFamilies.mono,
+                        fontSize = FontSize.label,
+                        lineHeight = FontSize.labelLine,
+                        color = colors.textTertiary,
+                    ),
+                )
+            }
+        }
+        if (actionLabel != null && onAction != null) {
+            Spacer(Modifier.height(Space.x4))
+            BrandButton(
+                label = actionLabel,
+                onClick = onAction,
+                variant = BrandButtonVariant.Outline,
+            )
+        }
+    }
+}
+
+/**
+ * 终端风加载态。
+ *
+ * ```
+ * $ 正在加载推荐…  ▌
+ * ```
+ *
+ * ## 为什么这个场景值得用光标
+ *
+ * 光标在这里**承担真实语义**：告诉用户"还在跑"。
+ * 静态的"正在加载…"文字在慢网络下会让人怀疑是不是卡死了，
+ * 一个跳动的方块能消除这个疑虑。
+ *
+ * ## 降级
+ *
+ * 低端设备光标**常亮不闪**（见 [BlockCursor]）—— 省一次每帧重组，
+ * 语义不变（仍是"这里在进行中"）。
+ */
+@Composable
+fun TerminalLoadingState(
+    text: String,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
+    val colors = BiliTheme.colors
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = Space.x4,
+                vertical = if (compact) Space.x4 else Space.x8,
+            ),
+        contentAlignment = if (compact) Alignment.CenterStart else Alignment.Center,
+    ) {
+        StatusLine(
+            text = text,
+            symbol = "$",
+            showCursor = true,
+            textColor = colors.textSecondarySafe,
+        )
     }
 }
 

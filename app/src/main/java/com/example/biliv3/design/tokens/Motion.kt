@@ -12,104 +12,128 @@ import androidx.compose.ui.unit.dp
 /**
  * 动效令牌。
  *
- * 原则：动效只表达「状态变了」，不做纯展示编排。
- * 播放器首帧速度永远优先于转场动画。
+ * ---
+ *
+ * ## 原则
+ *
+ * 1. **动效只表达「状态变了」**，不做纯展示编排
+ * 2. **播放器首帧速度永远优先于转场动画**
+ * 3. 每个动画必须显式传 `animationSpec` 且来自这里（不写裸 `tween(300)`）
+ *
+ * ## 时长阶梯
+ *
+ * 收敛成四档，避免"到处都是 180/200/220/240"：
+ *
+ * | 档 | 时长 | 用途 |
+ * |---|---|---|
+ * | 即时反馈 | 100ms | 按压 |
+ * | 短 | 160ms | 淡入淡出、hover |
+ * | 中 | 220ms | 页面转场、面板展开 |
+ * | 长 | 320ms | 大面积过渡（仅少量场景） |
  */
 object Motion {
-    /** 卡片 hover 上浮、标题变色 */
-    const val HOVER_MS = 160
+    // ---------------- 时长 ----------------
 
-    /** 封面放大（比卡片稍慢，产生层次） */
-    const val COVER_ZOOM_MS = 240
-
-    /** 按压反馈 */
+    /** 按压反馈。 */
     const val PRESS_MS = 100
 
-    /** 轮播切换 */
-    const val CAROUSEL_MS = 400
+    /** 淡入淡出、hover、图标切换。 */
+    const val FADE_MS = 160
 
-    /** 骨架屏微光一轮 */
+    /** 页面转场、面板展开。 */
+    const val PAGE_MS = 220
+
+    /** 大面积过渡（如全屏进出）。 */
+    const val LONG_MS = 320
+
+    /** 骨架屏微光一轮。 */
     const val SHIMMER_MS = 1200
 
-    /** 搜索联想下拉展开 */
-    const val SUGGEST_MS = 180
-
-    /**
-     * 页面转场（NavHost）时长。
-     *
-     * ⚠️ 刻意压到 220ms。NavHost 默认约 400ms ——
-     * 那 400ms 里页面已经在动、但内容还没到，主观上就是「迟钝」。
-     * 220ms 接近"眨眼即完成"，保留方向感的同时消除等待感。
-     */
-    const val PAGE_TRANSITION_MS = 220
-
-    /** 页面转场的纯淡入/淡出时长。比位移更短，避免叠加拖沓。 */
-    const val PAGE_FADE_MS = 160
-
-    /** 弹层/面板展开。 */
-    const val SHEET_MS = 200
-
-    /**
-     * 图片淡入时长。
-     *
-     * 短到只用来**消除跳变**，不制造等待感。
-     * 图片"啪"地直接出现会造成闪烁观感（尤其在快速滚动时）。
-     */
+    /** 图片淡入。 */
     const val IMAGE_FADE_MS = 180
 
-    /** 标准缓动 `cubic-bezier(0.16, 1, 0.3, 1)` */
+    /** 轮播切换。 */
+    const val CAROUSEL_MS = 400
+
+    // ---------------- 兼容别名 ----------------
+    /** @deprecated 用 [FADE_MS]。 */
+    const val HOVER_MS = FADE_MS
+    /** @deprecated 用 [PAGE_MS]。 */
+    const val PAGE_TRANSITION_MS = PAGE_MS
+    /** @deprecated 用 [FADE_MS]。 */
+    const val PAGE_FADE_MS = FADE_MS
+    /** @deprecated 用 [PAGE_MS]。 */
+    const val SHEET_MS = PAGE_MS
+    /** @deprecated 用 [FADE_MS]。 */
+    const val SUGGEST_MS = FADE_MS
+    /** @deprecated 用 [FADE_MS]。 */
+    const val COVER_ZOOM_MS = FADE_MS
+
+    // ---------------- 缓动 ----------------
+
+    /**
+     * 标准缓动 `cubic-bezier(0.16, 1, 0.3, 1)`。
+     *
+     * 前段快、后段缓 —— 主观上"响应快"，这是现代 UI 的默认手感。
+     */
     val standard: Easing = CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
 
-    /** 轮播缓动 ease-in-out */
+    /** 轮播缓动。 */
     val carousel: Easing = FastOutSlowInEasing
 
-    /** 线性（骨架屏） */
+    /** 线性（骨架屏、进度）。 */
     val linear: Easing = LinearEasing
 
-    /** 弹簧（底部弹窗） */
+    // ---------------- 便捷规格 ----------------
+
+    /** 标准 tween（淡入淡出）。 */
+    fun <T> fadeSpec() = tween<T>(durationMillis = FADE_MS, easing = standard)
+
+    /** 页面级 tween。 */
+    fun <T> pageSpec() = tween<T>(durationMillis = PAGE_MS, easing = standard)
+
+    /** 弹簧（底部面板、点赞心跳）。 */
     fun <T> sheetSpring() = spring<T>(
         dampingRatio = Spring.DampingRatioMediumBouncy,
         stiffness = Spring.StiffnessMediumLow,
     )
 
-    /** hover 上浮动画规格 */
-    fun hoverSpec() = tween<Float>(durationMillis = HOVER_MS, easing = standard)
+    /** 轻弹（点赞、微交互）。 */
+    fun <T> popSpring() = spring<T>(
+        dampingRatio = Spring.DampingRatioMediumBouncy,
+        stiffness = Spring.StiffnessMedium,
+    )
 
-    /** 封面缩放动画规格 */
-    fun coverZoomSpec() = tween<Float>(durationMillis = COVER_ZOOM_MS, easing = standard)
+    /** @deprecated 用 [fadeSpec]。 */
+    fun hoverSpec() = fadeSpec<Float>()
+
+    /** @deprecated 用 [fadeSpec]。 */
+    fun coverZoomSpec() = fadeSpec<Float>()
 }
 
 /**
- * 阴影令牌。轻量，只用两级。
+ * 阴影令牌。
  *
- * Compose 里用 `Modifier.shadow(elevation, shape)`，
- * 数值按 Material 的 dp 换算（1dp 阴影 ≈ `0 1px 2px`）。
+ * ---
+ *
+ * ## ⚠️ 深色下阴影几乎不可见
+ *
+ * 黑底黑影，`Modifier.shadow()` 渲染出来接近零。
+ * 所以 `biliCard()` 在深色下用**描边**分层，浅色下用**阴影**。
+ *
+ * ## 只保留两级
+ *
+ * 阴影是"重"的视觉手段，层级越多越脏。两级够表达"静止"与"浮起"。
  */
 object Elevation {
-    /** 静止：`0 1px 2px rgba(0,0,0,0.04)` */
+    /** 静止卡片。 */
     val rest = 1.dp
 
-    /** hover 上浮：`0 8px 20px rgba(0,0,0,0.10)` */
-    val hover = 8.dp
+    /** 浮起（hover、弹窗）。 */
+    val raised = 4.dp
 
-    /**
-     * C 方案：卡片浮起高度。
-     *
-     * ## ⚠️ 浅色下可见，深色下**不可见**
-     *
-     * 深色底上投影是"黑底黑影"，`Modifier.shadow()` 渲染出来几乎为零。
-     * 因此调用点必须按主题分支：
-     *
-     * ```kotlin
-     * val dark = BiliTheme.colors.bgBase.luminance() < 0.5f
-     * Modifier.then(
-     *     if (dark) Modifier.border(1.dp, colors.borderHairline, shape)
-     *     else Modifier.shadow(Elevation.card, shape)
-     * )
-     * ```
-     *
-     * 3dp 是实测值：再小看不出浮起，再大会让相邻卡片"挤在一起"
-     * （2 列网格的横向间距只有 8~16dp）。
-     */
-    val card = 3.dp
+    /** @deprecated 用 [rest]。 */
+    val card = rest
+    /** @deprecated 用 [raised]。 */
+    val hover = raised
 }

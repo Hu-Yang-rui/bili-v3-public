@@ -346,13 +346,13 @@ private fun DurationBadge(text: String, modifier: Modifier = Modifier) {
             .background(colors.overlayCover)
             .padding(horizontal = 4.dp, vertical = 1.dp),
     ) {
-        Text(
+        // 时长用等宽：网格里多个卡片的时长会上下对齐，
+        // 比例字体下 `1:05` 与 `11:05` 宽度差很多，整列看着参差。
+        MonoReadout(
             text = text,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.badge,
-                color = colors.onOverlay,
-                fontWeight = FontWeight.Medium,
-            ),
+            color = colors.onOverlay,
+            fontSize = FontSize.badge,
+            weight = FontWeight.Medium,
         )
     }
 }

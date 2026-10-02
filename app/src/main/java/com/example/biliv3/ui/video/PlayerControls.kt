@@ -49,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.example.biliv3.ui.component.MonoReadout
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
@@ -388,12 +389,20 @@ fun PlayerControls(
                     .padding(horizontal = Space.x2, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = formatTime(if (isDragging) (dragFraction * duration).toLong() else position),
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.onOverlay,
+                // 时间读数用**等宽字体**。
+                //
+                // ## 这是功能需求，不是风格偏好
+                //
+                // 比例字体下 `1` 比 `8` 窄，时间每秒刷新一次，
+                // 整行宽度会跟着**左右抖动** —— 在播放器这种静态构图上非常显眼。
+                // 等宽字体让每个数字占同样宽度，读数稳定不跳。
+                MonoReadout(
+                    text = formatTime(
+                        if (isDragging) (dragFraction * duration).toLong() else position,
                     ),
+                    color = colors.onOverlay,
+                    fontSize = FontSize.badge,
+                    weight = FontWeight.Medium,
                 )
 
                 Spacer(Modifier.width(Space.x2))

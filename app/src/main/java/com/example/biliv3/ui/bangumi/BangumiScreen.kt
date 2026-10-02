@@ -195,6 +195,8 @@ fun BangumiScreen(
 
             items.isEmpty() -> EmptyState(
                 title = "这个分类暂时没有内容",
+                // 终端风：列表为空的次要状态，轻量提示符行
+                terminalStyle = true,
                 description = "换个分类看看",
                 modifier = Modifier.fillMaxSize(),
             )
