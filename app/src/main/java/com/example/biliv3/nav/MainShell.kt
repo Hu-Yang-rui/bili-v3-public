@@ -576,6 +576,8 @@ fun MainShell(
                         // AI 查成分「在 APP 内查看」带过来的评论 id。
                         // 非空时详情页会自动切评论 Tab、翻页定位并高亮。
                         focusRpid = focusRpid,
+                        // 空降助手：总开关来自设置
+                        sponsorBlockEnabled = settings.sponsorBlockEnabled,
                         settings = settings,
                         // Activity 级播放器：PiP / 切页继续播都依赖它
                         holder = container.playerHolder,
@@ -648,6 +650,7 @@ fun MainShell(
                             subtitleRepo = container.subtitleRepository,
                             danmakuRepo = container.danmakuRepository,
                             commentRepo = container.commentRepository,
+                            sponsorBlockRepo = container.sponsorBlockRepository,
                             authHeader = container.appAuthHeader,
                             // 详情页收藏后广播，收藏列表/我的页据此刷新
                             favoritesSync = container.favoritesSync,

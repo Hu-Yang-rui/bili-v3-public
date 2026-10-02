@@ -398,6 +398,51 @@ fun SettingsScreen(
                 onCheckedChange = viewModel::setNotifyReply,
             )
 
+            // ================= 空降助手 =================
+            //
+            // 数据来自第三方 bsbsb.top（社区标注的可跳过片段）。
+            // 页面上**明确标注来源**（AGENTS.md §4.3 的合规要求）。
+            SectionHeader("空降助手（第三方数据）")
+
+            SwitchRow(
+                title = "自动跳过赞助片段",
+                subtitle = "数据来自 bsbsb.top 社区标注；默认关闭",
+                checked = settings.sponsorBlockEnabled,
+                onCheckedChange = viewModel::setSponsorBlockEnabled,
+            )
+
+            // 总开关关着时，下面的细项无意义 —— 不渲染（而不是灰掉，
+            // 灰掉会让人以为"点了没反应"）
+            if (settings.sponsorBlockEnabled) {
+                CategoryPicker(
+                    selected = settings.sponsorBlockCategories,
+                    onToggle = { cat ->
+                        val next = if (cat in settings.sponsorBlockCategories) {
+                            settings.sponsorBlockCategories - cat
+                        } else {
+                            settings.sponsorBlockCategories + cat
+                        }
+                        viewModel.setSponsorBlockCategories(next)
+                    },
+                )
+
+                SwitchRow(
+                    title = "显示跳过提示",
+                    subtitle = "关闭后静默跳过，不显示「已跳过」提示条",
+                    checked = settings.sponsorBlockShowToast,
+                    onCheckedChange = viewModel::setSponsorBlockShowToast,
+                )
+
+                SwitchRow(
+                    title = "允许撤销",
+                    subtitle = "社区标注可能出错；开启后提示条可点「撤销」退回",
+                    checked = settings.sponsorBlockAllowUndo,
+                    onCheckedChange = viewModel::setSponsorBlockAllowUndo,
+                )
+
+                InfoRow(label = "数据来源", value = "bsbsb.top（非官方接口）")
+            }
+
             // ================= 存储 =================
             SectionHeader("存储")
 
@@ -440,6 +485,70 @@ private enum class SettingsPickerId {
 // ---------------------------------------------------------------------------
 // 组件
 // ---------------------------------------------------------------------------
+
+/**
+ * 空降助手的类别多选。
+ *
+ * ## 为什么用"可点标签"而不是 Switch 列表
+ *
+ * 类别有 7 个，每个都做成一行 Switch 会让设置页非常长（一屏放不下），
+ * 而且用户改的通常只有一两个。标签形式一行能放 3~4 个，一眼看全。
+ *
+ * ## 选中态不只用颜色
+ *
+ * 选中的标签是**品牌粉底 + 白字**，未选中是**弱灰底 + 次文字色** ——
+ * 同时改变了底色与文字色两个维度，色盲用户也能区分。
+ */
+@Composable
+private fun CategoryPicker(
+    selected: Set<String>,
+    onToggle: (String) -> Unit,
+) {
+    val colors = BiliTheme.colors
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Space.x4, vertical = Space.x2),
+    ) {
+        Text(
+            text = "跳过哪些内容",
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.label,
+                color = colors.textTertiary,
+            ),
+        )
+        Spacer(Modifier.height(Space.x2))
+
+        // 手工分行：用 FlowRow 需要 experimental API，而这里只有 7 项、
+        // 每行 3 个足够稳定（文字长度可控）。
+        val cats = com.example.biliv3.data.SkipSegment.SELECTABLE
+        cats.chunked(3).forEach { row ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                modifier = Modifier.padding(bottom = Space.x2),
+            ) {
+                row.forEach { cat ->
+                    val on = cat in selected
+                    Text(
+                        text = com.example.biliv3.data.SkipSegment.LABELS[cat] ?: cat,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = FontSize.label,
+                            color = if (on) colors.textOnBrand else colors.textSecondarySafe,
+                            fontWeight = if (on) FontWeight.Medium else FontWeight.Normal,
+                        ),
+                        maxLines = 1,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(Radius.pill))
+                            .background(if (on) colors.brandPrimary else colors.bgHover)
+                            .clickable { onToggle(cat) }
+                            .padding(horizontal = Space.x3, vertical = Space.x1 + 2.dp),
+                    )
+                }
+            }
+        }
+    }
+}
 
 /** 分组标题。 */
 @Composable

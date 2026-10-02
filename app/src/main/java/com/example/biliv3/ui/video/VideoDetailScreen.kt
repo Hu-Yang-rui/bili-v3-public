@@ -130,6 +130,8 @@ fun VideoDetailScreen(
      * 翻页找到该评论、滚动并短暂高亮。
      */
     focusRpid: String = "",
+    /** 空降助手：是否启用自动跳过片段（来自设置）。 */
+    sponsorBlockEnabled: Boolean = false,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
     onVideoClick: (String) -> Unit = {},
@@ -342,6 +344,18 @@ fun VideoDetailScreen(
     LaunchedEffect(playState) {
         if (playState is PlayState.Ready) playerError = null
     }
+
+    // ---- 毛玻璃帧源 ----
+    //
+    // 持续从共享 TextureView 抓帧，喂给 holder.backdrop。
+    // 抓帧在 holder 里（跨页面共享同一份帧），这里只负责"启动它"。
+    //
+    // PiP 下关掉：小窗里没有玻璃面板，抓帧纯属浪费。
+    com.example.biliv3.design.VideoBackdropEffect(
+        backdrop = holder.backdrop,
+        textureProvider = { holder.textureView },
+        enabled = !isInPip,
+    )
 
     /**
      * 左栏视图切换：true=评论，false=简介。
@@ -2048,6 +2062,12 @@ private fun PlayerArea(
     onBack: () -> Unit = {},
     onRetryPlay: () -> Unit,
     onPlayerError: (String) -> Unit,
+    /** 空降助手：是否启用自动跳过片段。 */
+    sponsorBlockEnabled: Boolean = false,
+    /** 判定当前进度该不该跳（含去重）。 */
+    skipTargetFor: (Double) -> Double? = { null },
+    /** 进度条拖动状态变化。 */
+    onSeekingChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = BiliTheme.colors
@@ -2059,6 +2079,9 @@ private fun PlayerArea(
      * 再点或播放中 3 秒后自动淡出。
      */
     var chromeVisible by remember { mutableStateOf(false) }
+
+    /** 用户是否正在拖进度条（拖动中不跳片段）。 */
+    var isUserSeeking by remember { mutableStateOf(false) }
 
     PlayerSafeAreaTop()
 
@@ -2107,7 +2130,20 @@ private fun PlayerArea(
                     controlsVisible = chromeVisible,
                     onToggleControls = { chromeVisible = !chromeVisible },
                     onAutoHide = { chromeVisible = false },
+                    // 拖动中不跳片段（空降助手依赖）
+                    onSeekingChanged = { seeking ->
+                        isUserSeeking = seeking
+                        onSeekingChanged(seeking)
+                    },
                     modifier = Modifier.fillMaxSize(),
+                )
+
+                // 空降助手：按进度自动跳过片段（只调 seekTo，不参与布局）
+                SponsorBlockSkipper(
+                    player = player,
+                    enabled = sponsorBlockEnabled,
+                    skipTargetFor = skipTargetFor,
+                    isUserSeeking = isUserSeeking,
                 )
             }
 
@@ -2163,38 +2199,54 @@ private fun PlayerArea(
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.TopEnd),
             ) {
-                Row(
+                // 毛玻璃承载右上角按钮组。
+                //
+                // 三个圆钮各自带半透明底会显得"三块分离的补丁"；
+                // 用一层玻璃把它们收成一个整体，观感更整、也更"高级"。
+                //
+                // 玻璃底来自共享 TextureView 抓的帧（holder.backdrop），
+                // 所以它**真的在模糊当前的视频画面**，不是假色块。
+                com.example.biliv3.design.GlassSurface(
+                    backdrop = holder?.backdrop,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                        com.example.biliv3.design.tokens.Radius.pill,
+                    ),
+                    blur = com.example.biliv3.design.GlassTokens.blurSmall,
                     modifier = Modifier
                         .statusBarsPadding()
                         .padding(Space.x2),
-                    horizontalArrangement = Arrangement.spacedBy(Space.x2),
-                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // 小窗入口：只在可播放时显示（没画面时进 PiP 没意义）
-                    if (playState is PlayState.Ready && player != null) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = Space.x1, vertical = Space.x1),
+                        horizontalArrangement = Arrangement.spacedBy(Space.x1),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // 小窗入口：只在可播放时显示（没画面时进 PiP 没意义）
+                        if (playState is PlayState.Ready && player != null) {
+                            PlayerChromeButton(
+                                icon = Icons.Filled.PictureInPictureAlt,
+                                contentDescription = "小窗播放",
+                                onClick = { onEnterPip() },
+                            )
+                        }
+
+                        // 全屏 / 退出全屏（从 PlayerControls 收归到这里）
                         PlayerChromeButton(
-                            icon = Icons.Filled.PictureInPictureAlt,
-                            contentDescription = "小窗播放",
-                            onClick = { onEnterPip() },
+                            icon = if (isFullscreen) {
+                                Icons.Filled.FullscreenExit
+                            } else {
+                                Icons.Filled.Fullscreen
+                            },
+                            contentDescription = if (isFullscreen) "退出全屏" else "全屏",
+                            onClick = onToggleFullscreen,
+                        )
+
+                        PlayerChromeButton(
+                            icon = Icons.Filled.Settings,
+                            contentDescription = "播放设置与字幕",
+                            onClick = onOpenSettings,
                         )
                     }
-
-                    // 全屏 / 退出全屏（从 PlayerControls 收归到这里）
-                    PlayerChromeButton(
-                        icon = if (isFullscreen) {
-                            Icons.Filled.FullscreenExit
-                        } else {
-                            Icons.Filled.Fullscreen
-                        },
-                        contentDescription = if (isFullscreen) "退出全屏" else "全屏",
-                        onClick = onToggleFullscreen,
-                    )
-
-                    PlayerChromeButton(
-                        icon = Icons.Filled.Settings,
-                        contentDescription = "播放设置与字幕",
-                        onClick = onOpenSettings,
-                    )
                 }
             }
         }

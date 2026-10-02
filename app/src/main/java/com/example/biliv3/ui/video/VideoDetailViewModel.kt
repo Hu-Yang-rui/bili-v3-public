@@ -82,6 +82,12 @@ class VideoDetailViewModel(
     private val danmakuRepo: DanmakuRepository? = null,
     private val commentRepo: CommentRepository? = null,
     private val authHeader: String = "",
+    /**
+     * 空降助手仓库（第三方 bsbsb.top 的"可跳过片段"）。
+     *
+     * null = 不启用该功能。
+     */
+    private val sponsorBlockRepo: com.example.biliv3.data.SponsorBlockRepository? = null,
     /** 收藏状态全局广播（见 [com.example.biliv3.data.FavoritesSync]）。 */
     private val favoritesSync: com.example.biliv3.data.FavoritesSync =
         com.example.biliv3.data.FavoritesSync(),
@@ -469,6 +475,97 @@ class VideoDetailViewModel(
         _focusingComment.value = false
     }
 
+    // ---------------- 空降助手（跳过恰饭广告等）----------------
+
+    /** 已加载的可跳过片段（按开始时间升序、已合并）。 */
+    private val _skipSegments = MutableStateFlow<List<com.example.biliv3.data.SkipSegment>>(
+        emptyList(),
+    )
+    val skipSegments: StateFlow<List<com.example.biliv3.data.SkipSegment>> =
+        _skipSegments.asStateFlow()
+
+    /** 刚跳过的片段（驱动"已跳过 xx，撤销"提示条；null = 无提示）。 */
+    private val _justSkipped = MutableStateFlow<JustSkipped?>(null)
+    val justSkipped: StateFlow<JustSkipped?> = _justSkipped.asStateFlow()
+
+    /** 已处理过的片段 UUID，避免同一个片段被重复跳。 */
+    private var skippedUuids = HashSet<String>()
+
+    /**
+     * 拉取当前分P 的可跳过片段。
+     *
+     * 在取流成功（拿到 cid）后调用一次。失败**静默** ——
+     * 这是第三方增强功能，拿不到就不跳，不该影响播放。
+     */
+    fun loadSkipSegments(categories: Set<String>) {
+        val repo = sponsorBlockRepo ?: return
+        val cur = _state.value
+        if (cur !is DetailUiState.Content) return
+
+        val cid = cur.detail.pages.getOrNull(_currentPage.value)?.cid ?: cur.detail.cid
+        if (cid <= 0L) return
+
+        viewModelScope.launch {
+            val list = repo.segments(bvid = bvid, cid = cid, categories = categories)
+            _skipSegments.value = list
+            skippedUuids = HashSet()
+        }
+    }
+
+    /** 切换分P 时清空片段（不同 cid 的片段不同）。 */
+    private fun resetSkipSegments() {
+        _skipSegments.value = emptyList()
+        skippedUuids = HashSet()
+        _justSkipped.value = null
+    }
+
+    /**
+     * 按当前播放位置判断是否该跳过。
+     *
+     * ## 判定规则
+     *
+     * 位置落在某个片段区间内、且该片段**还没跳过** → 返回目标时间。
+     *
+     * ## 为什么用"已跳过集合"而不是只比较时间
+     *
+     * 跳过之后播放器位置会到 `endSeconds`，此时已不在区间内，看似不需要去重。
+     * 但用户**可能手动拖回**片段里（比如想看看广告讲了什么）——
+     * 那时若还跳，就变成了"用户拖不进去"的 bug。
+     * 用 UUID 记录"跳过一次就不再跳"，行为可预期。
+     *
+     * @param positionSeconds 当前播放位置（秒）
+     * @return 要跳到的目标时间（秒）；null = 不需要跳
+     */
+    fun skipTargetFor(positionSeconds: Double): Double? {
+        val seg = com.example.biliv3.data.SponsorBlockLogic.findSegmentAt(
+            segments = _skipSegments.value,
+            positionSeconds = positionSeconds,
+            alreadySkipped = skippedUuids,
+            tailMarginSeconds = SKIP_TAIL_MARGIN_SECONDS,
+        ) ?: return null
+
+        if (seg.uuid.isNotEmpty()) skippedUuids.add(seg.uuid)
+        _justSkipped.value = JustSkipped(
+            segment = seg,
+            fromSeconds = positionSeconds,
+        )
+        return seg.endSeconds
+    }
+
+    /** 撤销上次跳过（退回原位置）。 */
+    fun undoSkip(): Double? {
+        val last = _justSkipped.value ?: return null
+        // 允许再次跳（用户可能撤销后立刻又想跳）
+        skippedUuids.remove(last.segment.uuid)
+        _justSkipped.value = null
+        return last.fromSeconds
+    }
+
+    /** 提示条消失。 */
+    fun consumeJustSkipped() {
+        _justSkipped.value = null
+    }
+
     /**
      * 翻页找到指定评论并请求定位。
      *
@@ -771,8 +868,9 @@ class VideoDetailViewModel(
         if (index == _currentPage.value) return
 
         _currentPage.value = index
-        // 分P 变了 → cid 变了 → 弹幕也不同，必须重置
+        // 分P 变了 → cid 变了 → 弹幕/片段都不同，必须重置
         resetDanmaku()
+        resetSkipSegments()
         fetchPlayInfo(cur.detail, index)
     }
 
@@ -1039,3 +1137,23 @@ const val COMMENT_SORT_TIME = 2
  * 既给 B 站压力也容易触发风控，且用户要干等。
  */
 const val MAX_FOCUS_PAGES = 10
+
+/**
+ * 跳过片段的尾部余量（秒）。
+ *
+ * 位置已经非常接近片段末尾（差不到这个值）时就不再跳 ——
+ * 否则会出现"跳到 527.0s，而当前位置 526.9s"这种无意义跳转，
+ * 且容易和 `endSeconds` 的浮点误差打架形成抖动。
+ */
+const val SKIP_TAIL_MARGIN_SECONDS = 0.5
+
+/**
+ * 刚跳过一个片段（驱动"已跳过"提示条）。
+ *
+ * @param segment 被跳过的片段
+ * @param fromSeconds 跳过前的位置，用于"撤销"时退回
+ */
+data class JustSkipped(
+    val segment: com.example.biliv3.data.SkipSegment,
+    val fromSeconds: Double,
+)

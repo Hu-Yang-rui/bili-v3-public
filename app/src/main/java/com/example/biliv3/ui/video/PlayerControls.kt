@@ -111,6 +111,13 @@ fun PlayerControls(
     controlsVisible: Boolean = true,
     onToggleControls: () -> Unit = {},
     onAutoHide: () -> Unit = {},
+    /**
+     * 进度条拖动状态变化。`true` = 用户正在拖动。
+     *
+     * ⚠️ 空降助手需要它：拖动中**不能**自动跳片段，
+     * 否则会和用户的 seek 打架（表现为"拖不动 / 位置乱跳"）。
+     */
+    onSeekingChanged: (Boolean) -> Unit = {},
 ) {
     val colors = BiliTheme.colors
     var isPlaying by remember { mutableStateOf(player.isPlaying) }
@@ -119,6 +126,13 @@ fun PlayerControls(
 
     // 拖动进度条时用本地值，避免与播放进度更新打架（否则滑块会"跳回去"）
     var isDragging by remember { mutableStateOf(false) }
+    // 单一入口：赋值的同时上报，避免多处赋值漏上报（空降助手依赖它）
+    val setDragging: (Boolean) -> Unit = { v ->
+        if (isDragging != v) {
+            isDragging = v
+            onSeekingChanged(v)
+        }
+    }
     var dragFraction by remember { mutableFloatStateOf(0f) }
 
     // 手势 seek 预览
@@ -396,27 +410,27 @@ fun PlayerControls(
                             if (duration <= 0) return@pointerInput
                             detectTapGestures(
                                 onPress = { offset ->
-                                    isDragging = true
+                                    setDragging(true)
                                     dragFraction = (offset.x / size.width).coerceIn(0f, 1f)
                                     // 按住即预览，松手才真正 seek（与横滑 seek 同一策略：
                                     // 拖动中反复 seek 会让播放器不断重新缓冲）
                                     tryAwaitRelease()
                                     player.seekTo((dragFraction * duration).toLong())
                                     position = (dragFraction * duration).toLong()
-                                    isDragging = false
+                                    setDragging(false)
                                 },
                             )
                         }
                         .pointerInput(duration) {
                             if (duration <= 0) return@pointerInput
                             detectHorizontalDragGestures(
-                                onDragStart = { isDragging = true },
+                                onDragStart = { setDragging(true) },
                                 onDragEnd = {
                                     player.seekTo((dragFraction * duration).toLong())
                                     position = (dragFraction * duration).toLong()
-                                    isDragging = false
+                                    setDragging(false)
                                 },
-                                onDragCancel = { isDragging = false },
+                                onDragCancel = { setDragging(false) },
                                 onHorizontalDrag = { change, _ ->
                                     change.consume()
                                     dragFraction = (change.position.x / size.width)

@@ -176,11 +176,26 @@ fun VerticalScreen(
                     pageCount = { state.items.size },
                 )
 
-                // 页码变化 → 通知 ViewModel 切项 + 预加载后一项
+                // ---- 毛玻璃帧源 ----
+                //
+                // 从共享 TextureView 持续抓帧，供底部信息区做玻璃底。
+                // 与详情页共用同一个 backdrop（holder 持有），
+                // 所以两边来回切时玻璃不会"空一拍"。
+                com.example.biliv3.design.VideoBackdropEffect(
+                    backdrop = holder.backdrop,
+                    textureProvider = { holder.textureView },
+                )
+
+                // 页码变化 → 通知 ViewModel 切项 + 预加载相邻项
+                //
+                // ⚠️ 预加载从"仅 +1"扩到 **±1**：
+                // 用户往上滑回来时，上一项若没预加载会重新取流 → 明显卡顿。
+                // 上下各一项是"跟手"的最低要求（TikTok 也是这个范围）。
                 LaunchedEffect(pagerState) {
                     snapshotFlow { pagerState.currentPage }.collect { page ->
                         onPageChanged(page)
                         if (page + 1 <= state.items.lastIndex) onPreload(page + 1)
+                        if (page - 1 >= 0) onPreload(page - 1)
                     }
                 }
 
@@ -476,6 +491,29 @@ private fun ActionItem(
  * 底部用**渐变兜底**而不是纯色条 —— 纯色条会切掉画面，
  * 渐变能让画面自然过渡到文字区。
  */
+/**
+ * 底部信息区（毛玻璃）。
+ *
+ * ## 为什么用毛玻璃而不是纯渐变
+ *
+ * 纯渐变只能"压暗"，无法表达"这层玻璃浮在画面上"。
+ * 毛玻璃让底下的画面**隐约透出来**，层次立刻立体 ——
+ * 这是 TikTok 观感的核心之一，也是"不廉价"的关键：
+ * 廉价感来自"一块死黑的色块盖住画面"。
+ *
+ * ## 实现方式
+ *
+ * 用 `GlassSurface`（`design/Glass.kt`）：
+ * - 底：共享 TextureView 抓来的帧，缩小 8 倍再放大 → 天然模糊
+ * - 上：半透明染色 + 1dp 高光边
+ * - 内容（文字）**不被模糊**
+ *
+ * ## ⚠️ 兜底
+ *
+ * 抓不到帧时（未起播 / 无视频）退化为纯半透明底 ——
+ * 玻璃的质感主要来自"半透明 + 高光边"，模糊只是锦上添花。
+ * 所以不会出现"一块死黑"。
+ */
 @Composable
 private fun BottomInfo(
     state: VerticalUiState,
@@ -484,46 +522,53 @@ private fun BottomInfo(
 ) {
     val detail = state.detail
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color.Transparent, Color(0xCC000000)),
-                ),
-            )
-            .navigationBarsPadding()
-            .padding(
-                start = Space.x4,
-                // 右侧留出互动栏宽度，避免文字压在图标下
-                end = ACTION_BAR_RESERVED,
-                top = Space.x8,
-                bottom = Space.x3,
-            ),
+    com.example.biliv3.design.GlassSurface(
+        backdrop = holder.backdrop,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(
+            topStart = com.example.biliv3.design.tokens.Radius.card,
+            topEnd = com.example.biliv3.design.tokens.Radius.card,
+        ),
+        blur = com.example.biliv3.design.GlassTokens.blurMedium,
+        modifier = modifier.fillMaxWidth(),
     ) {
-        Text(
-            text = "@${detail?.ownerName.orEmpty()}",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-            ),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.height(Space.x1))
-        Text(
-            text = detail?.title.orEmpty(),
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                lineHeight = FontSize.bodyLine,
-                color = Color.White,
-            ),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.height(Space.x2))
-        VerticalProgress(holder = holder)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(
+                    start = Space.x4,
+                    // 右侧留出互动栏宽度，避免文字压在图标下
+                    end = ACTION_BAR_RESERVED,
+                    top = Space.x3,
+                    bottom = Space.x3,
+                ),
+        ) {
+            Text(
+                text = "@${detail?.ownerName.orEmpty()}",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    // ⚠️ 15sp（原 12sp）：底部信息区是竖屏唯一的文字区，
+                    // 12sp 在 6 寸屏上明显偏小，与"大图标"的视觉重量不匹配。
+                    fontSize = FontSize.titleMd,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(Space.x1))
+            Text(
+                text = detail?.title.orEmpty(),
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = FontSize.body,
+                    lineHeight = FontSize.bodyLine,
+                    color = Color.White,
+                ),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(Space.x2))
+            VerticalProgress(holder = holder)
+        }
     }
 }
 

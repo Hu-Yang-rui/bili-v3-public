@@ -70,6 +70,94 @@ class PlayerHolder(private val context: Context) {
         private set
 
     /**
+     * **共享的** `TextureView` 承载容器。
+     *
+     * ---
+     *
+     * ## 为什么需要一个"跨页面复用"的 View
+     *
+     * 毛玻璃需要**抓视频帧**（见 `design/Glass.kt`），而抓帧要求：
+     *
+     * 1. 画面必须渲染在 `TextureView` 上
+     *    （`SurfaceView` 的内容在独立合成层，`getBitmap()` 只能拿到黑图）
+     * 2. 这个 View 必须**长期存活** —— 否则切换页面时重新创建，
+     *    `TextureView` 的 Surface 会重建，画面**黑一帧**
+     *
+     * 所以：一个 `PlayerHolder` 只持有一个 View，所有页面共用它。
+     *
+     * ## 为什么不是 Compose 的 `remember`
+     *
+     * Compose 的 `remember` 生命周期跟随**组合**。竖屏页与详情页是
+     * 两个不同的组合，各自 `remember` 会得到两个 View → 又回到
+     * "两个 View 抢一个 ExoPlayer"的老问题。
+     *
+     * 放在 `PlayerHolder`（Activity 级单例）里，生命周期与 Activity 一致。
+     */
+    private var sharedTextureView: android.view.TextureView? = null
+
+    /** 取共享 `TextureView`（懒创建）。供 `VideoPlayerSurface` 挂载、玻璃抓帧。 */
+    fun obtainTextureView(): android.view.TextureView =
+        sharedTextureView ?: android.view.TextureView(context).also {
+            sharedTextureView = it
+        }
+
+    /**
+     * 把共享 `TextureView` 挂到指定容器。
+     *
+     * ## ⚠️ 必须先摘再挂
+     *
+     * `View` 只能有一个父级。若旧宿主还没销毁就 `addView`，
+     * 会抛 `IllegalStateException: The specified child already has a parent`。
+     *
+     * 页面切换时新旧组合可能**短暂共存**（转场期间），
+     * 所以这一步不是防御性代码，而是**必需**的。
+     *
+     * @return 挂载后的 view（调用方通常不需要，但便于测试断言）
+     */
+    fun attachTextureViewTo(container: android.view.ViewGroup): android.view.TextureView {
+        val v = obtainTextureView()
+        // 关键：先从旧父级摘下来
+        (v.parent as? android.view.ViewGroup)?.removeView(v)
+        if (container.indexOfChild(v) < 0) {
+            container.addView(
+                v,
+                android.view.ViewGroup.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                ),
+            )
+        }
+        return v
+    }
+
+    /** 当前共享 View（null = 还没创建过）。玻璃抓帧用。 */
+    val textureView: android.view.TextureView? get() = sharedTextureView
+
+    /**
+     * 毛玻璃用的视频帧。
+     *
+     * ## 为什么放在 holder 上而不是某个页面里
+     *
+     * 玻璃面板要在**多个页面**用（竖屏底部信息区、详情页控制层），
+     * 而帧都来自**同一个**共享 `TextureView`。
+     * 放在页面里会导致"每个页面各抓一份、各自过期"。
+     *
+     * 由 `design/Glass.kt` 的 `VideoBackdropEffect` 持续写入。
+     */
+    val backdrop = com.example.biliv3.design.VideoBackdrop()
+
+    /**
+     * 释放共享 View。
+     *
+     * ⚠️ 只在**真正离开播放场景**时调用（如 Activity 销毁）。
+     * 页面间切换**不要**调 —— 那正是黑帧的来源。
+     */
+    fun releaseTextureView() {
+        (sharedTextureView?.parent as? android.view.ViewGroup)?.removeView(sharedTextureView)
+        sharedTextureView = null
+    }
+
+    /**
      * 取得播放器（不存在则创建）。
      *
      * @param key 视频标识。与 [currentKey] 不同时会**重建**播放器 ——

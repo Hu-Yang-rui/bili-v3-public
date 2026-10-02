@@ -268,6 +268,15 @@ val pmRepository: PmRepository = PmRepository(api, authStore)
      * （没有任何接口能直接给竖屏列表，见该类注释），
      * 那些请求需要登录态。
      */
+    /**
+     * 空降助手（第三方 bsbsb.top 的可跳过片段）。
+     *
+     * ⚠️ 它用**独立 client**（不挂 CookieJar）—— 第三方站点绝不能
+     * 拿到 B 站登录凭据（AGENTS.md §4.2 红线）。
+     */
+    val sponsorBlockRepository: com.example.biliv3.data.SponsorBlockRepository =
+        com.example.biliv3.data.SponsorBlockRepository()
+
     val verticalFeedRepository: com.example.biliv3.data.VerticalFeedRepository =
         com.example.biliv3.data.VerticalFeedRepository(api, videoRepository)
 }

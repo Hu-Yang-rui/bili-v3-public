@@ -68,6 +68,17 @@ class SettingsStore(
             personalizedRecommend = p[KEY_PERSONALIZED] ?: true,
             // ---- 通知 ----
             notifyReply = p[KEY_NOTIFY_REPLY] ?: true,
+            // ---- 空降助手 ----
+            sponsorBlockEnabled = p[KEY_SB_ENABLED] ?: false,
+            sponsorBlockCategories = (p[KEY_SB_CATEGORIES] ?: "")
+                .takeIf { it.isNotEmpty() }
+                ?.split(',')
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                ?.toSet()
+                ?: SponsorBlockDefaults.CATEGORIES,
+            sponsorBlockShowToast = p[KEY_SB_TOAST] ?: true,
+            sponsorBlockAllowUndo = p[KEY_SB_UNDO] ?: true,
             // ---- 通用 ----
             preferH264 = p[KEY_H264] ?: true,
             // ---- 外观 ----
@@ -121,6 +132,18 @@ class SettingsStore(
     suspend fun setDanmakuBlockModes(modes: Set<Int>) = edit {
         it[KEY_DANMAKU_BLOCK_MODES] = modes.sorted().joinToString(",")
     }
+
+    // ---------------- 空降助手 ----------------
+
+    suspend fun setSponsorBlockEnabled(v: Boolean) = edit { it[KEY_SB_ENABLED] = v }
+
+    suspend fun setSponsorBlockCategories(cats: Set<String>) = edit {
+        it[KEY_SB_CATEGORIES] = cats.sorted().joinToString(",")
+    }
+
+    suspend fun setSponsorBlockShowToast(v: Boolean) = edit { it[KEY_SB_TOAST] = v }
+
+    suspend fun setSponsorBlockAllowUndo(v: Boolean) = edit { it[KEY_SB_UNDO] = v }
 
     // ---------------- 外观 ----------------
 
@@ -194,7 +217,46 @@ class SettingsStore(
         /** 主题模式：`system` / `dark` / `light`。 */
         private val KEY_THEME_MODE = androidx.datastore.preferences.core
             .stringPreferencesKey("theme_mode")
+
+        // ---- 空降助手 ----
+        private val KEY_SB_ENABLED = androidx.datastore.preferences.core
+            .booleanPreferencesKey("sponsor_block_enabled")
+
+        /** 要跳过的类别（逗号分隔）。空串 = 用默认集。 */
+        private val KEY_SB_CATEGORIES = androidx.datastore.preferences.core
+            .stringPreferencesKey("sponsor_block_categories")
+
+        private val KEY_SB_TOAST = androidx.datastore.preferences.core
+            .booleanPreferencesKey("sponsor_block_toast")
+
+        private val KEY_SB_UNDO = androidx.datastore.preferences.core
+            .booleanPreferencesKey("sponsor_block_undo")
     }
+}
+
+/**
+ * 空降助手的默认设置。
+ *
+ * ## 默认跳哪些类别
+ *
+ * 默认只开**真正让人厌烦、且跳过不会丢失信息**的三类：
+ * - `sponsor`（恰饭广告）—— 核心诉求
+ * - `selfpromo`（自我推广 / 一键三连提示）
+ * - `intro` / `outro`（片头片尾动画）
+ *
+ * **默认不开**的：
+ * - `interaction`（互动提示）—— 有些是内容的一部分
+ * - `poi_highlight` / `exclusive_access` —— 是"定位"不是"跳过"，
+ *   语义不同（`actionType` 为 `poi`/`full`），跳过会让人莫名其妙
+ * - `preview` / `music_offtopic` —— 争议较大，交给用户自己开
+ */
+object SponsorBlockDefaults {
+    val CATEGORIES: Set<String> = setOf(
+        "sponsor",
+        "selfpromo",
+        "intro",
+        "outro",
+    )
 }
 
 /**
@@ -262,6 +324,30 @@ data class Settings(
 
     // ---- 通知 ----
     val notifyReply: Boolean = true,
+
+    // ---- 空降助手（SponsorBlock for Bilibili）----
+    /**
+     * 总开关。默认**关**。
+     *
+     * ## 为什么默认关而不是开
+     *
+     * 它会让播放器**自动跳转进度**（跳过赞助片段）。自动改变播放位置的
+     * 行为必须由用户明确开启 —— 否则会出现"视频自己跳了"的困惑，
+     * 而且用户会怀疑是 bug。
+     *
+     * 另外这是**第三方社区数据**（bsbsb.top），默认开启等于替用户
+     * 做了一个"接受第三方数据"的决定。
+     */
+    val sponsorBlockEnabled: Boolean = false,
+
+    /** 要跳过的类别（见 `SponsorBlockRepository.Category`）。 */
+    val sponsorBlockCategories: Set<String> = SponsorBlockDefaults.CATEGORIES,
+
+    /** 是否显示"已跳过"提示条。关掉则静默跳过。 */
+    val sponsorBlockShowToast: Boolean = true,
+
+    /** 跳过时是否弹撤销按钮（误标时可以退回）。 */
+    val sponsorBlockAllowUndo: Boolean = true,
 
     // ---- 外观 ----
     /** 主题模式。 */

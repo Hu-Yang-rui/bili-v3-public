@@ -94,4 +94,34 @@ class SettingsDefaultsTest {
         assertThat(Settings().saveHistory).isTrue()
         assertThat(Settings().personalizedRecommend).isTrue()
     }
+
+    /**
+     * 空降助手默认**关闭**。
+     *
+     * ⚠️ 这条同样是回归防护。默认开启的后果：
+     * - 播放器会**自己跳进度**，用户会以为播放器坏了
+     * - 等于替用户默认接受了「使用第三方社区数据」这件事
+     *
+     * 而且它依赖第三方服务（bsbsb.top）—— 默认开启意味着
+     * 每次播放都会向第三方发请求，用户毫不知情。
+     */
+    @Test
+    fun `空降助手默认关闭`() {
+        assertThat(Settings().sponsorBlockEnabled).isFalse()
+    }
+
+    /** 默认跳过的类别：恰饭广告 / 一键三连 / 片头 / 片尾。 */
+    @Test
+    fun `空降助手默认类别`() {
+        assertThat(Settings().sponsorBlockCategories).containsExactly(
+            "sponsor", "selfpromo", "intro", "outro",
+        )
+    }
+
+    /** 提示与撤销默认开启（社区标注会出错，撤销是必要的补救）。 */
+    @Test
+    fun `空降助手默认显示提示且允许撤销`() {
+        assertThat(Settings().sponsorBlockShowToast).isTrue()
+        assertThat(Settings().sponsorBlockAllowUndo).isTrue()
+    }
 }

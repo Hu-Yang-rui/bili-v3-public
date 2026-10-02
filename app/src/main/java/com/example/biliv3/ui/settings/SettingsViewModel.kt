@@ -75,6 +75,17 @@ class SettingsViewModel(
 
     fun setNotifyReply(v: Boolean) = launch { store.setNotifyReply(v) }
 
+    // ---- 空降助手 ----
+
+    fun setSponsorBlockEnabled(v: Boolean) = launch { store.setSponsorBlockEnabled(v) }
+
+    fun setSponsorBlockCategories(cats: Set<String>) =
+        launch { store.setSponsorBlockCategories(cats) }
+
+    fun setSponsorBlockShowToast(v: Boolean) = launch { store.setSponsorBlockShowToast(v) }
+
+    fun setSponsorBlockAllowUndo(v: Boolean) = launch { store.setSponsorBlockAllowUndo(v) }
+
     // ---- 外观 ----
 
     fun setThemeMode(v: com.example.biliv3.data.ThemeMode) = launch { store.setThemeMode(v) }

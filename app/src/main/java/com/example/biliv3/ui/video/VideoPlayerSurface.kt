@@ -14,6 +14,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -69,6 +73,9 @@ fun VideoPlayerSurface(
      */
     holder: com.example.biliv3.player.PlayerHolder? = null,
 ) {
+    // 当前 Surface 绑定（随组合存活；onRelease 里释放）
+    var surfaceBinding by remember { mutableStateOf<TextureSurfaceBinder?>(null) }
+
     // 取流变化（切分P / 切清晰度）时重新装配 MediaSource。
     // ⚠️ 绝不缓存 MediaSource —— 取流 URL 约 2h 过期。
     LaunchedEffect(info.videoUrl, info.audioUrl, info.currentQuality) {
@@ -108,19 +115,127 @@ fun VideoPlayerSurface(
 
     AndroidView(
         modifier = modifier,
+        // ⚠️ 不再自己 new PlayerView，而是挂**共享的 TextureView**。
+        //
+        // 两个原因，缺一不可：
+        //
+        // 1. **毛玻璃要抓帧**（design/Glass.kt）
+        //    `SurfaceView` 的内容在独立合成层，`getBitmap()` 只能拿到黑图。
+        //    必须用 `TextureView` 才能拿到真实画面。
+        //
+        // 2. **切换页面不能黑一帧**
+        //    若每个页面各自 new 一个 View，切页时旧 View 销毁、
+        //    新 View 创建 → Surface 重建 → 必然黑一帧。
+        //    共享同一个 View（从旧父级摘下、挂到新父级）就没有这个问题。
+        //
+        // 画面比例由外层 Box 的 `aspectRatio` 控制（TextureView 默认拉伸填满）。
         factory = { ctx ->
-            PlayerView(ctx).apply {
-                useController = false
-                // FIT：保持原始比例，不做裁切。竖屏视频也不会被拉变形。
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                setShutterBackgroundColor(android.graphics.Color.BLACK)
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                )
-                this.player = player
+            android.widget.FrameLayout(ctx).also { container ->
+                val tv = holder?.attachTextureViewTo(container)
+                    ?: run {
+                        // 无 holder（预览/测试）时退化为自建一个，保持组件可用
+                        android.view.TextureView(ctx).also {
+                            container.addView(
+                                it,
+                                android.view.ViewGroup.LayoutParams(
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                ),
+                            )
+                        }
+                    }
+                // TextureView 不能直接挂 ExoPlayer —— 需要 Surface 中转
+                surfaceBinding = TextureSurfaceBinder(player, tv)
             }
         },
-        update = { it.player = player },
+        update = {
+            // 重新进入组合（PiP 进出 / 页面重建）时确保仍绑在当前 player 上
+            surfaceBinding?.rebind(player)
+        },
+        onRelease = {
+            surfaceBinding?.dispose()
+            surfaceBinding = null
+        },
     )
+}
+
+/**
+ * 把 `ExoPlayer` 的视频输出接到 `TextureView`。
+ *
+ * ## 为什么需要这一层
+ *
+ * `PlayerView` 内置了这个逻辑，但我们不能用 `PlayerView` ——
+ * 它默认用 `SurfaceView`，抓不到帧。
+ *
+ * `TextureView` 需要一个 `Surface` 才能真正显示画面，
+ * 而这个 `Surface` 在 View 尺寸变化、重新挂载时会**失效重建**，
+ * 所以必须监听 `SurfaceTextureListener` 并在每次可用时重新 `setSurface`。
+ *
+ * ## ⚠️ 顺序陷阱
+ *
+ * `setSurface` 必须在 **player 已 attach 到主线程** 之后。
+ * `ExoPlayer` 要求所有调用在同一线程（这里是主线程，Compose 也是主线程，OK）。
+ */
+@OptIn(UnstableApi::class)
+private class TextureSurfaceBinder(
+    private var player: ExoPlayer,
+    private val view: android.view.TextureView,
+) : android.view.TextureView.SurfaceTextureListener {
+
+    private var surface: android.view.Surface? = null
+
+    init {
+        // 若 Surface 已就绪（复用 View 时常见），立即绑定
+        val st = if (view.isAvailable) view.surfaceTexture else null
+        if (st != null) {
+            onSurfaceTextureAvailable(
+                st,
+                view.width.coerceAtLeast(1),
+                view.height.coerceAtLeast(1),
+            )
+        } else {
+            view.surfaceTextureListener = this
+        }
+    }
+
+    override fun onSurfaceTextureAvailable(
+        st: android.graphics.SurfaceTexture,
+        width: Int,
+        height: Int,
+    ) {
+        view.surfaceTextureListener = this
+        surface?.release()
+        val s = android.view.Surface(st)
+        surface = s
+        runCatching { player.setVideoSurface(s) }
+    }
+
+    override fun onSurfaceTextureSizeChanged(
+        st: android.graphics.SurfaceTexture,
+        width: Int,
+        height: Int,
+    ) = Unit
+
+    override fun onSurfaceTextureDestroyed(st: android.graphics.SurfaceTexture): Boolean {
+        runCatching { player.setVideoSurface(null) }
+        surface?.release()
+        surface = null
+        // 返回 true 表示"我自己释放"，让 TextureView 重建时重新回调 available
+        return true
+    }
+
+    override fun onSurfaceTextureUpdated(st: android.graphics.SurfaceTexture) = Unit
+
+    /** 重新绑定到（可能已变化的）player 实例。 */
+    fun rebind(newPlayer: ExoPlayer) {
+        player = newPlayer
+        surface?.let { runCatching { player.setVideoSurface(it) } }
+    }
+
+    fun dispose() {
+        runCatching { player.setVideoSurface(null) }
+        surface?.release()
+        surface = null
+        view.surfaceTextureListener = null
+    }
 }

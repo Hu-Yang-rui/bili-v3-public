@@ -27,6 +27,8 @@ class VideoDetailViewModelFactory(
     private val subtitleRepo: SubtitleRepository? = null,
     private val danmakuRepo: com.example.biliv3.data.danmaku.DanmakuRepository? = null,
     private val commentRepo: com.example.biliv3.data.CommentRepository? = null,
+    /** 空降助手（第三方可跳过片段）。传 null 时该功能整体不启用。 */
+    private val sponsorBlockRepo: com.example.biliv3.data.SponsorBlockRepository? = null,
     private val authHeader: String = "",
     /** 收藏状态全局广播。传 null 时用独立实例（预览环境够用）。 */
     private val favoritesSync: com.example.biliv3.data.FavoritesSync? = null,
@@ -50,6 +52,7 @@ class VideoDetailViewModelFactory(
             subtitleRepo = subtitleRepo,
             danmakuRepo = danmakuRepo,
             commentRepo = commentRepo,
+            sponsorBlockRepo = sponsorBlockRepo,
             authHeader = authHeader,
             favoritesSync = favoritesSync ?: com.example.biliv3.data.FavoritesSync(),
             progressStore = progressStore,
