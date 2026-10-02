@@ -57,7 +57,21 @@ $hdr = @{
 $notesPath = Join-Path $root 'tool\release-notes.md'
 if (-not (Test-Path $notesPath)) { throw "missing release notes: $notesPath" }
 
+# Read the template once, up front: the changelog filter below needs the
+# 'changelog-exclude:' rule that is declared inside this file (as an HTML
+# comment, so it never shows on the rendered release page).
+$rawNotes = [System.IO.File]::ReadAllText($notesPath, [System.Text.Encoding]::UTF8)
+
 # ---- changelog: derived from git so it can never drift or be forgotten ----
+#
+# The changelog is USER-FACING, so internal-only commits must not appear in it:
+# release scripting, doc maintenance, version bumps, build/CI chores. Users care
+# about what the APP does, not how we ship it.
+#
+# Two-stage filter:
+#   1. conventional-commit type/scope (ASCII, so it can live here)
+#   2. extra regex from release-notes.md (needs Chinese, so it lives there --
+#      this script must stay pure ASCII)
 #
 # Native command output is decoded using [Console]::OutputEncoding; commit
 # subjects here are Chinese, so force UTF-8 first or they come back as '?'.
@@ -79,23 +93,63 @@ try {
         Write-Host ("changelog range: {0}..HEAD" -f $prevTag)
         $subjects = & git -C $root log "$prevTag..HEAD" --no-merges --pretty=format:%s 2>$null
     } else {
-        Write-Host 'changelog range: first release (last 15 commits)'
-        $subjects = & git -C $root log -15 --no-merges --pretty=format:%s 2>$null
+        Write-Host 'changelog range: first release (last 30 commits)'
+        $subjects = & git -C $root log -30 --no-merges --pretty=format:%s 2>$null
     }
 
-    $lines = @($subjects | Where-Object { $_ -and $_.Trim() -ne '' } | ForEach-Object { "- " + $_.Trim() })
-    if ($lines.Count -eq 0) { $lines = @('- (no commit subjects found)') }
+    $all = @($subjects | Where-Object { $_ -and $_.Trim() -ne '' } | ForEach-Object { $_.Trim() })
+
+    # --- filter 1: conventional-commit types that are never user-visible ---
+    # chore/docs/ci/build/test/style/revert are tooling-only by definition.
+    # Also drop any scope=release|docs|tool regardless of type.
+    $dropTypes = '^(chore|docs|ci|build|test|style|revert)(\(|:|!)'
+    $dropScope = '^[a-z]+\((release|docs|tool|repo)\)'
+
+    # --- filter 2: extra regex declared in release-notes.md ---
+    $excludeExtra = ''
+    $m = [regex]::Match($rawNotes, 'changelog-exclude:\s*(.+)')
+    if ($m.Success) { $excludeExtra = $m.Groups[1].Value.Trim() }
+
+    # Fallback text for an empty changelog (Chinese -> must come from the
+    # UTF-8 file, not from this ASCII-only script).
+    $emptyText = '- (no user-visible changes)'
+    $me = [regex]::Match($rawNotes, 'changelog-empty:\s*(.+)')
+    if ($me.Success) { $emptyText = $me.Groups[1].Value.Trim() }
+
+    $kept = @($all | Where-Object {
+        $s = $_
+        if ($s -match $dropTypes) { return $false }
+        if ($s -match $dropScope) { return $false }
+        if ($excludeExtra -and $s -match $excludeExtra) { return $false }
+        return $true
+    })
+
+    Write-Host ("changelog: {0} kept / {1} total (filtered out {2})" -f
+        $kept.Count, $all.Count, ($all.Count - $kept.Count))
+
+    $lines = @($kept | ForEach-Object { "- " + $_ })
+    if ($lines.Count -eq 0) {
+        # Never ship an empty section. The fallback text is Chinese, so it
+        # cannot live here (this script must stay pure ASCII) -- it is declared
+        # as 'changelog-empty:' in release-notes.md and read below.
+        $lines = @($emptyText)
+    }
     $changes = $lines -join "`n"
-    Write-Host ("changelog entries: {0}" -f $lines.Count)
 } finally {
     [Console]::OutputEncoding = $prevEnc
 }
 
-$notes = [System.IO.File]::ReadAllText($notesPath, [System.Text.Encoding]::UTF8)
-$notes = $notes.Replace('{{TAG}}', $tag).
-                Replace('{{VERSION}}', $ver).
-                Replace('{{CODE}}', $code).
-                Replace('{{CHANGES}}', $changes)
+$notes = $rawNotes.Replace('{{TAG}}', $tag).
+                    Replace('{{VERSION}}', $ver).
+                    Replace('{{CODE}}', $code).
+                    Replace('{{CHANGES}}', $changes)
+
+# Strip HTML comments before publishing. The rule block at the top of
+# release-notes.md is internal (it exists only for this script to read), and
+# GitHub stores the raw markdown -- hiding it visually is not enough, it must
+# not be in the payload at all.
+$notes = [regex]::Replace($notes, '(?s)<!--.*?-->', '').Trim()
+
 if ($notes -match '\{\{') { throw 'unsubstituted placeholder left in release-notes.md' }
 
 $existing = $null

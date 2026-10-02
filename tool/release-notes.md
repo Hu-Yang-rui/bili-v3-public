@@ -1,3 +1,20 @@
+<!--
+  changelog-exclude: 发版|版本漂移|AGENTS\.md|清理全部历史产物|versionCode|versionName
+  changelog-empty: 本次以内部维护为主，无用户可见改动
+
+  上面两行是给 tool/create-release.ps1 读的【改动清单规则】，GitHub 渲染时
+  会隐藏 HTML 注释，所以不会出现在 Release 页面上。
+
+  - changelog-exclude: 过滤正则。把【内部工具类提交】(发版脚本、文档维护、
+    版本号同步) 从面向用户的改动清单里去掉 —— 用户关心的是 App 改了什么，
+    不是我们怎么发版。脚本另有一套按 conventional-commit type/scope 的过滤
+    (chore/docs/ci/build/test/style/revert 与 scope=release|docs|tool)。
+  - changelog-empty: 清单被过滤空时的兜底文案。
+
+  为什么规则放这里而不是脚本里: .ps1 必须纯 ASCII(PowerShell 5.1 按 GBK 读
+  脚本，中文字面量会拆坏字符串终止符)，而这些规则需要中文。本文件是 UTF-8。
+-->
+
 ## BiliV3 {{TAG}}
 
 `versionName = {{VERSION}}` / `versionCode = {{CODE}}`
@@ -7,8 +24,6 @@
 ---
 
 ### 本次改动
-
-> 由 `git log` 自动生成（上一个 tag 到本次），不需要手写。
 
 {{CHANGES}}
 
