@@ -1115,6 +1115,17 @@ private fun MetaItem(
  *
  * 半透明黑圆底 + 白色箭头 —— 与齿轮/小窗按钮同一套语言，
  * 保证压在任意亮度的画面上都清晰可辨。
+ *
+ * ## ⚠️ 尺寸必须与右上角按钮组一致（用户反馈"退出键过大"）
+ *
+ * 此前这里是 `Space.minTouchTarget`（**48dp**），而右上角那组是
+ * **36dp** —— 左上角比右上角大一圈，
+ * 在一屏"默认纯画面"的播放器上非常抢眼。
+ *
+ * 现在视觉尺寸统一为 [PLAYER_CHROME_BUTTON]（36dp），
+ * 但**触摸目标仍保证 ≥48dp**：外层 Box 撑出 48dp 命中区、
+ * 内层画 36dp 的可见圆 —— 直接给可见圆钮设 48dp 会让它视觉变大，
+ * 那正是这次要修的问题。
  */
 @Composable
 private fun FloatingBackButton(
@@ -1129,24 +1140,31 @@ private fun FloatingBackButton(
         exit = fadeOut(),
         modifier = modifier,
     ) {
+        // 外层：只负责撑出 ≥48dp 的可点区域（视觉不可见）
         Box(
             modifier = Modifier
                 .statusBarsPadding()
                 .padding(start = Space.x2, top = Space.x2)
-                // ⚠️ minTouchTarget 在 Space 里，不在 Sizes 里
-                // （AGENTS.md §7.2 已记录这个坑）
-                .size(Space.minTouchTarget)
-                .clip(CircleShape)
-                .background(colors.overlayControl)
+                .size(PLAYER_CHROME_TOUCH)
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "返回",
-                tint = colors.onOverlay,
-                modifier = Modifier.size(Sizes.iconXl),
-            )
+            // 内层：真正的视觉圆钮，尺寸与右上角一致
+            Box(
+                modifier = Modifier
+                    .size(PLAYER_CHROME_BUTTON)
+                    .clip(CircleShape)
+                    .background(colors.overlayControl),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "返回",
+                    tint = colors.onOverlay,
+                    // 图标比圆钮小一档，留出视觉呼吸（与右上角同规格）
+                    modifier = Modifier.size(Sizes.iconMd),
+                )
+            }
         }
     }
 }
@@ -2029,61 +2047,76 @@ private fun PlayerArea(
                 ) {
                     // 小窗入口：只在可播放时显示（没画面时进 PiP 没意义）
                     if (playState is PlayState.Ready && player != null) {
-                        Box(
-                            modifier = Modifier
-                                .size(SETTINGS_BUTTON)
-                                .clip(CircleShape)
-                                .background(colors.overlayControl)
-                                .clickable { onEnterPip() },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.PictureInPictureAlt,
-                                contentDescription = "小窗播放",
-                                tint = colors.onOverlay,
-                                modifier = Modifier.size(Sizes.iconLg),
-                            )
-                        }
+                        PlayerChromeButton(
+                            icon = Icons.Filled.PictureInPictureAlt,
+                            contentDescription = "小窗播放",
+                            onClick = { onEnterPip() },
+                        )
                     }
 
                     // 全屏 / 退出全屏（从 PlayerControls 收归到这里）
-                    Box(
-                        modifier = Modifier
-                            .size(SETTINGS_BUTTON)
-                            .clip(CircleShape)
-                            .background(colors.overlayControl)
-                            .clickable(onClick = onToggleFullscreen),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = if (isFullscreen) {
-                                Icons.Filled.FullscreenExit
-                            } else {
-                                Icons.Filled.Fullscreen
-                            },
-                            contentDescription = if (isFullscreen) "退出全屏" else "全屏",
-                            tint = colors.onOverlay,
-                            modifier = Modifier.size(Sizes.iconLg),
-                        )
-                    }
+                    PlayerChromeButton(
+                        icon = if (isFullscreen) {
+                            Icons.Filled.FullscreenExit
+                        } else {
+                            Icons.Filled.Fullscreen
+                        },
+                        contentDescription = if (isFullscreen) "退出全屏" else "全屏",
+                        onClick = onToggleFullscreen,
+                    )
 
-                    Box(
-                        modifier = Modifier
-                            .size(SETTINGS_BUTTON)
-                            .clip(CircleShape)
-                            .background(colors.overlayControl)
-                            .clickable(onClick = onOpenSettings),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = "播放设置与字幕",
-                            tint = colors.onOverlay,
-                            modifier = Modifier.size(Sizes.iconLg),
-                        )
-                    }
+                    PlayerChromeButton(
+                        icon = Icons.Filled.Settings,
+                        contentDescription = "播放设置与字幕",
+                        onClick = onOpenSettings,
+                    )
                 }
             }
+        }
+    }
+}
+
+/**
+ * 播放器浮层圆钮（返回 / 小窗 / 全屏 / 齿轮共用）。
+ *
+ * ## 为什么要抽出来（用户反馈"退出键过大"的根因）
+ *
+ * 此前四个按钮**各写一份**，于是尺寸分叉：
+ * 左上角返回用 `Space.minTouchTarget`（48dp），右上角三个用 36dp ——
+ * 同一层浮层里两种圆钮大小，左上角明显大一圈，很抢眼。
+ *
+ * 现在尺寸/圆角/底色/图标规格全部收敛到这一处：
+ * 视觉 [PLAYER_CHROME_BUTTON]（36dp），触摸目标 [PLAYER_CHROME_TOUCH]（48dp）——
+ * 用"外层透明 Box 撑命中区、内层画可见圆"的写法，
+ * 既满足无障碍最小点击区，又不会让圆钮视觉上变大。
+ */
+@Composable
+private fun PlayerChromeButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    val colors = BiliTheme.colors
+    Box(
+        modifier = Modifier
+            .size(PLAYER_CHROME_TOUCH)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(PLAYER_CHROME_BUTTON)
+                .clip(CircleShape)
+                .background(colors.overlayControl),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = colors.onOverlay,
+                modifier = Modifier.size(Sizes.iconLg),
+            )
         }
     }
 }
@@ -2236,12 +2269,26 @@ private val TITLE_TWO_LINES = 44.dp
 private val PLAY_BUTTON = 64.dp
 
 /**
- * 播放器右上角常驻设置按钮。
+ * 播放器浮层按钮的**统一视觉尺寸**（返回 / 小窗 / 全屏 / 齿轮共用）。
  *
- * 36dp：足够好点（配合外层 padding 接近 48dp 触摸目标），
- * 又不至于在画面上太抢眼。
+ * 36dp：足够辨识，又不至于在画面上太抢眼。
+ *
+ * 抽成常量而不是各自写死：此前返回键用 `Space.minTouchTarget`(48dp)、
+ * 右上角那组用 36dp —— 同一层浮层里两种圆钮大小，
+ * 左上角明显比右上角大一圈，用户反馈"退出键过大、太抢眼"。
+ *
+ * 现在四颗按钮视觉完全一致，改一处即全局生效。
  */
-private val SETTINGS_BUTTON = 36.dp
+private val PLAYER_CHROME_BUTTON = 36.dp
+
+/**
+ * 播放器浮层按钮的**触摸目标**尺寸（≥48dp，满足无障碍最小点击区）。
+ *
+ * 视觉只有 [PLAYER_CHROME_BUTTON]，但命中区要够大 ——
+ * 做法是外层透明 Box 撑到 48dp、内层画 36dp 的圆。
+ * 直接给可见圆钮设 48dp 会让它视觉上变大（就是这次要修的问题）。
+ */
+private val PLAYER_CHROME_TOUCH = Space.minTouchTarget
 
 /**
  * 续播提示条。
