@@ -10,8 +10,19 @@
 $ErrorActionPreference = 'Stop'
 
 $owner = 'Hu-Yang-rui'
-$repo  = 'bili-v3'
+# Repo name must match `git remote -v` (origin).
+# NOTE: the old private repo 'bili-v3' still exists but is ABANDONED
+# (frozen at v0.6.4). Publishing there would ship to nobody.
+# Active repo is the public one.
+$repo  = 'bili-v3-public'
 $root  = 'D:\deep\bili-v3'
+
+# Guard: fail loudly if origin disagrees with $repo, so a renamed/old
+# remote can never silently receive a release again.
+$originUrl = (& git -C $root remote get-url origin 2>&1 | Out-String).Trim()
+if ($originUrl -notmatch [regex]::Escape($repo)) {
+    throw "origin ($originUrl) does not match `$repo ($repo); refusing to publish"
+}
 
 # ---- derive version from build.gradle.kts ----
 $gradle = [System.IO.File]::ReadAllText(
