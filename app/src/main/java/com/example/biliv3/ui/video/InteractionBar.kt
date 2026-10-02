@@ -71,14 +71,14 @@ fun InteractionBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            // C 方案：互动栏是**卡片**，与上方 UP 信息卡 / 视频简介卡
-            // 同处一列纵向堆叠。
+            // ⚠️ 互动栏**自身不是卡片** —— 它已被合并进 UP 信息卡内部
+            // （见 `VideoDetailScreen` 的 owner-meta item）。
             //
-            // ⚠️ 圆角必须用 `Radius.card`(16dp) 而不是 `Radius.button`(12dp)。
-            // 此前用 12dp，与相邻卡片的 16dp 差 4dp —— 单独看不出，
-            // 但两张卡上下紧挨时，左右两个角的弧度对不上，
-            // 观感就是"这一栏的圆框和别处不一样"。
-            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
+            // 若这里再套一层 `biliCard()`，就会出现"卡片里再套一个卡"：
+            // 玻璃底 + 玻璃底叠加 → 中间浮出一个亮框，
+            // 视觉上像"框里又画了个框"，比不合并还乱。
+            //
+            // 它只需要横向铺满 + 一点纵向呼吸。
             .padding(vertical = Space.x2),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,

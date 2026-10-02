@@ -1823,26 +1823,38 @@ private fun DetailContent(
                             )
                         }
                     }
-                }
-            }
 
-            // ---- ⑥ 互动栏 ----
-            item(key = "actions") {
-                InteractionBar(
-                    interaction = interaction,
-                    likeCount = detail.likeCount,
-                    coinCount = detail.coinCount,
-                    favoriteCount = detail.favoriteCount,
-                    shareCount = detail.shareCount,
-                    onLike = onLike,
-                    onCoin = onCoin,
-                    onFavorite = onFavorite,
-                    onShare = onShare,
-                    // ⚠️ 与其它卡片统一内缩。此前这里是通栏贴边的，
-                    // 而"视频简介"卡是内缩的 —— 同一屏里两种卡片宽度，
-                    // 用户看到的就是"为什么只有点赞那栏没收缩"。
-                    modifier = Modifier.padding(horizontal = CARD_INSET),
-                )
+                    // ---- 互动栏（与 UP 信息同卡）----
+                    //
+                    // 放在卡片最底部：语义上"看完这个视频是什么 → 我能做什么"，
+                    // 与上方信息是同一块内容的收尾。
+                    //
+                    // 上方用一条极淡的分隔线（而非再套一层卡）——
+                    // 它只需要"分区"这一个作用，不需要自己的边界。
+                    Spacer(Modifier.height(Space.x2))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(colors.borderHairline),
+                    )
+                    InteractionBar(
+                        interaction = interaction,
+                        likeCount = detail.likeCount,
+                        coinCount = detail.coinCount,
+                        favoriteCount = detail.favoriteCount,
+                        shareCount = detail.shareCount,
+                        onLike = onLike,
+                        onCoin = onCoin,
+                        onFavorite = onFavorite,
+                        onShare = onShare,
+                        // ⚠️ 不再需要横向内缩 —— 它已在卡内。
+                        // 之前每块各自 `padding(horizontal = CARD_INSET)`
+                        // 是"三块并列"时代的产物，合并后这个内缩会变成
+                        // 卡内多余的留白（卡片被挤窄）。
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
 
             // ---- 分P（仅多P）----

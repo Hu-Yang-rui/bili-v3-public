@@ -82,15 +82,15 @@ fun VideoToolRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            // C 方案：工具条是**卡片**，与下方 UP 信息卡 / 互动栏同列堆叠。
+            // ⚠️ 工具条**不是卡片**，是紧贴播放器下方的一条标签行。
             //
-            // ⚠️ 圆角用 `Radius.card`(16dp)，与相邻卡片一致。
-            // 此前是 `Radius.button`(12dp)，与邻居差 4dp —— 弧度对不上。
+            // 它只有两个标签（简介 / 评论）+ 两个动作（发弹幕 / 弹幕开关），
+            // 给它套卡会立刻多一个框 —— 加上下方的 UP 卡，
+            // 一屏里就是"播放器 + 框 + 框"，这正是臃肿的来源。
             //
-            // 纵向内边距从 `Space.x2`(8dp) 收到 `Space.x1`(4dp)：
-            // 这条工具条紧贴播放器下方，每多 4dp 都是从画面里抢的。
-            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
-            .padding(horizontal = Space.x4, vertical = Space.x1),
+            // 现在直接落在页面底上，靠留白与下方卡片分开。
+            // 官方客户端此处也是通栏、无容器。
+            .padding(horizontal = Space.x4, vertical = Space.x2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // ================= 左栏：视图切换 =================
