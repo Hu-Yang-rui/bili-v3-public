@@ -338,24 +338,21 @@ fun PlayerControls(
         }
 
         // ================= 右上角：全屏切换 =================
-        AnimatedVisibility(
-            visible = controlsVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(Space.x1),
-        ) {
-            SmallIconButton(
-                icon = if (isFullscreen) {
-                    Icons.Filled.FullscreenExit
-                } else {
-                    Icons.Filled.Fullscreen
-                },
-                contentDescription = if (isFullscreen) "退出全屏" else "全屏",
-                onClick = onToggleFullscreen,
-            )
-        }
+        //
+        // ⚠️ 这里**不再渲染全屏按钮**（这是「点全屏没反应 / 退出时灵时不灵」
+        // 的根因之一）。
+        //
+        // 此前本组件与 `VideoDetailScreen` 的右上角按钮组
+        // （小窗 + 齿轮）都 `align(TopEnd)`，而后者在 composition 里
+        // **渲染更晚** → 覆盖在本组件之上 → 命中测试优先给它。
+        // 两个 40dp 圆钮叠在同一角落，全屏按钮被盖住/半盖住，
+        // 于是"点全屏"有时点到、有时点到齿轮或小窗。
+        //
+        // 现在右上角**只有一处**（`VideoDetailScreen` 的按钮组），
+        // 由它统一放：小窗 + 齿轮 + 全屏。本组件不再画。
+        //
+        // 保留参数与图标 import 会变成未使用告警，所以一并清理。
+        // （`onToggleFullscreen` / `isFullscreen` 仍由上层使用。）
 
         // ================= 底部：自绘进度条（单行、紧凑）=================
         AnimatedVisibility(

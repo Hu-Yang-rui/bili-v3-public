@@ -29,6 +29,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.PlayArrow
@@ -57,6 +59,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,6 +67,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.exoplayer.ExoPlayer
 import coil.compose.AsyncImage
+import com.example.biliv3.data.model.PlayInfo
 import com.example.biliv3.data.model.VideoDetail
 import com.example.biliv3.data.model.VideoItem
 import com.example.biliv3.data.model.formatCount
@@ -384,31 +388,89 @@ fun VideoDetailScreen(
     }
 
     /**
-     * 页面内返回的分层处理。
+     * 分层返回（从最上层往下逐级消费）。
      *
-     * ## 顺序（从最内层到最外层）
+     * ## ⚠️ 为什么必须显式分层（这是「退出时灵时不灵」的根因）
      *
-     * 1. **设置弹层开着** → 只关弹层，留在视频页
-     * 2. **全屏中** → 退出全屏，留在视频页
-     * 3. 都不是 → 交给 NavHost，真正返回上一页（首页）
+     * 页面里有**多个**覆盖层，但它们的返回处理方式并不一致：
      *
-     * ## ⚠️ 这条链路曾经是断的
+     * | 覆盖层 | 实现 | 返回由谁处理 |
+     * |---|---|---|
+     * | 设置 / 投币 | `Dialog`（独立 window） | Dialog 自己，优先 |
+     * | **评论输入 / 弹幕输入** | **页面内 Box**（不是 Dialog） | **此前没人处理** ❌ |
      *
-     * 设置弹层过去不是 Dialog（只是一段普通 Compose 内容），
-     * 系统返回手势感知不到它，直接落到 NavHost 上 `popBackStack()`
-     * → 视频页被弹掉，用户回到首页。表现就是
-     * 「点齿轮后返回，直接回首页而不是关掉设置」。
+     * 后两个之所以不用 Dialog，是因为 Dialog 的独立 window 配合
+     * `decorFitsSystemWindows=false` 会让键盘避让失效（详见
+     * `CommentInputSheet` 的说明）。代价就是**它们不拦截系统返回**。
      *
-     * 现在双保险：
-     * - `PlayerSettingsSheet` 内部是 `Dialog`，会**优先**接管返回
-     * - 本 `BackHandler` 兜住「全屏 → 先退全屏」这一层，
-     *   并保证即使弹层被移除，返回也不会穿透到 NavHost
+     * 此前这里的 `BackHandler` 只处理「全屏 → 退全屏」一种情况，
+     * 于是评论/弹幕输入浮层开着时按返回：事件直接穿透到 NavHost →
+     * `popBackStack()` → **整个视频页被弹掉**，用户回到首页。
+     * 而浮层有没有开、当时是否全屏，都会影响命中哪条分支 ——
+     * 表现就是"有时能退有时不能退 / 退得莫名其妙"。
      *
-     * `BackHandler` 的 `enabled` 控制谁生效：弹层开着时由 Dialog 处理，
-     * 这里只在**全屏**时接管，避免两层同时消费返回事件。
+     * 现在按优先级逐层消费，保证每次返回只做一件事、且可预期：
+     * 输入浮层 → 更多菜单 → 全屏 → 交给 NavHost 返回上一页。
      */
-    androidx.activity.compose.BackHandler(enabled = isFullscreen && !showSettings) {
-        isFullscreen = false
+    val hasInputOverlay = showCommentInput || showDanmakuInput
+    androidx.activity.compose.BackHandler(
+        enabled = hasInputOverlay || showMoreMenu || isFullscreen,
+    ) {
+        when {
+            // ① 输入浮层优先（最上层，且是"用户正在输入"的状态）
+            showCommentInput -> {
+                showCommentInput = false
+                replyTarget = null
+            }
+
+            showDanmakuInput -> showDanmakuInput = false
+
+            // ② 更多菜单
+            showMoreMenu -> showMoreMenu = false
+
+            // ③ 全屏 → 先退全屏（不退页面）
+            isFullscreen -> isFullscreen = false
+        }
+    }
+
+    /**
+     * 全屏时进入**沉浸模式**（隐藏状态栏 / 导航栏）。
+     *
+     * ## ⚠️ 这是「全屏没铺满、有黑边留白」的直接原因
+     *
+     * `MainActivity` 调了 `enableEdgeToEdge()`，内容虽然铺到系统栏底下，
+     * 但**系统栏本身仍然可见并占位**。此前全屏只把 Compose 内容
+     * 换成 `fillMaxSize`，没有让系统栏真正隐藏 —— 于是：
+     * - 状态栏仍在顶部占一条 → 画面顶部被裁/被挡
+     * - 导航栏仍在底部占一条 → 画面底部留白
+     * 观感就是"全屏了但没盖住整屏"。
+     *
+     * 修法：全屏时用 `WindowInsetsControllerCompat` 隐藏两条系统栏，
+     * 并临时切到 `BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE`（滑动可临时唤出）。
+     * 退出全屏 / 离开页面时**必须恢复**，否则会把系统栏永久藏掉
+     * （`DisposableEffect` 的 onDispose 就是干这个的）。
+     */
+    val view = LocalView.current
+    DisposableEffect(isFullscreen) {
+        val window = (view.context as? android.app.Activity)?.window
+        if (window == null) {
+            onDispose { }
+        } else {
+            val controller = androidx.core.view.WindowCompat
+                .getInsetsController(window, view)
+            if (isFullscreen) {
+                controller?.systemBarsBehavior =
+                    androidx.core.view.WindowInsetsControllerCompat
+                        .BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller?.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            } else {
+                controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            }
+            onDispose {
+                // 离开页面或退出全屏都要把系统栏还回来
+                controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            }
+        }
     }
 
     /**
@@ -922,10 +984,48 @@ fun VideoDetailScreen(
  * 所以即使容器是 4:3、视频是 16:9，画面也**不会被拉伸变形**，
  * 只会在容器内上下留黑边（画面本身比 16:9 容器大得多）。
  */
-private fun playerAspectRatio(windowSize: WindowSize): Float = when (windowSize) {
-    WindowSize.Mobile -> PLAYER_ASPECT_PORTRAIT
-    WindowSize.Tablet, WindowSize.Desktop -> PLAYER_ASPECT_WIDE
+/**
+ * 播放器容器比例。
+ *
+ * ## ⚠️ 优先级：真实视频比例 > 断点回退值（这是「比例不正确」的根因）
+ *
+ * 此前**无条件**按断点取固定值（竖屏 4:3 / 宽屏 16:9），完全忽略
+ * `PlayInfo.width/height` —— 而接口本来就给了真实分辨率。
+ * 后果：
+ * - 16:9 的视频塞进 4:3 容器 → 上下留大量黑边（画面显得又小又偏）
+ * - 竖版（9:16）视频塞进 4:3 容器 → 左右留黑边，画面极小
+ * - 全屏时容器变成 `fillMaxSize`，但播放器仍按 FIT 缩放，
+ *   在非 16:9 屏幕上就会出现"没铺满、有黑边"的观感
+ *
+ * 现在：起播后**用真实比例**；未起播（只有封面）时才回退到断点值 ——
+ * 封面按固定比例显示，避免"封面 16:9 → 起播变 4:3"的高度跳变。
+ *
+ * @param playInfo 已取流的信息；未起播时为 null
+ */
+internal fun playerAspectRatio(
+    windowSize: WindowSize,
+    playInfo: PlayInfo?,
+): Float {
+    // 真实比例优先（宽高都有效才采用，避免脏数据把画面压成一条线）
+    val w = playInfo?.width ?: 0
+    val h = playInfo?.height ?: 0
+    if (w > 0 && h > 0) {
+        val r = w.toFloat() / h.toFloat()
+        // 兜底：极端比例（如接口脏数据 1×9999）会让容器塌掉或撑爆，
+        // 限制在合理区间内，超出则视为不可信、回退断点值。
+        if (r.isFinite() && r in MIN_PLAYER_ASPECT..MAX_PLAYER_ASPECT) return r
+    }
+    return when (windowSize) {
+        WindowSize.Mobile -> PLAYER_ASPECT_PORTRAIT
+        WindowSize.Tablet, WindowSize.Desktop -> PLAYER_ASPECT_WIDE
+    }
 }
+
+/** 可信比例下限（约 1:3 的竖版）。 */
+private const val MIN_PLAYER_ASPECT = 0.33f
+
+/** 可信比例上限（约 3:1 的超宽）。 */
+private const val MAX_PLAYER_ASPECT = 3.0f
 
 /**
  * 竖屏播放器比例 4:3。
@@ -1164,7 +1264,15 @@ private fun DetailContent(
                 onOpenSettings = onOpenSettings,
                 onEnterPip = onEnterPip,
                 isInPip = isInPip,
-                onBack = onBack,
+                // ⚠️ 全屏下浮动返回键必须是「退全屏」，不是「退页面」。
+                //
+                // 此前这里传的是 `onBack`，于是全屏时点左上角返回键
+                // **直接退出整个视频页**，而按系统返回键只是退全屏
+                // （BackHandler 处理）—— 两个入口行为不一致，
+                // 用户感受就是"退出时灵时不灵、行为还不同"。
+                //
+                // 现在两者统一：先退全屏，留在视频页；再按一次才退页面。
+                onBack = onToggleFullscreen,
                 onRetryPlay = onRetryPlay,
                 onPlayerError = onPlayerError,
                 modifier = Modifier.fillMaxSize(),
@@ -1201,7 +1309,13 @@ private fun DetailContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(playerAspectRatio(windowSize))
+                    // 真实视频比例优先（见 playerAspectRatio 的说明）
+                    .aspectRatio(
+                        playerAspectRatio(
+                            windowSize,
+                            (playState as? PlayState.Ready)?.info,
+                        ),
+                    )
                     .background(colors.playerBackground),
             ) {
                 PlayerArea(
@@ -1315,7 +1429,13 @@ private fun DetailContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(playerAspectRatio(windowSize))
+                    // 真实视频比例优先（见 playerAspectRatio 的说明）
+                    .aspectRatio(
+                        playerAspectRatio(
+                            windowSize,
+                            (playState as? PlayState.Ready)?.info,
+                        ),
+                    )
                     .background(colors.playerBackground),
             ) {
                 PlayerArea(
@@ -1666,41 +1786,24 @@ private fun DetailContent(
             //
             // 现在紧跟互动栏：点击标签 → 内容就在眼前。
             //
-            // 简介正文与标题右侧倒 V 展开的是同一份内容（`detail.desc`），
-            // 两个入口、一个数据源。
-            // ⚠️ 评论模式已在函数开头 `return`（走独立布局），
-            // 所以这里只可能是「简介」分支 —— 不再需要 if/else。
+            // ⚠️ 这里**不再渲染简介**（这是「为什么有两个简介」的根因）。
+            //
+            // 此前这里有一个常驻的「视频简介」卡片，无条件显示 `detail.desc`；
+            // 而标题右侧的倒 V 展开后也显示同一份 `detail.desc` ——
+            // 于是同一个简介在页面上出现两次：
+            //   ① 标题右侧倒 V 展开的
+            //   ② 这张「视频简介」卡片
+            // 用户看到的"两个简介"就是这么来的。
+            //
+            // 按已确认的交互约定，简介**只有一个入口**：
+            // 位于标题最右侧、倒 V 图标、默认隐藏、点击才展开。
+            // 因此删掉这张常驻卡片，简介统一由倒 V 控制。
             //
             // 为什么评论不能留在本 LazyColumn 里：评论列表自己是
             // `LazyColumn`（要无限滚动），嵌在外层 LazyColumn 的 item 里
             // 会落在**无限高度约束**下、塌成 0 高 —— 表现就是"点了评论一片空白"。
-            item(key = "full-desc") {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = CARD_INSET)
-                            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
-                            .padding(horizontal = Space.x4, vertical = Space.x3),
-                    ) {
-                        Text(
-                            text = "视频简介",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = FontSize.body,
-                                fontWeight = FontWeight.SemiBold,
-                                color = colors.textPrimary,
-                            ),
-                        )
-                        Spacer(Modifier.height(Space.x2))
-                        Text(
-                            text = detail.desc.ifBlank { "这个视频没有简介" },
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = FontSize.bodySm,
-                                lineHeight = FontSize.bodySmLine,
-                                color = colors.textSecondarySafe,
-                            ),
-                        )
-                    }
-                }
+            // （评论模式已在函数开头 `return` 走独立布局，所以本分支
+            //   只可能是「简介」态，这里无需再放任何简介内容。）
 
             if (related.isNotEmpty()) {
                 item(key = "related-header") {
@@ -1897,14 +2000,18 @@ private fun PlayerArea(
             )
         }
 
-        // ================= 右上角按钮组（小窗 + 齿轮）=================
+        // ================= 右上角按钮组（小窗 + 全屏 + 齿轮）=================
         //
-        // ⚠️ 改成**跟随 chromeVisible**（此前是常驻）。
+        // ⚠️ 这是页面**唯一**的右上角控件组（问题 1 的根因之一）。
         //
-        // 理由：既然页面默认是"纯画面"，右上角常驻两个黑圆钮
-        // 就破坏了"无白栏、视频占满"的观感。现在与控件、
-        // 浮动返回按钮**同进同退**，点一下画面三个一起出现。
+        // 此前 `PlayerControls` 内部**也**画了一个 `align(TopEnd)` 的全屏按钮，
+        // 与这里的按钮组叠在同一角落。后者的 composition 顺序更靠后，
+        // 覆盖在上层、优先拿到命中测试 —— 于是"点全屏"有时点到、
+        // 有时点到下面的齿轮/小窗，表现就是"时灵时不灵"。
         //
+        // 现在全屏按钮收进本组，右上角只有一处，不再有重叠。
+        //
+        // 仍跟随 `chromeVisible`：默认纯画面，点一下三个一起出现。
         // PiP 下整组隐藏（小窗里点不中且挡画面）。
         if (!isInPip) {
             AnimatedVisibility(
@@ -1937,6 +2044,27 @@ private fun PlayerArea(
                                 modifier = Modifier.size(Sizes.iconLg),
                             )
                         }
+                    }
+
+                    // 全屏 / 退出全屏（从 PlayerControls 收归到这里）
+                    Box(
+                        modifier = Modifier
+                            .size(SETTINGS_BUTTON)
+                            .clip(CircleShape)
+                            .background(colors.overlayControl)
+                            .clickable(onClick = onToggleFullscreen),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = if (isFullscreen) {
+                                Icons.Filled.FullscreenExit
+                            } else {
+                                Icons.Filled.Fullscreen
+                            },
+                            contentDescription = if (isFullscreen) "退出全屏" else "全屏",
+                            tint = colors.onOverlay,
+                            modifier = Modifier.size(Sizes.iconLg),
+                        )
                     }
 
                     Box(

@@ -6,8 +6,11 @@ import com.example.biliv3.data.Settings
 import com.example.biliv3.data.ThemeMode
 import com.example.biliv3.data.danmaku.DanmakuItem
 import com.example.biliv3.data.model.CoverUrls
+import com.example.biliv3.data.model.PlayInfo
+import com.example.biliv3.design.WindowSize
 import com.example.biliv3.ui.component.userMessageFor
 import com.example.biliv3.ui.video.isBlocked
+import com.example.biliv3.ui.video.playerAspectRatio
 import com.example.biliv3.ui.video.semanticMode
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
@@ -217,5 +220,55 @@ class FeatureLogicTest {
             .isEqualTo("网络不可用，请检查连接后重试")
         assertThat(userMessageFor(RuntimeException("something else")))
             .isEqualTo("加载失败，请稍后重试")
+    }
+
+    // ---------------------------------------------------------------------
+    // 7. 播放器比例（回归：此前忽略真实分辨率，导致画面变形/黑边）
+    // ---------------------------------------------------------------------
+
+    private fun info(w: Int, h: Int) = PlayInfo(
+        acceptQuality = listOf(80),
+        acceptDescription = listOf("1080P"),
+        currentQuality = 80,
+        videoUrl = "https://example.com/v.m4s",
+        audioUrl = "https://example.com/a.m4s",
+        videoCodecs = "avc1.64001F",
+        width = w,
+        height = h,
+        durationSeconds = 100,
+    )
+
+    @Test
+    fun `起播后用真实分辨率而不是断点固定值`() {
+        // 回归：此前竖屏恒取 4:3，16:9 的视频被塞进 4:3 容器 → 大量黑边。
+        val r = playerAspectRatio(WindowSize.Mobile, info(1920, 1080))
+        assertThat(r).isWithin(0.001f).of(16f / 9f)
+    }
+
+    @Test
+    fun `竖版视频用 9 比 16 而不是被压成横版`() {
+        val r = playerAspectRatio(WindowSize.Mobile, info(1080, 1920))
+        assertThat(r).isWithin(0.001f).of(9f / 16f)
+    }
+
+    @Test
+    fun `未起播时回退到断点值以保证封面不跳变`() {
+        assertThat(playerAspectRatio(WindowSize.Mobile, null))
+            .isWithin(0.001f).of(4f / 3f)
+        assertThat(playerAspectRatio(WindowSize.Tablet, null))
+            .isWithin(0.001f).of(16f / 9f)
+    }
+
+    @Test
+    fun `脏分辨率不产生塌陷或撑爆的比例`() {
+        // 接口脏数据（0 / 负数 / 极端值）必须回退，不能把容器压成一条线
+        assertThat(playerAspectRatio(WindowSize.Mobile, info(0, 1080)))
+            .isWithin(0.001f).of(4f / 3f)
+        assertThat(playerAspectRatio(WindowSize.Mobile, info(1920, 0)))
+            .isWithin(0.001f).of(4f / 3f)
+        assertThat(playerAspectRatio(WindowSize.Mobile, info(1, 9999)))
+            .isWithin(0.001f).of(4f / 3f)
+        assertThat(playerAspectRatio(WindowSize.Mobile, info(9999, 1)))
+            .isWithin(0.001f).of(4f / 3f)
     }
 }
