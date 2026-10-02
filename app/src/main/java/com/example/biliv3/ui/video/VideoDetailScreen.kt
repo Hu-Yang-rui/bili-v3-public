@@ -617,6 +617,21 @@ fun VideoDetailScreen(
             // 现在播放器**直接顶到状态栏**，页面一进来就是画面。
             // 返回按钮改为浮在画面上（点画面才浮现，见 PlayerArea）。
 
+            // ---- 玻璃作用域：**只覆盖压在视频上的表面** ----
+            //
+            // ⚠️ 这里**刻意不把整页包进去**。
+            //
+            // 第一版把整个详情页包进 `ProvideGlassBackdrop`，结果是：
+            // 播放器**下方**的 UP 卡 / 互动栏 / 推荐卡也去糊视频帧 ——
+            // 但那些卡片**根本不在视频上面**，物理上"底下没有视频"。
+            // 表现是卡片里透出视频画面的"幽灵轮廓"（实测截图里能清楚
+            // 看到人物的头肩形状），既脏又干扰阅读。
+            //
+            // 正确做法：只有**真正叠在视频画面上**的浮层才拿 backdrop ——
+            // 即 `PlayerArea` 内部的返回键、右上角按钮组、控制条。
+            // 播放器下方的卡片走静态页配方（比页面底亮一档）。
+            //
+            // 这也正是玻璃拟态的物理前提：**玻璃必须压在东西上面**。
             when (val s = state) {
                 is DetailUiState.Loading -> ProvideShimmer { DetailSkeleton() }
 
@@ -2085,6 +2100,18 @@ private fun PlayerArea(
 
     PlayerSafeAreaTop()
 
+    // ---- 玻璃作用域：**只覆盖播放器区域** ----
+    //
+    // 播放器区域内的浮层（返回键、右上角按钮组、底部控制条）是
+    // **真正叠在视频画面上**的 —— 它们拿 backdrop 才有意义，
+    // 糊的就是它们正下方的画面。
+    //
+    // ⚠️ 不能放大到整个页面。播放器**下方**的卡片（UP 信息 / 互动栏 /
+    // 相关推荐）物理上不在视频上面，让它们糊视频帧会透出"幽灵轮廓"，
+    // 既脏又干扰阅读 —— 实测截图里能清楚看到人物的头肩形状。
+    //
+    // 玻璃拟态的物理前提是：**玻璃必须压在东西上面**。
+    com.example.biliv3.design.ProvideGlassBackdrop(backdrop = holder?.backdrop) {
     Box(modifier = modifier) {
         when {
             playerError != null -> PlayerPlaceholder(
@@ -2199,28 +2226,26 @@ private fun PlayerArea(
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.TopEnd),
             ) {
-                // 毛玻璃承载右上角按钮组。
+                // 右上角按钮组：走统一的 `biliCard()` 玻璃原语。
                 //
                 // 三个圆钮各自带半透明底会显得"三块分离的补丁"；
-                // 用一层玻璃把它们收成一个整体，观感更整、也更"高级"。
+                // 用一层玻璃把它们收成一个整体，观感更整。
                 //
-                // 玻璃底来自共享 TextureView 抓的帧（holder.backdrop），
-                // 所以它**真的在模糊当前的视频画面**，不是假色块。
-                com.example.biliv3.design.GlassSurface(
-                    backdrop = holder?.backdrop,
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                        com.example.biliv3.design.tokens.Radius.pill,
-                    ),
-                    blur = com.example.biliv3.design.GlassTokens.blurSmall,
+                // backdrop 已由外层 `ProvideGlassBackdrop` 注入，
+                // 所以这里自动是真毛玻璃（糊的是当前视频画面）。
+                Row(
                     modifier = Modifier
                         .statusBarsPadding()
-                        .padding(Space.x2),
+                        .padding(Space.x2)
+                        .biliCard(
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                                com.example.biliv3.design.tokens.Radius.pill,
+                            ),
+                        )
+                        .padding(horizontal = Space.x1, vertical = Space.x1),
+                    horizontalArrangement = Arrangement.spacedBy(Space.x1),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = Space.x1, vertical = Space.x1),
-                        horizontalArrangement = Arrangement.spacedBy(Space.x1),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
                         // 小窗入口：只在可播放时显示（没画面时进 PiP 没意义）
                         if (playState is PlayState.Ready && player != null) {
                             PlayerChromeButton(
@@ -2246,10 +2271,10 @@ private fun PlayerArea(
                             contentDescription = "播放设置与字幕",
                             onClick = onOpenSettings,
                         )
-                    }
                 }
             }
         }
+    }
     }
 }
 

@@ -97,9 +97,9 @@ object GlassTokens {
     val blurLarge = 32.dp
 
     /**
-     * 深色主题的玻璃底色。
+     * 深色主题下**压在视频上**的玻璃底色。
      *
-     * ## ⚠️ 为什么是 **55% 黑**，而不是"淡白玻璃"
+     * ## ⚠️ 为什么是 **72% 黑**，而不是"淡白玻璃"
      *
      * 第一版用了 12% 白（`0x1FFFFFFF`），实测**文字完全不可读** ——
      * 白色文字压在浅色视频画面（白 T 恤 / 雪景 / 白墙）上直接消失。
@@ -107,28 +107,53 @@ object GlassTokens {
      * 这是玻璃风格的经典陷阱：
      * **透明度必须由"最坏情况"决定，而不是由"好看的截图"决定。**
      *
-     * 视频内容不可控，总会有亮场景。所以玻璃底必须足够暗，
-     * 保证白字在任何画面上都达到可读对比度。
+     * 第二版用 55% 黑，文字可读了，但**底下的画面轮廓仍太清楚**
+     * （实测：UP 卡里能明显看出人物的头肩形状），
+     * 视觉上"脏"，且干扰卡片内的文字阅读。
      *
-     * 55% 黑 + 模糊 + 高光边：
-     * - 仍能隐约透出底下画面（玻璃感保留）
-     * - 白字对比度 ≈ 4.5:1（WCAG AA 达标）
+     * 72% 黑是最终值：
+     * - 底下的色彩仍然透出来（玻璃感保留，这是它和"纯色块"的区别）
+     * - 但轮廓已经糊到不构成干扰
+     * - 白字对比度 ≈ 7:1（远超 WCAG AA）
      *
-     * 一句话：**这是"压暗的玻璃"，不是"发白的玻璃"。**
+     * ⚠️ **只用于压在视频上的表面**。静态页面用 [surfaceTintDark]。
      */
-    val tintDark = Color(0x8C000000)   // 黑 55%
+    val tintDark = Color(0xB8000000)   // 黑 72%
 
     /**
-     * 浅色主题的玻璃底色。
-     *
-     * 浅色下玻璃多压在**页面**（非视频）上，文字是深色的 ——
-     * 40% 白即可，不需要压暗。
+     * 浅色主题下**压在视频上**的玻璃底色。
      */
     val tintLight = Color(0x66FFFFFF)  // 白 40%
 
+    /**
+     * 深色主题下**静态页面**（首页/搜索/我的/消息）的玻璃底。
+     *
+     * ## 🔴 为什么必须和 [tintDark] 分开
+     *
+     * 实测：把 55% 黑玻璃用在静态页上，卡片会**几乎看不见** ——
+     * 页面底是 `#121114`，55% 黑压上去比底色还暗，
+     * 视觉上像"在深色页面上挖了几个黑洞"，只剩一圈描边。
+     *
+     * 根本原因：**静态页背后没有东西可模糊**（底色是纯色）。
+     * 玻璃拟态在纯色背景上的"立体感"必须靠**比底色更亮**来实现 ——
+     * 这是它与"压在视频上"（靠压暗保证可读）完全相反的策略。
+     *
+     * 用 12% 白：卡片比页面底亮一档，浮起来，且不刺眼。
+     * 配合 20% 白高光边，就是标准 glassmorphism 观感。
+     */
+    val surfaceTintDark = Color(0x1FFFFFFF)   // 白 12%
+
+    /**
+     * 浅色主题下静态页面的玻璃底。
+     *
+     * 页面底是 `#F7F4F6`（近白），卡片要比它更白才能浮起来。
+     * 用 70% 白 + 一点阴影感。
+     */
+    val surfaceTintLight = Color(0xB3FFFFFF)   // 白 70%
+
     /** 顶部高光边（玻璃的"厚度感"来源）。 */
     val borderDark = Color(0x33FFFFFF)  // 白 20%
-    val borderLight = Color(0x33FFFFFF) // 白 20%
+    val borderLight = Color(0x26FFFFFF) // 白 15%
 
     /** 玻璃上的文字色（深色主题）。 */
     val onGlassDark = Color(0xFFFFFFFF)
@@ -142,21 +167,71 @@ object GlassTokens {
  *
  * ## 为什么用可变状态而不是参数传递
  *
- * 玻璃面板在**树的深处**（底部信息区、控制条），而帧来自**播放器 View**。
+ * 玻璃面板在**树的深处**（卡片、控制条、底部信息区），而帧来自**播放器 View**。
  * 层层传参会污染一路的签名。用一个共享 holder，
  * 面板只依赖它、不依赖播放器的存在。
+ *
+ * ## ⚠️ 帧是**预先模糊好**的
+ *
+ * `frame` 里的位图在**抓帧时就已经做过 box blur**，不是原始画面。
+ *
+ * 这样做有三个好处：
+ * 1. **卡片可以纯用 `drawBehind` 画它** —— 不碰子树，文字永远不会被糊
+ *    （`graphicsLayer{renderEffect}` 会把子树一起糊，这是踩过的坑）
+ * 2. 模糊只算**一次**（在 1/8 小图上，约 4 万像素），所有卡片共用
+ * 3. 不依赖 API 31（`RenderEffect` 在低版本无效）
  *
  * ## 线程
  *
  * `frame` 只在主线程写（`getBitmap` 需在 UI 线程调用）。
  */
 class VideoBackdrop {
-    /** 当前帧（已缩小）。null = 还没抓到 / 无视频。 */
+    /** 当前帧（已缩小 **且已模糊**）。null = 还没抓到 / 无视频。 */
     var frame by mutableStateOf<ImageBitmap?>(null)
 
     /** 当前帧的主色调，用于玻璃染色（避免灰白玻璃压彩色画面发脏）。 */
     var dominantColor by mutableStateOf<Color?>(null)
 }
+
+/**
+ * 玻璃底图的作用域。
+ *
+ * ## 为什么需要它（这是"全量玻璃"的关键）
+ *
+ * `biliCard()` 是**纯 Modifier**，它无法自己去问"现在有没有视频帧"。
+ * 用 CompositionLocal 把 [VideoBackdrop] 注入下去后：
+ *
+ * - **视频页**：`ProvideGlassBackdrop(holder.backdrop) { ... }` 包一层
+ *   → 里面所有卡片自动变成**真毛玻璃**（糊的是视频画面）
+ * - **静态页**：不提供 → 卡片退化为**半透明 + 高光边**
+ *   （静态页背后是纯色底，模糊纯色仍是纯色，所以这是正确形态，不是降级）
+ *
+ * 一句话：**同一份 `biliCard()` 代码，在有视频的地方是真玻璃，
+ * 在没视频的地方是标准玻璃拟态。**
+ */
+val LocalGlassBackdrop = androidx.compose.runtime.staticCompositionLocalOf<VideoBackdrop?> {
+    null
+}
+
+/** 在子树内启用玻璃底图（有视频的页面调用）。 */
+@Composable
+fun ProvideGlassBackdrop(
+    backdrop: VideoBackdrop?,
+    content: @Composable () -> Unit,
+) {
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalGlassBackdrop provides backdrop,
+        content = content,
+    )
+}
+
+/**
+ * 当前是否处于玻璃态（用于让组件按需调整对比度）。
+ *
+ * 实际上只要提供了 backdrop 或有玻璃令牌就算。这里返回恒定 true ——
+ * 因为**全量替换后整个 App 都是玻璃**，这个查询留给将来可能的"关闭玻璃"开关。
+ */
+val isGlassEnabled: Boolean get() = true
 
 /**
  * 从 `TextureView` 持续抓帧，喂给 [VideoBackdrop]。
@@ -197,9 +272,18 @@ fun VideoBackdropEffect(
                 // getBitmap 必须在主线程（TextureView 的线程约束）
                 val bmp: Bitmap? = runCatching { tv.getBitmap(w, h) }.getOrNull()
                 if (bmp != null) {
-                    backdrop.frame = bmp.asImageBitmap()
+                    // ⚠️ 在**这里**就模糊好（1/8 小图上做 box blur，约 4 万像素）
+                    //
+                    // 为什么不在卡片上做：
+                    // 卡片是 Modifier，用 `graphicsLayer{renderEffect}` 会把
+                    // **子树（文字）一起糊掉** —— 这是踩过的坑。
+                    // 在抓帧时预先模糊，卡片就能纯 `drawBehind` 画出来，永不碰文字。
+                    //
+                    // 顺带好处：只算一次，所有卡片共用；且不依赖 API 31。
+                    val blurred = runCatching { boxBlur(bmp, BLUR_PASSES) }.getOrDefault(bmp)
+                    backdrop.frame = blurred.asImageBitmap()
                     backdrop.dominantColor = runCatching {
-                        averageColor(bmp)
+                        averageColor(blurred)
                     }.getOrNull()
                 }
             }
@@ -407,6 +491,96 @@ private fun averageColor(bmp: Bitmap): Color {
 
 /** 抓帧时的缩小倍数。8 = 约 40KB 一张，放大后天然模糊。 */
 private const val FRAME_DIVISOR = 8
+
+/**
+ * box blur 的迭代次数。
+ *
+ * ## 为什么用 box blur 而不是高斯
+ *
+ * 真正的 `RenderEffect` 高斯需要 API 31，且作用域会连子树一起糊。
+ * 这里是**在 1/8 小图上做软件 box blur**：
+ * - 3 次 box blur ≈ 一次高斯（中心极限定理），视觉上无差别
+ * - 4 万像素 × 3 遍 = 12 万次运算，亚毫秒级
+ * - 任何 API 版本都能跑
+ *
+ * 3 遍之后配合"放大回全屏"的双线性插值，效果已经足够柔和。
+ */
+private const val BLUR_PASSES = 3
+
+/**
+ * 软件 box blur（就地生成新位图）。
+ *
+ * 实现：横向 + 纵向各做一遍滑动窗口平均，重复 [passes] 次。
+ * 用 `IntArray` 直接读写像素，避免 `getPixel/setPixel` 的 JNI 开销。
+ */
+private fun boxBlur(src: Bitmap, passes: Int): Bitmap {
+    val w = src.width
+    val h = src.height
+    if (w < 2 || h < 2) return src
+
+    val pixels = IntArray(w * h)
+    src.getPixels(pixels, 0, w, 0, 0, w, h)
+
+    val tmp = IntArray(w * h)
+    repeat(passes) {
+        horizontalBlur(pixels, tmp, w, h)
+        verticalBlur(tmp, pixels, w, h)
+    }
+
+    return Bitmap.createBitmap(pixels, w, h, Bitmap.Config.ARGB_8888)
+}
+
+/** 横向一维 box blur（半径 1，即 3 像素窗口）。 */
+private fun horizontalBlur(src: IntArray, dst: IntArray, w: Int, h: Int) {
+    for (y in 0 until h) {
+        val row = y * w
+        for (x in 0 until w) {
+            val l = if (x > 0) src[row + x - 1] else src[row + x]
+            val c = src[row + x]
+            val r = if (x < w - 1) src[row + x + 1] else src[row + x]
+            dst[row + x] = avg3(l, c, r)
+        }
+    }
+}
+
+/** 纵向一维 box blur。 */
+private fun verticalBlur(src: IntArray, dst: IntArray, w: Int, h: Int) {
+    for (x in 0 until w) {
+        for (y in 0 until h) {
+            val t = if (y > 0) src[(y - 1) * w + x] else src[y * w + x]
+            val c = src[y * w + x]
+            val b = if (y < h - 1) src[(y + 1) * w + x] else src[y * w + x]
+            dst[y * w + x] = avg3(t, c, b)
+        }
+    }
+}
+
+/**
+ * 三个 ARGB 像素求平均。
+ *
+ * 逐通道算，**不能**把整个 int 相加再除 —— 那样高位 alpha 会污染低位色值。
+ */
+private fun avg3(a: Int, b: Int, c: Int): Int {
+    val aA = (a ushr 24) and 0xFF
+    val aR = (a ushr 16) and 0xFF
+    val aG = (a ushr 8) and 0xFF
+    val aB = a and 0xFF
+
+    val bA = (b ushr 24) and 0xFF
+    val bR = (b ushr 16) and 0xFF
+    val bG = (b ushr 8) and 0xFF
+    val bB = b and 0xFF
+
+    val cA = (c ushr 24) and 0xFF
+    val cR = (c ushr 16) and 0xFF
+    val cG = (c ushr 8) and 0xFF
+    val cB = c and 0xFF
+
+    return (((aA + bA + cA) / 3) shl 24) or
+        (((aR + bR + cR) / 3) shl 16) or
+        (((aG + bG + cG) / 3) shl 8) or
+        ((aB + bB + cB) / 3)
+}
 
 /**
  * 抓帧间隔（毫秒）。

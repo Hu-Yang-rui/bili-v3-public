@@ -63,6 +63,7 @@ import com.example.biliv3.data.model.PlayInfo
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.subtitle.SubtitleBody
 import com.example.biliv3.design.BiliTheme
+import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
@@ -144,6 +145,13 @@ fun VerticalScreen(
             .fillMaxSize()
             .background(colors.playerBackground),
     ) {
+        // ---- 全页玻璃化 ----
+        //
+        // 注入后本页所有 `biliCard()` / `GlassSurface` 都拿到真实视频帧，
+        // 自动变成真毛玻璃。不需要逐个组件传 backdrop。
+        com.example.biliv3.design.ProvideGlassBackdrop(
+            backdrop = holder.backdrop,
+        ) {
         when {
             state.error != null && state.items.isEmpty() -> ErrorState(
                 title = "竖屏内容加载失败",
@@ -285,6 +293,7 @@ fun VerticalScreen(
                     }
                 }
             }
+        }
         }
     }
 }
@@ -522,53 +531,54 @@ private fun BottomInfo(
 ) {
     val detail = state.detail
 
-    com.example.biliv3.design.GlassSurface(
-        backdrop = holder.backdrop,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(
-            topStart = com.example.biliv3.design.tokens.Radius.card,
-            topEnd = com.example.biliv3.design.tokens.Radius.card,
-        ),
-        blur = com.example.biliv3.design.GlassTokens.blurMedium,
-        modifier = modifier.fillMaxWidth(),
+    // 底部信息区：走统一的 `biliCard()` 玻璃原语。
+    //
+    // backdrop 已由外层 `ProvideGlassBackdrop` 注入，
+    // 所以这里自动是真毛玻璃（糊的是当前视频画面），不需要显式传。
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            // 只圆上面两个角（贴在屏幕底部）
+            .biliCard(
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                    topStart = com.example.biliv3.design.tokens.Radius.card,
+                    topEnd = com.example.biliv3.design.tokens.Radius.card,
+                ),
+            )
+            .navigationBarsPadding()
+            .padding(
+                start = Space.x4,
+                // 右侧留出互动栏宽度，避免文字压在图标下
+                end = ACTION_BAR_RESERVED,
+                top = Space.x3,
+                bottom = Space.x3,
+            ),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(
-                    start = Space.x4,
-                    // 右侧留出互动栏宽度，避免文字压在图标下
-                    end = ACTION_BAR_RESERVED,
-                    top = Space.x3,
-                    bottom = Space.x3,
-                ),
-        ) {
-            Text(
-                text = "@${detail?.ownerName.orEmpty()}",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    // ⚠️ 15sp（原 12sp）：底部信息区是竖屏唯一的文字区，
-                    // 12sp 在 6 寸屏上明显偏小，与"大图标"的视觉重量不匹配。
-                    fontSize = FontSize.titleMd,
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(Space.x1))
-            Text(
-                text = detail?.title.orEmpty(),
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    lineHeight = FontSize.bodyLine,
-                    color = Color.White,
-                ),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(Space.x2))
-            VerticalProgress(holder = holder)
-        }
+        Text(
+            text = "@${detail?.ownerName.orEmpty()}",
+            style = MaterialTheme.typography.labelMedium.copy(
+                // 15sp（原 12sp）：底部信息区是竖屏唯一的文字区，
+                // 12sp 在 6 寸屏上明显偏小，与"大图标"的视觉重量不匹配。
+                fontSize = FontSize.titleMd,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(Space.x1))
+        Text(
+            text = detail?.title.orEmpty(),
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = FontSize.body,
+                lineHeight = FontSize.bodyLine,
+                color = Color.White,
+            ),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(Space.x2))
+        VerticalProgress(holder = holder)
     }
 }
 
