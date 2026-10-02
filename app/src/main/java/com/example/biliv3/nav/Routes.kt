@@ -57,6 +57,15 @@ object Routes {
     /** 排行榜（全站 + 分区）。 */
     const val RANKING = "ranking"
 
+    /**
+     * 竖屏沉浸式观看模式。
+     *
+     * 全屏无导航栏 —— `MainShell` 的 `showBottomNav` 只在
+     * `tabRoutes`（home/dynamic/profile）内显示底栏，本路由不在其中，
+     * 所以底栏不会盖住画面。
+     */
+    const val VERTICAL = "vertical"
+
     /** 番剧 / 影视索引。 */
     const val BANGUMI = "bangumi"
 

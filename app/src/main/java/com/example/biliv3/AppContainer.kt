@@ -257,4 +257,17 @@ val pmRepository: PmRepository = PmRepository(api, authStore)
     /** aicu 查成分仓库（评论 / 视频弹幕 / 直播弹幕 / 用户成分）。 */
     val aicuRepository: com.example.biliv3.data.AicuRepository =
         com.example.biliv3.data.AicuRepository(aicuApi)
+
+    // ---------------- 竖屏观看模式 ----------------
+
+    /**
+     * 竖屏观看模式数据源。
+     *
+     * ⚠️ 必须复用共享 [api] 与 [videoRepository] ——
+     * 探测"是否竖屏"要逐条查详情取真实分辨率
+     * （没有任何接口能直接给竖屏列表，见该类注释），
+     * 那些请求需要登录态。
+     */
+    val verticalFeedRepository: com.example.biliv3.data.VerticalFeedRepository =
+        com.example.biliv3.data.VerticalFeedRepository(api, videoRepository)
 }

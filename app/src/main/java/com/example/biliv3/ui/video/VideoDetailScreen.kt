@@ -2408,8 +2408,11 @@ private fun rememberPreviewHolder(): com.example.biliv3.player.PlayerHolder {
  *
  * ExoPlayer 的原始错误（如 `ERROR_CODE_IO_BAD_HTTP_STATUS`）对用户毫无意义，
  * 但对定位问题极有价值，所以 logcat 里保留原始码，UI 上给中文原因。
+ *
+ * 非 private：竖屏模式（`VerticalScreen`）复用同一份映射，
+ * 避免两处文案漂移。
  */
-private fun describePlayerError(error: androidx.media3.common.PlaybackException): String =
+fun describePlayerError(error: androidx.media3.common.PlaybackException): String =
     when (error.errorCode) {
         androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
             "视频源返回错误（可能是取流地址已过期或需要登录）"

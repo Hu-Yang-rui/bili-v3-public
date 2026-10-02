@@ -8,6 +8,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -283,6 +284,125 @@ fun MainShell(
                         }
                     },
                 )
+            }
+
+            // ---------- 竖屏沉浸式观看模式 ----------
+            //
+            // 全屏无导航栏（`showBottomNav` 的 tabRoutes 不含本路由）。
+            // 播放器复用 Activity 级 holder，与详情页同一个实例。
+            composable(Routes.VERTICAL) {
+                val vm: com.example.biliv3.ui.vertical.VerticalViewModel = viewModel(
+                    factory = com.example.biliv3.ui.vertical.VerticalVmFactory(
+                        feed = container.verticalFeedRepository,
+                        videoRepository = container.videoRepository,
+                        interactions = container.interactionRepository,
+                        spaceRepository = container.spaceRepository,
+                        currentMid = { container.authStore.mid },
+                        danmakuRepository = container.danmakuRepository,
+                    ),
+                )
+                val vState by vm.state.collectAsStateWithLifecycle()
+                val vSettings by container.settingsStore.settings
+                    .collectAsStateWithLifecycle(initialValue = com.example.biliv3.data.Settings())
+                val vSnackbar = remember { SnackbarHostState() }
+
+                LaunchedEffect(vState.toast) {
+                    vState.toast?.let {
+                        vSnackbar.showSnackbar(it)
+                        vm.consumeToast()
+                    }
+                }
+
+                /**
+                 * 离开竖屏路由时释放播放器。
+                 *
+                 * ⚠️ 与详情页同样的处理：用 `rememberUpdatedState` 读**最新**
+                 * 的 `isInPip`，避免进小窗时误释放（见详情页那段注释）。
+                 */
+                val vLatestInPip by androidx.compose.runtime.rememberUpdatedState(isInPip)
+                androidx.compose.runtime.DisposableEffect(Unit) {
+                    onDispose {
+                        if (!vLatestInPip) container.playerHolder.release()
+                    }
+                }
+
+                /**
+                 * 确保播放器已创建并绑定当前项媒体。
+                 *
+                 * `acquire` 在 key 相同时复用，key 变化（换视频）时**重建** ——
+                 * 所以用 bvid 作 key，切项不会带着上一条流的缓冲状态。
+                 */
+                val vBvid = vState.items.getOrNull(vState.currentIndex)?.bvid
+                LaunchedEffect(vBvid) {
+                    if (vBvid != null) container.playerHolder.acquire(vBvid)
+                }
+
+                /**
+                 * 订阅播放器运行时错误。
+                 *
+                 * ⚠️ 与详情页一样**必须订阅** —— 否则解码失败 / 网络中断会
+                 * **静默黑屏**（`holder.onError` 无人接收，用户只看到黑画面
+                 * 且没有任何提示）。离开时还原，避免污染其他页面。
+                 */
+                androidx.compose.runtime.DisposableEffect(container.playerHolder) {
+                    val prev = container.playerHolder.onError
+                    container.playerHolder.onError = { e ->
+                        vm.showToast(
+                            com.example.biliv3.ui.video.describePlayerError(e),
+                        )
+                    }
+                    onDispose { container.playerHolder.onError = prev }
+                }
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    com.example.biliv3.ui.vertical.VerticalScreen(
+                        state = vState,
+                        holder = container.playerHolder,
+                        danmaku = vState.danmaku,
+                        danmakuEnabled = vSettings.danmakuEnabled,
+                        danmakuAlpha = vSettings.danmakuAlpha,
+                        danmakuFontScale = vSettings.danmakuFontScale,
+                        activeSubtitle = null,
+                        onBack = { navController.popBackStack() },
+                        onPageChanged = vm::onPageChanged,
+                        onPreload = vm::preload,
+                        onLike = vm::toggleLike,
+                        // 竖屏沉浸流里不弹投币选择器 —— 弹窗会打断浏览。
+                        // 直接投默认 2 枚 + 同时点赞（与官方短视频流一致）。
+                        onCoin = { vm.coin(count = 2, alsoLike = true) },
+                        onFavorite = vm::toggleFavorite,
+                        onFollow = vm::toggleFollow,
+                        onShare = {
+                            vm.onShared()
+                            val intent = android.content.Intent(
+                                android.content.Intent.ACTION_SEND,
+                            ).apply {
+                                type = "text/plain"
+                                vBvid?.let {
+                                    putExtra(
+                                        android.content.Intent.EXTRA_TEXT,
+                                        "https://www.bilibili.com/video/$it",
+                                    )
+                                }
+                            }
+                            runCatching {
+                                context.startActivity(
+                                    android.content.Intent.createChooser(intent, "分享到"),
+                                )
+                            }
+                        },
+                        onRetry = vm::retry,
+                        onPlayerError = { msg ->
+                            vm.showToast(msg)
+                        },
+                    )
+                    SnackbarHost(
+                        hostState = vSnackbar,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding(),
+                    )
+                }
             }
 
             // ---------- 视频详情 ----------

@@ -7,6 +7,7 @@ import com.example.biliv3.data.InteractionRepository
 import com.example.biliv3.data.VerticalFeedRepository
 import com.example.biliv3.data.VideoRepository
 import com.example.biliv3.data.api.InteractionState
+import com.example.biliv3.data.danmaku.DanmakuItem
 import com.example.biliv3.data.model.PlayInfo
 import com.example.biliv3.data.model.VideoDetail
 import com.example.biliv3.data.model.VideoItem
@@ -42,6 +43,8 @@ data class VerticalUiState(
     val interaction: InteractionState = InteractionState(),
     /** 是否已关注当前 UP 主。 */
     val following: Boolean = false,
+    /** 当前项的弹幕（已按时间升序）。 */
+    val danmaku: List<DanmakuItem> = emptyList(),
     /** 一次性提示。 */
     val toast: String? = null,
     /** 错误（首屏加载失败时展示）。 */
@@ -65,6 +68,8 @@ class VerticalViewModel(
     /** 关注态读写走用户主页那套仓库（关注是 UP 维度的操作）。 */
     private val spaceRepository: com.example.biliv3.data.SpaceRepository? = null,
     private val currentMid: () -> Long,
+    /** 弹幕仓库。null = 不加载弹幕（预览/测试）。 */
+    private val danmakuRepository: com.example.biliv3.data.danmaku.DanmakuRepository? = null,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(VerticalUiState())
@@ -125,6 +130,7 @@ class VerticalViewModel(
             playInfo = null,
             interaction = InteractionState(),
             following = false,
+            danmaku = emptyList(),
         )
         loadDetail(index)
     }
@@ -168,6 +174,19 @@ class VerticalViewModel(
                         interaction = st ?: InteractionState(),
                         following = following,
                     )
+                }
+            }
+
+            // ---- 弹幕（增强：失败静默，不影响播放）----
+            //
+            // 竖屏视频通常较短（<6 分钟），所以只拉第一片就够。
+            // 多片的话第一片也能覆盖开头，滑走后再拉意义不大。
+            launch {
+                val dm = runCatching {
+                    danmakuRepository?.segment(detail.cid, segmentIndex = 1)
+                }.getOrNull()
+                if (_state.value.currentIndex == index && !dm.isNullOrEmpty()) {
+                    _state.value = _state.value.copy(danmaku = dm)
                 }
             }
         }
@@ -333,6 +352,11 @@ class VerticalViewModel(
         _state.value = _state.value.copy(toast = null)
     }
 
+    /** 显示一次性提示（供 UI 上报播放错误等）。 */
+    fun showToast(message: String) {
+        _state.value = _state.value.copy(toast = message)
+    }
+
     fun retry() = loadFirstPage()
 
     /** 当前登录 mid（供 UI 判断"是否自己的视频"）。 */
@@ -352,8 +376,9 @@ class VerticalVmFactory(
     /** 关注态读写走用户主页那套仓库（关注是 UP 维度的操作）。 */
     private val spaceRepository: com.example.biliv3.data.SpaceRepository? = null,
     private val currentMid: () -> Long,
+    private val danmakuRepository: com.example.biliv3.data.danmaku.DanmakuRepository? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        VerticalViewModel(feed, videoRepository, interactions, spaceRepository, currentMid) as T
+        VerticalViewModel(feed, videoRepository, interactions, spaceRepository, currentMid, danmakuRepository) as T
 }

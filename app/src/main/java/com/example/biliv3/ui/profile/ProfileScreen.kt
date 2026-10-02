@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.DownloadDone
 import androidx.compose.material.icons.automirrored.outlined.ManageSearch
 import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.SmartDisplay
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SwitchAccount
 import androidx.compose.material3.CircularProgressIndicator
@@ -192,6 +193,9 @@ private fun GuestPanel(
             entries = listOf(
                 Entry("离线缓存", Icons.Outlined.DownloadDone, "downloads"),
                 Entry("查成分", Icons.AutoMirrored.Outlined.ManageSearch, "aicu"),
+                // 竖屏模式同样不依赖登录态：推荐流匿名可读，
+                // 探测竖屏要的详情/取流接口也都能匿名访问。
+                Entry("竖屏模式", Icons.Outlined.SmartDisplay, "vertical"),
             ),
             enabled = true,
             onNavigate = onNavigate,
@@ -290,6 +294,9 @@ private fun LoggedInPanel(
                 Entry("历史记录", Icons.Filled.History, "history"),
                 Entry("我的收藏", Icons.Filled.Star, "favorites"),
                 Entry("稍后再看", Icons.Outlined.Schedule, "toView"),
+                // 竖屏沉浸式观看模式。不依赖登录态（推荐流匿名可读），
+                // 所以两处入口都放。
+                Entry("竖屏模式", Icons.Outlined.SmartDisplay, "vertical"),
                 // ⚠️ 离线缓存入口此前**完全不存在** ——
                 // `VideoDownloader`（315 行）写好了却没有任何页面能进。
                 // 它不依赖登录态（本地文件），所以未登录也该能进。
