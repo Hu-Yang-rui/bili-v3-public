@@ -101,6 +101,7 @@ fun HistoryScreen(
 
             entries.isEmpty() -> EmptyState(
                 title = "还没有观看记录",
+                      terminalStyle = true,
                 description = "看过的视频会出现在这里",
                 modifier = Modifier.fillMaxSize(),
             )
@@ -139,6 +140,7 @@ fun ToViewScreen(
             loading -> LoadingPanel()
             videos.isEmpty() -> EmptyState(
                 title = "稍后再看是空的",
+                      terminalStyle = true,
                 description = "在视频页点「稍后再看」加入",
                 modifier = Modifier.fillMaxSize(),
             )
@@ -209,6 +211,7 @@ fun FavoriteScreen(
             loading && folders.isEmpty() -> LoadingPanel()
             folders.isEmpty() -> EmptyState(
                 title = "还没有收藏夹",
+                      terminalStyle = true,
                 description = "在视频页点「收藏」加入",
                 actionLabel = "刷新",
                 onAction = onRetry,
@@ -480,6 +483,7 @@ fun FavoriteFolderScreen(
             loading && entries.isEmpty() -> LoadingPanel()
             entries.isEmpty() -> EmptyState(
                 title = "这个收藏夹是空的",
+                      terminalStyle = true,
                 description = "在视频页点「收藏」加入",
                 modifier = Modifier.fillMaxSize(),
             )

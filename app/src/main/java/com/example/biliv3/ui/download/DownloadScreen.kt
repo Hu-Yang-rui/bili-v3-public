@@ -156,6 +156,7 @@ fun DownloadScreen(
         if (items.isEmpty() && running.isEmpty() && failed.isEmpty()) {
             EmptyState(
                 title = "还没有缓存任何视频",
+                      terminalStyle = true,
                 description = "在视频详情页点「更多 ⋮」→「缓存」即可离线观看",
                 icon = Icons.Outlined.DownloadDone,
                 modifier = Modifier.fillMaxSize(),

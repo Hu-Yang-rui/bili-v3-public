@@ -394,6 +394,7 @@ private fun IdlePanel(
             item(key = "idle-empty") {
                 EmptyState(
                     title = "还没有搜索记录",
+                          terminalStyle = true,
                     description = "输入关键词开始搜索",
                     modifier = Modifier.fillMaxWidth(),
                 )
