@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      深色启动主题。
-      关键差异：windowLightStatusBar = false —— 深色背景下状态栏图标必须是浅色，
-      否则时钟/信号图标（深色）压在 #0A0B0C 上几乎看不见。
+      启动主题（本项目唯一 —— v1.1.3 起移除浅色主题）。
+
+      为什么放在 values-night/ 而不是 values/：
+      本项目恒为深色，但**系统**仍可能是浅色。若主题只放 values/，
+      系统为浅色时 Android 会去找 values-night/ 覆盖 —— 找不到就用 values/，
+      这条路径本身没问题。但反过来（放 values-night/）在系统浅色下
+      **不会**被选中，会导致 windowBackground 缺失 → 冷启动闪白。
+
+      ⚠️ 所以必须**同时**保留 values/ 与 values-night/ 两份，
+      内容相同。这不是冗余，是 Android 资源限定的要求。
     -->
     <style name="Theme.BiliV3" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/launch_background</item>

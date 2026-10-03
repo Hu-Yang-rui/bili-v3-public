@@ -256,91 +256,18 @@ val DarkColors = BiliColors(
     categorySurface = Color(0xFF1B212A),
 )
 
-/**
- * 浅色。
+
+/*
+ * 本项目**只有深色主题**。
  *
- * 冷调近白底，与深色同一色相家族 —— 切换主题时"只是明暗变了"，
- * 不出现色相跳变。
+ * ## 为什么删掉浅色（v1.1.3）
+ *
+ * 浅色下静态页面（首页/搜索/我的）背后是**纯色底，没有东西可模糊** ——
+ * 玻璃拟态在纯色背景上只能靠"比底色更白"来假装层次，
+ * 那不是玻璃，是白色卡片。物理上做不出来。
+ *
+ * 于是变成"要么维护两套完全不同的材质策略、要么浅色下材质是假的"。
+ * 两个都不好。选择：**只做深色，把它做透**。
+ *
+ * ⚠️ 不要再加回浅色。真要加，先解决"静态页玻璃"这个物理问题。
  */
-val LightColors = BiliColors(
-    // 品牌
-    brandPrimary = Color(0xFFE8578A),
-    brandSecondary = Color(0xFF00A1D6),
-    brandPrimaryHover = Color(0xFFD94A7C),
-    brandPrimaryActive = Color(0xFFC43F6E),
-    brandPrimaryDim = Color(0x1FE8578A),
-    brandSecondaryHover = Color(0xFF0090C0),
-
-    // 极客点缀（浅色下压深以保证对比度）
-    accentTerminal = Color(0xFF0D9488),
-    accentTerminalDim = Color(0x1A0D9488),
-    gridLine = Color(0x0D000000),
-
-    // 文字安全变体
-    textBrandSafe = Color(0xFFC2416B),
-    textLinkSafe = Color(0xFF0077A8),
-    textSecondarySafe = Color(0xFF5A6472),
-
-    // 三级层次
-    bgBase = Color(0xFFF5F7FA),
-    bgCard = Color(0xFFFFFFFF),
-    bgHover = Color(0xFFEDF1F6),
-    surfaceElevated = Color(0xFFFFFFFF),
-
-    // 文字
-    textPrimary = Color(0xFF14181F),
-    textSecondary = Color(0xFF8B95A5),
-    textTertiary = Color(0xFFA3ABB8),
-    textOnBrand = Color(0xFFFFFFFF),
-    textOnMedia = Color(0xFFFFFFFF),
-
-    // 描边
-    borderHairline = Color(0x14000000),
-    borderStrong = Color(0x26000000),
-
-    // 遮罩
-    overlayCover = Color(0x66000000),
-    scrim = Color(0x66000000),
-    scrimPanel = Color(0x8C000000),
-    overlayControl = Color(0xB3000000),
-    onOverlay = Color(0xFFFFFFFF),
-    trackInactive = Color(0x3DFFFFFF),
-    gradientMediaEnd = Color(0x99000000),
-
-    // 状态
-    stateError = Color(0xFFDC2626),
-    stateSuccess = Color(0xFF16A34A),
-    stateLive = Color(0xFFE8578A),
-
-    // 互动
-    accentCoin = Color(0xFFD98A1F),
-    accentFavorite = Color(0xFFC9911A),
-    accentCoinBright = Color(0xFFE8A33D),
-    onAccentCoin = Color(0xFFFFFFFF),
-
-    // 播放器
-    danmakuStroke = Color(0xCC000000),
-    subtitleScrim = Color(0xB3000000),
-    playerBackground = Color(0xFF000000),
-
-    // 二维码
-    qrSurface = Color(0xFFF7F8FA),
-    onQrSurface = Color(0xFF14181F),
-
-    // 榜单
-    rankFirst = Color(0xFFE5484D),
-    rankSecond = Color(0xFFD97706),
-    rankThird = Color(0xFFB45309),
-
-    // 骨架
-    skeletonBase = Color(0xFFEDF1F6),
-    skeletonHighlight = Color(0xFFF7F9FC),
-
-    // 占位
-    coverPlaceholder = Color(0xFFE8EDF3),
-    avatarPlaceholder = Color(0xFFDDE3EB),
-
-    // 分区
-    categoryAccent = Color(0xFF5A6472),
-    categorySurface = Color(0xFFEDF1F6),
-)

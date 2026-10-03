@@ -96,14 +96,14 @@ class MainActivity : ComponentActivity() {
         container = AppContainer(this)
         enableEdgeToEdge()
 
-        // ⚠️ 状态栏图标颜色**不做全局覆盖**，交给主题
-        // （浅色主题 windowLightStatusBar=true → 深色图标；
-        //  深色主题 false → 浅色图标）。绝大多数页面是浅色底，
-        // 主题的默认选择就是对的。
+        // 状态栏图标颜色：**全应用恒为浅色图标**（配深色底）。
         //
-        // 只有**视频详情页**顶部是纯黑（播放器 + 安全区），那里需要浅色图标 ——
-        // 由该页面自己按需切换（见 VideoDetailScreen 的 PlayerSafeAreaTop），
-        // 离开时还原，避免污染其他页面。
+        // 由 `values/themes.xml` + `values-night/themes.xml` 的
+        // `windowLightStatusBar=false` 声明（两份内容相同 —— 因为
+        // 系统主题决定选哪份，而应用自身恒为深色）。
+        //
+        // 视频详情页顶部是纯黑安全区，同样需要浅色图标，
+        // 那里会再显式压一次（见 `VideoDetailScreen.PlayerSafeAreaTop`）。
 
         /**
          * 设备性能档位。
@@ -256,22 +256,15 @@ private fun BiliApp(
         else -> WindowSize.Mobile
     }
 
-    // ⚠️ 主题模式来自设置（三选一：跟随系统 / 强制深色 / 强制浅色）。
+    // 🔴 主题恒为深色（v1.1.3 起移除浅色主题）。
     //
-    // 之前 `BiliTheme` **只认 `isSystemInDarkTheme()`**，用户无法在应用内切换
-    // —— 这是「深色模式三选一」被判为缺失的直接原因。
-    // 首帧用 `Settings()` 的默认值（跟随系统），DataStore 到位后自动重绘，
-    // 不会闪白（`values-night` 已处理窗口背景）。
-    val settings by container.settingsStore.settings
-        .collectAsStateWithLifecycle(initialValue = com.example.biliv3.data.Settings())
-
-    val darkTheme = when (settings.themeMode) {
-        com.example.biliv3.data.ThemeMode.Dark -> true
-        com.example.biliv3.data.ThemeMode.Light -> false
-        com.example.biliv3.data.ThemeMode.System -> androidx.compose.foundation.isSystemInDarkTheme()
-    }
-
-    BiliTheme(windowSize = windowSize, darkTheme = darkTheme) {
+    // 浅色主题下的"玻璃"在静态页上是假的（背后是纯色底，没东西可模糊），
+    // 详见 `design/BiliTheme.kt` 的 KDoc。
+    //
+    // 因此不再读 `settings.themeMode` —— 用户没有可选项。
+    // 注意：`Settings.themeMode` 字段本身保留（兼容旧数据），
+    // 但**不再有任何消费者**。
+    BiliTheme(windowSize = windowSize) {
         Surface(modifier = Modifier.fillMaxSize()) {
             MainShell(
                 windowSize = windowSize,

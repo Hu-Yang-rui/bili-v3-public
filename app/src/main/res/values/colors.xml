@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 与 design/tokens/Colors.kt 的 bg/base 保持一致 -->
-    <color name="launch_background">#F4F5F7</color>
+    <!--
+      启动窗口背景。恒为深色（与 DarkColors.bgBase 一致）。
+
+      ⚠️ 与 values-night/colors.xml 内容相同，两份都必须存在（原因见 themes.xml）。
+    -->
+    <color name="launch_background">#0E1116</color>
 </resources>

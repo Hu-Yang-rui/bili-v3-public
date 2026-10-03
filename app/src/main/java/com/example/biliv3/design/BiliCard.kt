@@ -4,16 +4,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.design.tokens.BiliColors
@@ -78,7 +75,6 @@ fun Modifier.biliCard(
     }
 
     val colors = BiliTheme.colors
-    val isDark = colors.bgBase.luminance() < 0.5f
     val tier = LocalDeviceTier.current
     val backdrop = LocalGlassBackdrop.current
     val frame = backdrop?.frame
@@ -87,46 +83,32 @@ fun Modifier.biliCard(
     val useGlass = frame != null && tier.canBlur
 
     /**
-     * 玻璃染色：**由「底下压着什么」决定，而不是由主题决定**。
+     * 卡片底色。
      *
-     * ## 🔴 这是一个曾经写错的地方
+     * ## 只有深色之后，这段逻辑反而更清楚了
      *
-     * 原实现是 `if (isDark) tintDark else tintLight` ——
-     * 用**主题**选配方。这在浅色主题下是错的：
-     *
-     * 浅色主题 + 视频画面（可能是雪景/白墙/亮场景）→ 选了 `tintLight`
-     * （为"浅色页面底"设计的白玻璃）→ **白玻璃压白画面**，
-     * 结果是一块纯白板，画面完全透不出来。
-     * 实测浅色主题下右上角按钮组就是这个表现。
-     *
-     * ## 正确规则
+     * 移除浅色主题（v1.1.3）之前，这里要分三种情况：
+     * 视频玻璃 / 浅色静态页 / 深色静态页。
+     * 现在只剩两种，而且判据是**"底下压着什么"**：
      *
      * | 底下是什么 | 用什么 | 为什么 |
      * |---|---|---|
-     * | **视频帧** | 一律 `tintDark`（压暗） | 视频亮度不可控，必须压暗才能"透出"且保证白图标可读 |
-     * | 静态页面底（深色） | `surfaceTintDark`（提亮） | 页面底已很暗，必须更亮才能浮起 |
-     * | 静态页面底（浅色） | `surfaceTintLight`（白） | 页面底已很亮，用白玻璃 |
+     * | **视频帧** | `tintDark`（压暗） | 视频亮度不可控，必须压暗才能"透出"且白图标可读 |
+     * | 静态页面底 | `surfaceTintDark`（提亮） | 页面底已很暗，必须更亮才能浮起来 |
      *
-     * **压在视频上的玻璃与主题无关** —— 因为视频画面的亮度
-     * 和用户选深色还是浅色主题**没有任何关系**。
+     * ## ⚠️ 两个令牌值相同但**不能合并**
+     *
+     * `tintDark` 是 72% 黑（压暗），`surfaceTintDark` 是 12% 白（提亮）——
+     * 值其实**不同**，是方向相反的两套策略。合并会让"调玻璃浓度"
+     * 和"调卡片浮起程度"互相牵连。
      */
     val bg = when {
         color != Color.Unspecified -> color
-        // 有视频帧 → 一律压暗（与主题无关）
         useGlass -> GlassTokens.tintDark
-        // 静态页面 → 按主题（页面底亮就提白、暗就提亮）
-        else -> if (isDark) GlassTokens.surfaceTintDark else GlassTokens.surfaceTintLight
+        else -> GlassTokens.surfaceTintDark
     }
 
     return this
-        .then(
-            // 浅色下用阴影分层；深色下阴影不可见（下面改用描边）
-            if (!isDark && elevation > 0.dp) {
-                Modifier.shadow(elevation = elevation, shape = shape, clip = false)
-            } else {
-                Modifier
-            },
-        )
         .clip(shape)
         .then(
             // 毛玻璃底：模糊的视频帧
@@ -138,23 +120,13 @@ fun Modifier.biliCard(
         )
         .background(bg)
         .then(
-            // 描边：玻璃形态用高光边（玻璃的"厚度感"）；
-            // 实心卡片用发丝线（深色下承担分层职责）
-            when {
-                // 压在视频上的玻璃：一律用**浅色高光边**（与主题无关，
-                // 因为玻璃底一律是压暗的，白边才有"厚度感"）
-                useGlass -> Modifier.border(
-                    width = 1.dp,
-                    color = GlassTokens.borderDark,
-                    shape = shape,
-                )
-                isDark -> Modifier.border(
-                    width = 1.dp,
-                    color = colors.borderHairline,
-                    shape = shape,
-                )
-                else -> Modifier
-            },
+            // 描边：**深色下描边承担分层职责**（黑底黑影，投影渲染出来几乎为零）。
+            // 玻璃形态用更亮的高光边（玻璃的"厚度感"）。
+            Modifier.border(
+                width = 1.dp,
+                color = if (useGlass) GlassTokens.borderDark else colors.borderHairline,
+                shape = shape,
+            ),
         )
 }
 
@@ -189,13 +161,3 @@ private fun DrawScope.drawGlassBackdrop(image: ImageBitmap) {
     )
 }
 
-/**
- * 当前主题是否为深色。
- *
- * 判断依据是 `bgBase` 的**相对亮度**，而不是 `isSystemInDarkTheme()` ——
- * 因为主题可以被显式覆盖（截图对比、`@Preview`），此时系统值会给出错误答案。
- */
-val BiliColors.isDark: Boolean
-    @Composable
-    @ReadOnlyComposable
-    get() = bgBase.luminance() < 0.5f

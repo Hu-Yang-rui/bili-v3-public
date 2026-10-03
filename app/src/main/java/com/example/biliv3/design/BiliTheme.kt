@@ -1,10 +1,8 @@
 package com.example.biliv3.design
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
@@ -17,7 +15,6 @@ import androidx.compose.ui.unit.sp
 import com.example.biliv3.design.tokens.BiliColors
 import com.example.biliv3.design.tokens.DarkColors
 import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.LightColors
 import com.example.biliv3.design.tokens.Radius
 
 /**
@@ -31,7 +28,7 @@ import com.example.biliv3.design.tokens.Radius
 val CjkFontFamily = FontFamily.SansSerif
 
 /** 提供 [BiliColors]。 */
-val LocalBiliColors = staticCompositionLocalOf { LightColors }
+val LocalBiliColors = staticCompositionLocalOf { DarkColors }
 
 /** 提供屏幕尺寸断点。 */
 val LocalWindowSize = staticCompositionLocalOf { WindowSize.Mobile }
@@ -70,50 +67,42 @@ enum class WindowSize {
 /**
  * 主题入口。
  *
- * ## 深浅色
+ * ## 🔴 只有深色（v1.1.3 起）
  *
- * 默认**跟随系统**（`isSystemInDarkTheme()`）。深色是主态
- * （`AGENTS.md` §5.1「影院级深色 + B站品牌粉」），浅色是补充态。
+ * 浅色主题**已移除**。原因不是"懒得维护"，而是**物理上做不出来**：
  *
- * 显式传 [colors] 可以覆盖（预览、截图、测试用）。
- * 显式传 [darkTheme] 可以强制某一种（截图对比用）。
+ * 玻璃拟态的前提是"背后有东西可模糊"。视频页满足（背后是画面），
+ * 但静态页（首页/搜索/我的）背后是**纯色底** —— 没东西可糊。
+ * 在纯色背景上，玻璃只能靠"比底色更白"来假装层次，
+ * 那不是玻璃，是**白色卡片**。
+ *
+ * 于是只剩两个选择：维护两套完全不同的材质策略，或浅色下材质是假的。
+ * 两个都不好。**选择只做深色，把它做透。**
+ *
+ * 附带好处：所有 `isDark` 分支消失，玻璃配方不再需要
+ * "按主题选"这种容易出错的判断（v1.1.2 修的就是这个 bug）。
+ *
+ * 显式传 [colors] 可以覆盖（预览 / 截图 / 测试用）。
  */
 @Composable
 fun BiliTheme(
     windowSize: WindowSize = WindowSize.Mobile,
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    colors: BiliColors = if (darkTheme) DarkColors else LightColors,
+    colors: BiliColors = DarkColors,
     content: @Composable () -> Unit,
 ) {
-    val scheme = if (darkTheme) {
-        darkColorScheme(
-            primary = colors.brandPrimary,
-            onPrimary = colors.textOnBrand,
-            secondary = colors.brandSecondary,
-            background = colors.bgBase,
-            onBackground = colors.textPrimary,
-            surface = colors.bgCard,
-            onSurface = colors.textPrimary,
-            surfaceVariant = colors.bgHover,
-            onSurfaceVariant = colors.textSecondarySafe,
-            outline = colors.borderHairline,
-            error = colors.stateError,
-        )
-    } else {
-        lightColorScheme(
-            primary = colors.brandPrimary,
-            onPrimary = colors.textOnBrand,
-            secondary = colors.brandSecondary,
-            background = colors.bgBase,
-            onBackground = colors.textPrimary,
-            surface = colors.bgCard,
-            onSurface = colors.textPrimary,
-            surfaceVariant = colors.bgHover,
-            onSurfaceVariant = colors.textSecondarySafe,
-            outline = colors.borderHairline,
-            error = colors.stateError,
-        )
-    }
+    val scheme = darkColorScheme(
+        primary = colors.brandPrimary,
+        onPrimary = colors.textOnBrand,
+        secondary = colors.brandSecondary,
+        background = colors.bgBase,
+        onBackground = colors.textPrimary,
+        surface = colors.bgCard,
+        onSurface = colors.textPrimary,
+        surfaceVariant = colors.bgHover,
+        onSurfaceVariant = colors.textSecondarySafe,
+        outline = colors.borderHairline,
+        error = colors.stateError,
+    )
 
     CompositionLocalProvider(
         LocalBiliColors provides colors,

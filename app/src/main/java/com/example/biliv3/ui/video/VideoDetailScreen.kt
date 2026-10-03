@@ -2028,19 +2028,22 @@ private fun PlayerSafeAreaTop() {
         .asPaddingValues()
         .calculateTopPadding()
 
-    // 进入本页 → 浅色图标（配黑底）；离开 → 还原成主题原本的设置
+    // 深色主题下状态栏图标**本来就该是浅色**（`values-night/themes.xml`
+    // 的 `windowLightStatusBar=false`），所以这里其实无需切换。
+    //
+    // ⚠️ 但**保留这行强制设置**，因为：
+    // 系统可能是浅色主题（Android 会选 `values/themes.xml`，
+    // 那份现在也写了 false，但第三方 ROM / 用户手动改过开发者选项时
+    // 不保证）。这里显式压一次，确保黑底配浅色图标。
+    //
+    // 不再需要保存/还原 —— 全应用恒为深色，没有"另一种状态"可还原。
     DisposableEffect(view) {
         val window = (view.context as? android.app.Activity)?.window
         val controller = window?.let {
             androidx.core.view.WindowCompat.getInsetsController(it, view)
         }
-        val prev = controller?.isAppearanceLightStatusBars
         controller?.isAppearanceLightStatusBars = false
-        onDispose {
-            // 还原而不是硬编码 true：深色主题下原本就是 false，
-            // 硬写 true 会让深色主题的状态栏图标变深、同样看不见。
-            if (prev != null) controller.isAppearanceLightStatusBars = prev
-        }
+        onDispose { }
     }
 
     if (statusBarHeight > 0.dp) {

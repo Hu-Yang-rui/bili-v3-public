@@ -1,13 +1,14 @@
 package com.example.biliv3
 
+import androidx.compose.ui.graphics.luminance
 import com.example.biliv3.data.NotLoggedInException
 import com.example.biliv3.data.PlaybackProgressStore
 import com.example.biliv3.data.Settings
-import com.example.biliv3.data.ThemeMode
 import com.example.biliv3.data.danmaku.DanmakuItem
 import com.example.biliv3.data.model.CoverUrls
 import com.example.biliv3.data.model.PlayInfo
 import com.example.biliv3.design.WindowSize
+import com.example.biliv3.design.tokens.DarkColors
 import com.example.biliv3.ui.component.userMessageFor
 import com.example.biliv3.ui.video.isBlocked
 import com.example.biliv3.ui.video.playerAspectRatio
@@ -141,25 +142,42 @@ class FeatureLogicTest {
     }
 
     // ---------------------------------------------------------------------
-    // 3. 主题模式
+    // 3. 主题（v1.1.3 起只有深色）
     // ---------------------------------------------------------------------
 
+    /**
+     * 守住"只有深色"这个决定。
+     *
+     * ## 为什么用测试钉住
+     *
+     * 移除浅色主题不是随手改的 —— 原因是**静态页玻璃在物理上做不出来**
+     * （背后是纯色底，没有东西可模糊）。
+     *
+     * 这个理由容易被遗忘，然后有人"顺手把浅色加回来"。
+     * 一旦加回来，就会重新出现"浅色下材质是假的"这个问题。
+     *
+     * 所以：`DarkColors` 必须确实是深色（底够暗），
+     * 否则说明有人动了令牌。
+     */
     @Test
-    fun `主题模式解析——三种取值与未知兜底`() {
-        assertThat(ThemeMode.fromKey("dark")).isEqualTo(ThemeMode.Dark)
-        assertThat(ThemeMode.fromKey("light")).isEqualTo(ThemeMode.Light)
-        assertThat(ThemeMode.fromKey("system")).isEqualTo(ThemeMode.System)
-        // 未知 / 缺失 → 跟随系统（不能崩，也不能静默变成强制深色）
-        assertThat(ThemeMode.fromKey(null)).isEqualTo(ThemeMode.System)
-        assertThat(ThemeMode.fromKey("")).isEqualTo(ThemeMode.System)
-        assertThat(ThemeMode.fromKey("garbage")).isEqualTo(ThemeMode.System)
+    fun `深色主题的底色必须是暗的`() {
+        val bg = DarkColors.bgBase
+        // 相对亮度 < 0.2 才算"深色底"（#0E1116 约 0.006）
+        assertThat(bg.luminance()).isLessThan(0.2f)
+        // 卡片要比底色亮（深色下靠"提亮"分层，不是靠投影）
+        assertThat(DarkColors.bgCard.luminance())
+            .isGreaterThan(DarkColors.bgBase.luminance())
     }
 
+    /**
+     * 深色下**投影不可见**，分层必须靠描边。
+     *
+     * 如果哪天有人把 `borderHairline` 改成完全透明，
+     * 深色卡片就会"糊成一片"（黑底黑影 + 无描边）。
+     */
     @Test
-    fun `主题模式——key 与枚举一一对应`() {
-        ThemeMode.entries.forEach { mode ->
-            assertThat(ThemeMode.fromKey(mode.key)).isEqualTo(mode)
-        }
+    fun `深色主题的描边必须可见`() {
+        assertThat(DarkColors.borderHairline.alpha).isGreaterThan(0f)
     }
 
     // ---------------------------------------------------------------------
@@ -171,11 +189,6 @@ class FeatureLogicTest {
         val s = Settings()
         assertThat(s.danmakuBlockKeywords).isEmpty()
         assertThat(s.danmakuBlockModes).isEmpty()
-    }
-
-    @Test
-    fun `设置默认值——主题默认跟随系统`() {
-        assertThat(Settings().themeMode).isEqualTo(ThemeMode.System)
     }
 
     // ---------------------------------------------------------------------

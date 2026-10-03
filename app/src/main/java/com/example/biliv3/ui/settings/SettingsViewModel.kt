@@ -86,9 +86,10 @@ class SettingsViewModel(
 
     fun setSponsorBlockAllowUndo(v: Boolean) = launch { store.setSponsorBlockAllowUndo(v) }
 
-    // ---- 外观 ----
-
-    fun setThemeMode(v: com.example.biliv3.data.ThemeMode) = launch { store.setThemeMode(v) }
+    // ⚠️ 原 `setThemeMode` 已移除（v1.1.3 移除浅色主题）。
+    //
+    // 没有消费者了就删掉 —— 留着一个"改了没反应"的方法
+    // 等于埋一个死入口（§1.6）。
 
     private fun launch(block: suspend () -> Unit) {
         viewModelScope.launch { block() }

@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.sp
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.DeviceTier
 import com.example.biliv3.design.LocalDeviceTier
-import com.example.biliv3.design.isDark
 import com.example.biliv3.design.tokens.FontFamilies
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Motion

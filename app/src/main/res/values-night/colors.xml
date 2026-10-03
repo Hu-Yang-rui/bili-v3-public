@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      深色启动背景。
-      与 design/tokens/Colors.kt 的 DarkColors.bgBase (#0A0B0C) 保持一致。
+      启动窗口背景。恒为深色（与 DarkColors.bgBase 一致）。
 
-      ⚠️ 没有这份 values-night，深色模式冷启动会先闪一下白底
-      （windowBackground 走的是 values/colors.xml 的浅色值），
-      然后才切到深色 Compose 内容。
+      ⚠️ 与 values/colors.xml 内容相同，两份都必须存在（原因见 themes.xml）。
     -->
-    <color name="launch_background">#0A0B0C</color>
+    <color name="launch_background">#0E1116</color>
 </resources>

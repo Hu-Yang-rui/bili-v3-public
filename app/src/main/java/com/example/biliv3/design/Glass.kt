@@ -374,14 +374,10 @@ fun GlassSurface(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colors = BiliTheme.colors
-    val dark = colors.isDark
-    // ⚠️ 本组件**专用于"压在视频上"**，所以染色**与主题无关** —— 一律压暗。
+    // ⚠️ 本组件**专用于"压在视频上"**，所以染色一律压暗。
     //
-    // 视频画面的亮度与用户选深色/浅色主题没有任何关系。
-    // 用"浅色主题 → 白玻璃"会让白玻璃压在亮画面上，
-    // 结果是一块纯白板、画面透不出来（实测过）。
-    //
-    // 同理描边一律用白高光边（玻璃底已压暗，白边才有"厚度感"）。
+    // 视频画面的亮度与主题无关，必须压暗才能既"透出"又保证白字可读。
+    // 描边同理用白高光边（玻璃底已压暗，白边才有"厚度感"）。
     val glassTint = tint ?: GlassTokens.tintDark
     val frame = backdrop?.frame
 

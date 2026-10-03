@@ -82,7 +82,6 @@ class SettingsStore(
             // ---- 通用 ----
             preferH264 = p[KEY_H264] ?: true,
             // ---- 外观 ----
-            themeMode = ThemeMode.fromKey(p[KEY_THEME_MODE]),
         )
     }
 
@@ -146,9 +145,6 @@ class SettingsStore(
     suspend fun setSponsorBlockAllowUndo(v: Boolean) = edit { it[KEY_SB_UNDO] = v }
 
     // ---------------- 外观 ----------------
-
-    /** 主题模式三选一。消费者：`MainActivity.BiliApp` 决定 `darkTheme`。 */
-    suspend fun setThemeMode(mode: ThemeMode) = edit { it[KEY_THEME_MODE] = mode.key }
 
     // ---------------- 隐私 ----------------
 
@@ -214,10 +210,6 @@ class SettingsStore(
         private val KEY_DANMAKU_BLOCK_MODES = androidx.datastore.preferences.core
             .stringPreferencesKey("danmaku_block_modes")
 
-        /** 主题模式：`system` / `dark` / `light`。 */
-        private val KEY_THEME_MODE = androidx.datastore.preferences.core
-            .stringPreferencesKey("theme_mode")
-
         // ---- 空降助手 ----
         private val KEY_SB_ENABLED = androidx.datastore.preferences.core
             .booleanPreferencesKey("sponsor_block_enabled")
@@ -257,37 +249,6 @@ object SponsorBlockDefaults {
         "intro",
         "outro",
     )
-}
-
-/**
- * 主题模式（设置页「外观」三选一）。
- *
- * ⚠️ 之前 `BiliTheme` **只认 `isSystemInDarkTheme()`**，用户无法切换 ——
- * 这是「深色模式」这项功能被判为缺失的直接原因。
- */
-enum class ThemeMode {
-    /** 跟随系统。 */
-    System,
-
-    /** 强制深色（本项目的主态）。 */
-    Dark,
-
-    /** 强制浅色。 */
-    Light;
-
-    val key: String get() = when (this) {
-        System -> "system"
-        Dark -> "dark"
-        Light -> "light"
-    }
-
-    companion object {
-        fun fromKey(k: String?): ThemeMode = when (k) {
-            "dark" -> Dark
-            "light" -> Light
-            else -> System
-        }
-    }
 }
 
 /**
@@ -348,10 +309,6 @@ data class Settings(
 
     /** 跳过时是否弹撤销按钮（误标时可以退回）。 */
     val sponsorBlockAllowUndo: Boolean = true,
-
-    // ---- 外观 ----
-    /** 主题模式。 */
-    val themeMode: ThemeMode = ThemeMode.System,
 ) {
     companion object {
         const val DEFAULT_SPEED = 1f

@@ -343,25 +343,15 @@ fun SettingsScreen(
             }
 
             // ================= 外观 =================
+            //
+            // 🔴 原「主题」三选一（跟随系统 / 深色 / 浅色）已移除（v1.1.3）。
+            //
+            // 原因：浅色主题下的"玻璃"在静态页上是假的 ——
+            // 静态页背后是纯色底，没有东西可模糊。
+            // 详见 `design/BiliTheme.kt` 的 KDoc。
+            //
+            // **不保留一个点了没用的"主题"项** —— 那是死入口（§1.6）。
             SectionHeader("外观")
-
-            InlinePicker(
-                label = "主题",
-                currentLabel = themeLabel(settings.themeMode),
-                options = THEME_MODES.map { m ->
-                    PickerOption(key = m, label = themeLabel(m))
-                },
-                selectedKey = settings.themeMode,
-                expanded = picker == SettingsPickerId.Theme,
-                onToggle = {
-                    picker = if (picker == SettingsPickerId.Theme) null
-                    else SettingsPickerId.Theme
-                },
-                onSelect = {
-                    viewModel.setThemeMode(it)
-                    picker = null
-                },
-            )
 
             // ================= 隐私 =================
             SectionHeader("隐私")
@@ -479,7 +469,6 @@ private enum class SettingsPickerId {
     Font,
     Area,
     Keywords,
-    Theme,
 }
 
 // ---------------------------------------------------------------------------
@@ -669,13 +658,6 @@ private fun areaLabel(ratio: Float): String = when {
     else -> "全屏"
 }
 
-/** 主题模式的中文标签。 */
-private fun themeLabel(mode: com.example.biliv3.data.ThemeMode): String = when (mode) {
-    com.example.biliv3.data.ThemeMode.System -> "跟随系统"
-    com.example.biliv3.data.ThemeMode.Dark -> "深色"
-    com.example.biliv3.data.ThemeMode.Light -> "浅色"
-}
-
 /** 在集合里加/减一个弹幕类型。 */
 private fun toggleMode(current: Set<Int>, mode: Int, on: Boolean): Set<Int> =
     if (on) current + mode else current - mode
@@ -850,13 +832,6 @@ private val QUALITY_OPTIONS = listOf(
     32 to "480P",
     64 to "720P",
     80 to "1080P",
-)
-
-/** 主题模式三选一。 */
-private val THEME_MODES = listOf(
-    com.example.biliv3.data.ThemeMode.System,
-    com.example.biliv3.data.ThemeMode.Dark,
-    com.example.biliv3.data.ThemeMode.Light,
 )
 
 /** 弹幕类型码（与 B 站 `mode` 字段一致）。 */
