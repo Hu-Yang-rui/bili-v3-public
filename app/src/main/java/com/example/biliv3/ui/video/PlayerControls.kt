@@ -50,6 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.biliv3.ui.component.MonoReadout
+import com.example.biliv3.design.tokens.Motion
+import androidx.compose.animation.core.tween
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
@@ -369,33 +371,42 @@ fun PlayerControls(
         // 保留参数与图标 import 会变成未使用告警，所以一并清理。
         // （`onToggleFullscreen` / `isFullscreen` 仍由上层使用。）
 
-        // ================= 底部：自绘进度条（单行、紧凑）=================
+        // ================= 底部：进度条（单行、紧凑）=================
+        //
+        // ## 结构（新设计语言）
+        //
+        // ```
+        // [渐变]                      ← 保证白字压任意画面可读
+        //   ┌──────────────────────┐
+        //   │ 00:15 ▬▬▬▬▬░░░░ 16:28 │  ← 等宽读数 + 细轨道
+        //   └──────────────────────┘
+        // ```
+        //
+        // ## 为什么两侧时间都用等宽
+        //
+        // 只把左边改等宽是不够的 —— 右侧总时长虽不变，但两处字体不一致
+        // 会让这一行看起来"两段拼接"。两边同族才是一个整体。
         AnimatedVisibility(
             visible = controlsVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
+            enter = fadeIn(animationSpec = tween(Motion.FADE_MS, easing = Motion.standard)),
+            exit = fadeOut(animationSpec = tween(Motion.FADE_MS, easing = Motion.standard)),
             modifier = Modifier.align(Alignment.BottomCenter),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    // 底部渐变：保证白色控件压在任意画面上都可读
+                    // 底部渐变：保证白色控件压在任意画面上都可读。
+                    // 这是**可读性兜底**，不是装饰 —— 不能去掉。
                     .background(
                         Brush.verticalGradient(
                             listOf(Color.Transparent, colors.gradientMediaEnd),
                         ),
                     )
-                    // ⚠️ 紧凑：垂直内边距 2dp（原为 4dp），横向 8dp
+                    // 紧凑：垂直 2dp、水平 8dp（播放器每多一像素都是从画面里抢的）
                     .padding(horizontal = Space.x2, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // 时间读数用**等宽字体**。
-                //
-                // ## 这是功能需求，不是风格偏好
-                //
-                // 比例字体下 `1` 比 `8` 窄，时间每秒刷新一次，
-                // 整行宽度会跟着**左右抖动** —— 在播放器这种静态构图上非常显眼。
-                // 等宽字体让每个数字占同样宽度，读数稳定不跳。
+                // 当前进度（等宽）
                 MonoReadout(
                     text = formatTime(
                         if (isDragging) (dragFraction * duration).toLong() else position,
@@ -463,12 +474,12 @@ fun PlayerControls(
 
                 Spacer(Modifier.width(Space.x2))
 
-                Text(
+                // 总时长（同样等宽，与左侧读数同族）
+                MonoReadout(
                     text = formatTime(duration),
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.onOverlay,
-                    ),
+                    color = colors.onOverlay,
+                    fontSize = FontSize.badge,
+                    weight = FontWeight.Normal,
                 )
             }
         }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,6 +64,7 @@ import com.example.biliv3.data.model.PlayInfo
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.subtitle.SubtitleBody
 import com.example.biliv3.ui.component.MonoReadout
+import com.example.biliv3.ui.component.TechTag
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
@@ -576,6 +578,29 @@ private fun BottomInfo(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+
+        // ---- 技术参数行（极客点缀，克制）----
+        //
+        // 只在**数据已就绪**时显示，且只放**技术属性**
+        // （播放量 / 弹幕数），不放"分类名"这类语义标签 ——
+        // 语义标签该用普通胶囊，方角微标签表达的是"参数"。
+        //
+        // ⚠️ 这一行是可选的：数据没到就整行不渲染，
+        // 不留空位（否则会在加载完成瞬间"跳一下"）。
+        val views = detail?.viewCount ?: 0
+        val danmakuCount = detail?.danmakuCount ?: 0
+        if (views > 0 || danmakuCount > 0) {
+            Spacer(Modifier.height(Space.x2))
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+                if (views > 0) {
+                    TechTag(text = "▶ ${com.example.biliv3.data.model.formatCount(views)}")
+                }
+                if (danmakuCount > 0) {
+                    TechTag(text = "◈ ${com.example.biliv3.data.model.formatCount(danmakuCount)}")
+                }
+            }
+        }
+
         Spacer(Modifier.height(Space.x2))
         VerticalProgress(holder = holder)
     }
