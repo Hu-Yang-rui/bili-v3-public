@@ -2318,20 +2318,24 @@ private fun PlayerChromeButton(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .size(PLAYER_CHROME_BUTTON)
-                .clip(CircleShape)
-                .background(colors.overlayControl),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = colors.onOverlay,
-                modifier = Modifier.size(Sizes.iconLg),
-            )
-        }
+        // ⚠️ **不再自己画半透明圆底**。
+        //
+        // 外层按钮组已经是一整块毛玻璃（`biliCard()`）。
+        // 如果每颗按钮再套一层 `overlayControl`（半透明黑圆），
+        // 就变成"玻璃外面再糊一个黑圆" —— 玻璃被完全盖掉，
+        // 观感是"白玻璃板 + 三个黑圆点"，而不是"玻璃上的三个图标"。
+        //
+        // 实测浅色主题截图里，那三个黑圆点非常突兀。
+        //
+        // 现在：玻璃负责底与分层，按钮只画图标。
+        // 图标用 `onOverlay`（白）—— 玻璃已把画面压暗，白图标在
+        // 任何画面上都可读。
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = colors.onOverlay,
+            modifier = Modifier.size(Sizes.iconLg),
+        )
     }
 }
 

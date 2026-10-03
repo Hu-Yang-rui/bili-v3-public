@@ -122,8 +122,28 @@ object GlassTokens {
 
     /**
      * 浅色主题下**压在视频上**的玻璃底色。
+     *
+     * ## 🔴 为什么不能是"白玻璃"
+     *
+     * 第一版用了 **40% 白**（`0x66FFFFFF`），实测**完全没有玻璃感** ——
+     * 白色半透明压在**亮色视频画面**（雪景、白墙、天空）上，
+     * 结果就是"白玻璃压白画面"，看起来是**一块纯白实心板**，
+     * 底下什么都透不出来（截图实测：浅色下右上角按钮组像白色贴纸）。
+     *
+     * 深色下之所以没问题，是因为 72% 黑压亮画面对比强烈。
+     * **浅色是反过来的问题** —— 必须让玻璃比画面**更暗**，
+     * 才能"透出"底下的内容。
+     *
+     * ## 现在的值：黑 32%
+     *
+     * - 底下的画面清晰透出（这才是玻璃）
+     * - 文字用深色（浅色主题的文字色），压在 32% 黑 + 模糊上对比度足够
+     * - 与深色的 72% 黑形成"同一策略、不同强度"的对称
+     *
+     * 一句话：**玻璃的染色方向必须与"底下内容的亮度"相反** ——
+     * 底下亮就压暗，底下暗就提亮。
      */
-    val tintLight = Color(0x66FFFFFF)  // 白 40%
+    val tintLight = Color(0x52000000)  // 黑 32%
 
     /**
      * 深色主题下**静态页面**（首页/搜索/我的/消息）的玻璃底。
@@ -146,14 +166,19 @@ object GlassTokens {
     /**
      * 浅色主题下静态页面的玻璃底。
      *
-     * 页面底是 `#F7F4F6`（近白），卡片要比它更白才能浮起来。
-     * 用 70% 白 + 一点阴影感。
+     * 页面底是 `#F5F7FA`（近白），卡片要比它更白才能浮起来。
      */
     val surfaceTintLight = Color(0xB3FFFFFF)   // 白 70%
 
-    /** 顶部高光边（玻璃的"厚度感"来源）。 */
+    /**
+     * 顶部高光边（玻璃的"厚度感"来源）。
+     *
+     * ⚠️ 浅色下**不能再用白边** —— 白边压白玻璃等于没边（实测完全看不见）。
+     * 浅色玻璃压的是**视频画面**（明暗不定），所以边要能"双向可见"：
+     * 用**半透明黑**，在亮画面上是暗边、在暗画面上也能靠模糊底衬托。
+     */
     val borderDark = Color(0x33FFFFFF)  // 白 20%
-    val borderLight = Color(0x26FFFFFF) // 白 15%
+    val borderLight = Color(0x33000000) // 黑 20%
 
     /** 玻璃上的文字色（深色主题）。 */
     val onGlassDark = Color(0xFFFFFFFF)
@@ -264,14 +289,27 @@ fun VideoBackdropEffect(
 ) {
     LaunchedEffect(backdrop, enabled) {
         if (!enabled) return@LaunchedEffect
+        // 只在首次成功时打一条日志（避免 400ms 刷屏）
+        var firstFrame = true
         while (true) {
             val tv = textureProvider()
+            // 诊断：抓帧失败时**必须能查到原因**（否则玻璃静默不生效）
+            if (tv == null) {
+                android.util.Log.d(TAG, "backdrop: textureView 为 null（播放器未创建？）")
+            } else if (!tv.isAvailable) {
+                android.util.Log.d(TAG, "backdrop: TextureView 未就绪（surface 还没建好）")
+            } else if (tv.width <= 0 || tv.height <= 0) {
+                android.util.Log.d(TAG, "backdrop: TextureView 尺寸为 0 (${tv.width}x${tv.height})")
+            }
             if (tv != null && tv.isAvailable && tv.width > 0 && tv.height > 0) {
                 val w = (tv.width / FRAME_DIVISOR).coerceAtLeast(1)
                 val h = (tv.height / FRAME_DIVISOR).coerceAtLeast(1)
                 // getBitmap 必须在主线程（TextureView 的线程约束）
                 val bmp: Bitmap? = runCatching { tv.getBitmap(w, h) }.getOrNull()
-                if (bmp != null) {
+                if (bmp == null) {
+                    // 拿到 view 但取不到位图 —— 通常是 surface 已销毁或尺寸竞态
+                    android.util.Log.d(TAG, "backdrop: getBitmap 返回 null (${w}x$h)")
+                } else {
                     // ⚠️ 在**这里**就模糊好（1/8 小图上做 box blur，约 4 万像素）
                     //
                     // 为什么不在卡片上做：
@@ -285,6 +323,11 @@ fun VideoBackdropEffect(
                     backdrop.dominantColor = runCatching {
                         averageColor(blurred)
                     }.getOrNull()
+                    // 只在**首次**成功时打一条，避免刷屏
+                    if (firstFrame) {
+                        firstFrame = false
+                        android.util.Log.i(TAG, "backdrop: 首帧抓取成功 (${w}x$h)")
+                    }
                 }
             }
             delay(FRAME_INTERVAL_MS)
@@ -332,7 +375,14 @@ fun GlassSurface(
 ) {
     val colors = BiliTheme.colors
     val dark = colors.isDark
-    val glassTint = tint ?: if (dark) GlassTokens.tintDark else GlassTokens.tintLight
+    // ⚠️ 本组件**专用于"压在视频上"**，所以染色**与主题无关** —— 一律压暗。
+    //
+    // 视频画面的亮度与用户选深色/浅色主题没有任何关系。
+    // 用"浅色主题 → 白玻璃"会让白玻璃压在亮画面上，
+    // 结果是一块纯白板、画面透不出来（实测过）。
+    //
+    // 同理描边一律用白高光边（玻璃底已压暗，白边才有"厚度感"）。
+    val glassTint = tint ?: GlassTokens.tintDark
     val frame = backdrop?.frame
 
     Box(modifier = modifier.clip(shape)) {
@@ -365,7 +415,8 @@ fun GlassSurface(
                     if (border) {
                         Modifier.border(
                             width = 1.dp,
-                            color = if (dark) GlassTokens.borderDark else GlassTokens.borderLight,
+                            // 玻璃底一律压暗 → 一律白高光边（与主题无关）
+                            color = GlassTokens.borderDark,
                             shape = shape,
                         )
                     } else {
@@ -488,6 +539,9 @@ private fun averageColor(bmp: Bitmap): Color {
         blue = (b / n).toInt(),
     )
 }
+
+/** 日志 TAG（排查"玻璃不生效"时用）。 */
+private const val TAG = "BiliGlass"
 
 /** 抓帧时的缩小倍数。8 = 约 40KB 一张，放大后天然模糊。 */
 private const val FRAME_DIVISOR = 8

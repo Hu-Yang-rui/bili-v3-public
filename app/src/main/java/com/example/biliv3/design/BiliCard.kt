@@ -86,10 +86,36 @@ fun Modifier.biliCard(
     // ---- 形态判定 ----
     val useGlass = frame != null && tier.canBlur
 
+    /**
+     * 玻璃染色：**由「底下压着什么」决定，而不是由主题决定**。
+     *
+     * ## 🔴 这是一个曾经写错的地方
+     *
+     * 原实现是 `if (isDark) tintDark else tintLight` ——
+     * 用**主题**选配方。这在浅色主题下是错的：
+     *
+     * 浅色主题 + 视频画面（可能是雪景/白墙/亮场景）→ 选了 `tintLight`
+     * （为"浅色页面底"设计的白玻璃）→ **白玻璃压白画面**，
+     * 结果是一块纯白板，画面完全透不出来。
+     * 实测浅色主题下右上角按钮组就是这个表现。
+     *
+     * ## 正确规则
+     *
+     * | 底下是什么 | 用什么 | 为什么 |
+     * |---|---|---|
+     * | **视频帧** | 一律 `tintDark`（压暗） | 视频亮度不可控，必须压暗才能"透出"且保证白图标可读 |
+     * | 静态页面底（深色） | `surfaceTintDark`（提亮） | 页面底已很暗，必须更亮才能浮起 |
+     * | 静态页面底（浅色） | `surfaceTintLight`（白） | 页面底已很亮，用白玻璃 |
+     *
+     * **压在视频上的玻璃与主题无关** —— 因为视频画面的亮度
+     * 和用户选深色还是浅色主题**没有任何关系**。
+     */
     val bg = when {
         color != Color.Unspecified -> color
-        useGlass -> if (isDark) GlassTokens.tintDark else GlassTokens.tintLight
-        else -> colors.bgCard
+        // 有视频帧 → 一律压暗（与主题无关）
+        useGlass -> GlassTokens.tintDark
+        // 静态页面 → 按主题（页面底亮就提白、暗就提亮）
+        else -> if (isDark) GlassTokens.surfaceTintDark else GlassTokens.surfaceTintLight
     }
 
     return this
@@ -115,9 +141,11 @@ fun Modifier.biliCard(
             // 描边：玻璃形态用高光边（玻璃的"厚度感"）；
             // 实心卡片用发丝线（深色下承担分层职责）
             when {
+                // 压在视频上的玻璃：一律用**浅色高光边**（与主题无关，
+                // 因为玻璃底一律是压暗的，白边才有"厚度感"）
                 useGlass -> Modifier.border(
                     width = 1.dp,
-                    color = if (isDark) GlassTokens.borderDark else GlassTokens.borderLight,
+                    color = GlassTokens.borderDark,
                     shape = shape,
                 )
                 isDark -> Modifier.border(
