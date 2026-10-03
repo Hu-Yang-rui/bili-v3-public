@@ -144,10 +144,9 @@ fun BangumiDetailScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(
-                    color = colors.brandPrimary,
-                    strokeWidth = 2.dp,
-                    modifier = Modifier.size(Sizes.iconXl),
+                // 终端风加载态（光标承担"进行中"语义）
+                com.example.biliv3.ui.component.TerminalLoadingState(
+                    text = "正在加载详情…",
                 )
             }
 

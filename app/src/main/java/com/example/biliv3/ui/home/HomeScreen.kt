@@ -179,6 +179,10 @@ fun HomeScreen(
 
                 is HomeUiState.Error -> ErrorState(
                     title = "推荐流加载失败",
+                    // ⚠️ `s.message` **已经是翻译过的中文** ——
+                    // `HomeViewModel` 在构造 `Error` 时就调了 `userMessageFor(e)`。
+                    // 这里不要再翻一次（会双重包装），也不要改成 `s.error`
+                    // （该字段不存在，`HomeUiState.Error` 只带 String）。
                     description = s.message,
                     onRetry = viewModel::load,
                     modifier = Modifier.fillMaxSize(),

@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.data.api.InteractionState
 import com.example.biliv3.data.model.formatCount
+import com.example.biliv3.ui.component.MonoReadout
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
@@ -154,14 +155,13 @@ private fun ActionItem(
             modifier = Modifier.size(Sizes.iconXl),
         )
         Spacer(Modifier.height(2.dp))
-        Text(
+        // 计数用等宽：点赞/投币数会实时变化，比例字体下四个数字
+        // 宽度不一，整栏会随交互轻微抖动。
+        MonoReadout(
             text = label,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.badge,
-                color = tint,
-                fontWeight = if (active) FontWeight.Medium else FontWeight.Normal,
-            ),
-            maxLines = 1,
+            color = tint,
+            fontSize = FontSize.badge,
+            weight = if (active) FontWeight.Medium else FontWeight.Normal,
         )
     }
 }

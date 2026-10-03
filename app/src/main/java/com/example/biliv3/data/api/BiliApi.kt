@@ -936,6 +936,38 @@ class BiliException(val code: Int, override val message: String) : Exception(mes
             -404 -> "内容已被删除或不可见"
             -799 -> "请求太频繁了，歇一会儿再试"
             -400 -> "请求参数有误"
-            else -> message.ifEmpty { "加载失败（$code）" }
+            else -> {
+                // ⚠️ **不要直接透传 `message`**。
+                //
+                // 网络层会把 `UnknownHostException` / `SocketTimeoutException`
+                // 之类包装成 `BiliException(code = -1, message = <原始英文>)`。
+                // 原来的 `message.ifEmpty { ... }` 会把
+                // `Unable to resolve host "api.bilibili.com": No address ...`
+                // **原样显示给用户** —— 实测断网时首页就是这个（英文 + 技术细节）。
+                //
+                // 这里先做一次网络文案识别；识别不出才退回 `message`，
+                // 且只有当它看起来像中文时才用（英文一律兜底成通用文案）。
+                val raw = message
+                when {
+                    raw.contains("Unable to resolve host") ||
+                        raw.contains("timeout", ignoreCase = true) ||
+                        raw.contains("ENOTFOUND", ignoreCase = true) ->
+                        "网络不可用，请检查连接后重试"
+
+                    raw.contains("Failed to connect") ||
+                        raw.contains("Connection refused", ignoreCase = true) ||
+                        raw.contains("ECONNREFUSED", ignoreCase = true) ->
+                        "连接服务器失败，请稍后重试"
+
+                    raw.contains("SSL", ignoreCase = true) ||
+                        raw.contains("Certificate", ignoreCase = true) ->
+                        "安全连接失败，请检查网络环境"
+
+                    // 含中文才认为是"已经写好的用户文案"
+                    raw.any { it.code in 0x4E00..0x9FFF } -> raw
+
+                    else -> "加载失败，请稍后重试"
+                }
+            }
         }
 }

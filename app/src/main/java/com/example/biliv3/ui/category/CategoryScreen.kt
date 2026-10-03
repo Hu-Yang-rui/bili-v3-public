@@ -170,10 +170,13 @@ fun CategoryScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(
-                    color = colors.brandPrimary,
-                    strokeWidth = 2.dp,
-                    modifier = Modifier.size(Sizes.iconXl),
+                // 终端风加载态：`$ 正在加载分区…  ▌`
+                //
+                // 比转圈更好的一点：**光标承担真实语义** ——
+                // 慢网络下静态文字让人怀疑卡死，跳动的方块能消除疑虑。
+                // 且不占用大面积（转圈在空页面上很"空"）。
+                com.example.biliv3.ui.component.TerminalLoadingState(
+                    text = "正在加载分区…",
                 )
             }
 

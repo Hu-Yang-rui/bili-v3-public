@@ -62,6 +62,7 @@ import com.example.biliv3.data.danmaku.DanmakuItem
 import com.example.biliv3.data.model.PlayInfo
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.subtitle.SubtitleBody
+import com.example.biliv3.ui.component.MonoReadout
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
@@ -470,7 +471,7 @@ private fun ActionItem(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.button))
+            .clip(RoundedCornerShape(Radius.card))
             .clickable(onClick = onClick)
             .padding(horizontal = Space.x1, vertical = Space.x1),
     ) {
@@ -481,15 +482,13 @@ private fun ActionItem(
             modifier = Modifier.size(ACTION_ICON),
         )
         Spacer(Modifier.height(2.dp))
-        Text(
+        // 计数用等宽：数字每秒/每次互动都在变，比例字体下整列会左右抖动。
+        // 竖屏互动栏是纵向排列的多个读数，抖动尤其明显。
+        MonoReadout(
             text = label,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.badge,
-                color = Color.White,
-                fontWeight = FontWeight.Medium,
-            ),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            color = Color.White,
+            fontSize = FontSize.badge,
+            weight = FontWeight.Medium,
         )
     }
 }
@@ -590,6 +589,7 @@ private fun BottomInfo(
  */
 @Composable
 private fun VerticalProgress(holder: PlayerHolder) {
+    val colors = BiliTheme.colors
     var progress by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(holder) {
@@ -606,13 +606,14 @@ private fun VerticalProgress(holder: PlayerHolder) {
             .fillMaxWidth()
             .height(PROGRESS_HEIGHT)
             .clip(RoundedCornerShape(Radius.badge))
-            .background(Color(0x4DFFFFFF)),
+            // 未播轨道：走令牌而不是裸色值（`trackInactive` 就是为它定义的）
+            .background(colors.trackInactive),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth(progress)
                 .height(PROGRESS_HEIGHT)
-                .background(Color.White),
+                .background(colors.onOverlay),
         )
     }
 }

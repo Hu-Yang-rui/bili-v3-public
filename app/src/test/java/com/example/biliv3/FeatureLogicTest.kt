@@ -214,6 +214,62 @@ class FeatureLogicTest {
         assertThat(userMessageFor(IllegalStateException("请先登录"))).isEqualTo("请先登录")
     }
 
+    // ---------------- 错误文案不得泄露英文技术细节 ----------------
+
+    /**
+     * 回归：断网时首页曾显示
+     * `Unable to resolve host "api.bilibili.com": No address associated with hostname`。
+     *
+     * ## 根因（不在 `userMessageFor`，而在 `BiliException.userMessage`）
+     *
+     * 网络层会把 `UnknownHostException` 包装成
+     * `BiliException(code = -1, message = <原始英文>)`，
+     * 而 `userMessage` 的 `else` 分支当时是 `message.ifEmpty { ... }` ——
+     * **原样透传**。
+     *
+     * `userMessageFor` 里虽然有网络识别，但 `BiliException` 分支**优先命中**，
+     * 根本走不到那里。所以两处都要能识别。
+     */
+    @Test
+    fun `BiliException 不得把英文异常原样透出`() {
+        val e = com.example.biliv3.data.api.BiliException(
+            code = -1,
+            message = "Unable to resolve host \"api.bilibili.com\": " +
+                "No address associated with hostname",
+        )
+        val msg = e.userMessage
+        // 必须是中文，且不含英文技术细节
+        assertThat(msg).isEqualTo("网络不可用，请检查连接后重试")
+        assertThat(msg).doesNotContain("Unable to resolve")
+        assertThat(msg).doesNotContain("api.bilibili.com")
+    }
+
+    @Test
+    fun `BiliException 的超时与连接失败也要翻译`() {
+        assertThat(
+            com.example.biliv3.data.api.BiliException(-1, "connect timeout").userMessage,
+        ).isEqualTo("网络不可用，请检查连接后重试")
+
+        assertThat(
+            com.example.biliv3.data.api.BiliException(-1, "Failed to connect to /1.2.3.4").userMessage,
+        ).isEqualTo("连接服务器失败，请稍后重试")
+    }
+
+    /** 已经是中文的自定义文案应原样保留（不要被兜底覆盖）。 */
+    @Test
+    fun `BiliException 的中文自定义文案原样保留`() {
+        assertThat(
+            com.example.biliv3.data.api.BiliException(-1, "这个视频需要登录才能看").userMessage,
+        ).isEqualTo("这个视频需要登录才能看")
+    }
+
+    /** 纯英文且识别不出的，兜底成通用中文（绝不透出英文）。 */
+    @Test
+    fun `BiliException 无法识别的英文兜底为中文`() {
+        val msg = com.example.biliv3.data.api.BiliException(-1, "some weird failure").userMessage
+        assertThat(msg).isEqualTo("加载失败，请稍后重试")
+    }
+
     @Test
     fun `网络类异常仍走原有文案不被登录分支吃掉`() {
         assertThat(userMessageFor(java.net.UnknownHostException("Unable to resolve host x")))
