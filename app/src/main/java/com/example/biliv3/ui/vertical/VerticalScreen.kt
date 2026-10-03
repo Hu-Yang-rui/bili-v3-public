@@ -473,7 +473,9 @@ private fun ActionItem(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.card))
+            // 交互元素 → 4dp（§5.2 圆角规则）。原来是 `Radius.card`(12dp)，
+            // 那是卡片时代的"主体圆角"，对按钮偏大、且与全站交互元素不一致。
+            .clip(RoundedCornerShape(Radius.interactive))
             .clickable(onClick = onClick)
             .padding(horizontal = Space.x1, vertical = Space.x1),
     ) {
@@ -536,16 +538,14 @@ private fun BottomInfo(
     //
     // backdrop 已由外层 `ProvideGlassBackdrop` 注入，
     // 所以这里自动是真毛玻璃（糊的是当前视频画面），不需要显式传。
+    //
+    // 🔴 乙·质感：**圆角去掉**（改为直角）。
+    // 圆角是"卡片"的语言；这里是压在视频上的浮层，属"色块"语言。
+    // 玻璃本身保留 —— 它是唯一"真玻璃"的场景（背后有画面可糊）。
     Column(
         modifier = modifier
             .fillMaxWidth()
-            // 只圆上面两个角（贴在屏幕底部）
-            .biliCard(
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                    topStart = com.example.biliv3.design.tokens.Radius.card,
-                    topEnd = com.example.biliv3.design.tokens.Radius.card,
-                ),
-            )
+            .biliCard(shape = RoundedCornerShape(0.dp))
             .navigationBarsPadding()
             .padding(
                 start = Space.x4,

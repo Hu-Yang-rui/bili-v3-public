@@ -59,9 +59,10 @@ import com.example.biliv3.data.model.VideoItem
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.model.formatRelativeTime
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
@@ -395,10 +396,7 @@ private fun FavPreviewCell(    entry: FavoriteEntry,
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            // C 方案：预览格也是卡片。
-            // ⚠️ 用 elevation = 0（不浮起）—— 预览格是 3 列并排，
-            // 每格都投影会在窄间距下互相压住，显得脏。
-            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.cover))
+            // 无卡片：预览格直接排在网格里，分组靠列间距
             .clickable(enabled = !entry.isInvalid, onClick = onClick)
             .padding(Space.x1),
     ) {
@@ -406,7 +404,7 @@ private fun FavPreviewCell(    entry: FavoriteEntry,
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(Sizes.coverAspectRatio)
-                .clip(RoundedCornerShape(Radius.tag))
+                // 封面直角 —— 圆角只留给交互元素
                 .background(colors.coverPlaceholder),
         ) {
             AsyncImage(
@@ -592,7 +590,6 @@ private fun FavoriteRow(
             modifier = Modifier
                 .width(HISTORY_THUMB_WIDTH)
                 .height(HISTORY_THUMB_HEIGHT)
-                .clip(RoundedCornerShape(Radius.cover))
                 .background(colors.coverPlaceholder),
         ) {
             AsyncImage(
@@ -718,14 +715,8 @@ private fun LibraryScaffold(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                // C 方案：顶栏通栏卡片，只留下方圆角（贴屏幕顶）
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
+                // 顶栏不再是卡片：与页面同明度，只留底边一条发丝线
+                .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -839,7 +830,6 @@ private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
             modifier = Modifier
                 .width(HISTORY_THUMB_WIDTH)
                 .height(HISTORY_THUMB_HEIGHT)
-                .clip(RoundedCornerShape(Radius.cover))
                 .background(colors.coverPlaceholder),
         ) {
             AsyncImage(
@@ -925,7 +915,6 @@ private fun VideoRow(video: VideoItem, onClick: () -> Unit) {
             modifier = Modifier
                 .width(HISTORY_THUMB_WIDTH)
                 .height(HISTORY_THUMB_HEIGHT)
-                .clip(RoundedCornerShape(Radius.cover))
                 .background(colors.coverPlaceholder),
         ) {
             AsyncImage(

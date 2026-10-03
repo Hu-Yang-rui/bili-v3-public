@@ -50,9 +50,10 @@ import com.example.biliv3.data.LiveRoom
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
-import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
@@ -120,13 +121,8 @@ fun LiveScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
+                // 顶栏不再是卡片：与页面同明度，只留底边一条发丝线
+                .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -234,7 +230,6 @@ private fun LiveCard(room: LiveRoom, onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1.6f)
-                .clip(RoundedCornerShape(Radius.cover))
                 .background(colors.coverPlaceholder),
         ) {
             AsyncImage(
@@ -248,7 +243,7 @@ private fun LiveCard(room: LiveRoom, onClick: () -> Unit) {
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(Space.x1 + 2.dp)
+                    .padding(Space.compactHorizontal)
                     .clip(RoundedCornerShape(Radius.badge))
                     .background(colors.stateLive)
                     .padding(horizontal = 5.dp, vertical = 1.dp),
@@ -274,7 +269,7 @@ private fun LiveCard(room: LiveRoom, onClick: () -> Unit) {
                     ),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(Space.x1 + 2.dp)
+                        .padding(Space.compactHorizontal)
                         .clip(RoundedCornerShape(Radius.badge))
                         .background(colors.overlayCover)
                         .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),

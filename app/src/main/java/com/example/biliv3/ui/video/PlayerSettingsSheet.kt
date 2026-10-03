@@ -160,8 +160,10 @@ fun PlayerSettingsSheet(
                     .align(Alignment.Center)
                     .padding(horizontal = Space.x4)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(Radius.card))
-                    .background(colors.bgCard)
+                    .clip(RoundedCornerShape(Radius.panel))
+                    // 弹层用 `surfaceElevated`（比卡片亮一档）——
+                    // 深色下投影不可见，分层只能靠提亮。
+                    .background(colors.surfaceElevated)
                     // ⚠️ 点**弹层内的空白处**也要收起已展开的选择器。
                     //
                     // 行内展开不是 Dialog，没有天然的"外部点击"通知；
@@ -193,7 +195,7 @@ fun PlayerSettingsSheet(
                     Box(
                         modifier = Modifier
                             .size(Sizes.iconXl + Space.x2)
-                            .clip(RoundedCornerShape(Radius.button))
+                            .clip(RoundedCornerShape(Radius.interactive))
                             .clickable(onClick = onDismiss),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -377,7 +379,7 @@ private fun SubtitleSection(
             !isLoggedIn -> Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(Radius.button))
+                    .clip(RoundedCornerShape(Radius.interactive))
                     .clickable(onClick = onLoginRequired)
                     .padding(vertical = Space.x3),
                 verticalAlignment = Alignment.CenterVertically,
@@ -466,7 +468,7 @@ private fun DanmakuSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(Radius.button))
+                .clip(RoundedCornerShape(Radius.interactive))
                 .clickable(onClick = onToggle)
                 .padding(vertical = Space.x2),
             verticalAlignment = Alignment.CenterVertically,
@@ -576,7 +578,7 @@ private fun SettingRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(Radius.button))
+            .clip(RoundedCornerShape(Radius.interactive))
             .clickable(onClick = onClick)
             .padding(horizontal = Space.x3, vertical = Space.x3),
         verticalAlignment = Alignment.CenterVertically,
@@ -602,7 +604,7 @@ private fun SettingRow(
                 modifier = Modifier
                     .clip(RoundedCornerShape(Radius.badge))
                     .background(colors.brandPrimary)
-                    .padding(horizontal = Space.x1 + 2.dp, vertical = 1.dp),
+                    .padding(horizontal = Space.compactHorizontal, vertical = 1.dp),
             )
         }
         Spacer(Modifier.weight(1f))

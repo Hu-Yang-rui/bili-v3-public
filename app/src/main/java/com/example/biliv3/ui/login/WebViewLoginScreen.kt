@@ -10,7 +10,6 @@ import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,9 +47,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.biliv3.data.api.Endpoints
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
-import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import kotlinx.coroutines.delay
@@ -158,13 +157,8 @@ fun WebViewLoginScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
+                // 顶栏不再是卡片：与页面同明度，靠底边一条发丝线分隔
+                .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),

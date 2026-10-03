@@ -386,7 +386,7 @@ fun BrandButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        shape = RoundedCornerShape(Radius.button),
+        shape = RoundedCornerShape(Radius.interactive),
         colors = ButtonDefaults.buttonColors(
             containerColor = bg,
             contentColor = fg,
@@ -407,7 +407,7 @@ fun BrandButton(
         },
         contentPadding = contentPadding ?: PaddingValues(
             horizontal = Space.x4,
-            vertical = Space.x2 + 2.dp,
+            vertical = Space.rowVertical,
         ),
         modifier = modifier,
     ) {

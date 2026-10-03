@@ -50,9 +50,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.biliv3.data.auth.SavedAccount
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
@@ -114,16 +115,10 @@ fun AccountsScreen(
                 .background(colors.bgBase),
         ) {
             // ---- 顶栏 ----
+            // 通栏：不再是卡片，内容直接排。
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .biliCard(
-                        elevation = 0.dp,
-                        shape = RoundedCornerShape(
-                            bottomStart = Radius.card,
-                            bottomEnd = Radius.card,
-                        ),
-                    )
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .height(Sizes.topBarMobile)
                     .padding(horizontal = Space.x2),
@@ -156,12 +151,9 @@ fun AccountsScreen(
 
             LazyColumn(
                 contentPadding = PaddingValues(
-                    start = Space.x3,
-                    end = Space.x3,
                     top = Space.x2,
                     bottom = Space.x6,
                 ),
-                verticalArrangement = Arrangement.spacedBy(Space.x2),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 // ---- 账号列表 ----
@@ -170,7 +162,10 @@ fun AccountsScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = Space.x10),
+                                .padding(
+                                    horizontal = Space.x4,
+                                    vertical = Space.x10,
+                                ),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Text(
@@ -205,13 +200,13 @@ fun AccountsScreen(
 
                 // ---- 添加新账号 ----
                 item(key = "add") {
-                    Spacer(Modifier.height(Space.x2))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
+                            // 列表项之间用发丝线分隔（账号列表项一律直角）
+                            .ruleTop(color = Rule.subtle)
                             .clickable(onClick = onAddAccount)
-                            .padding(Space.x4),
+                            .padding(horizontal = Space.x4, vertical = Space.x3),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
@@ -236,13 +231,13 @@ fun AccountsScreen(
                 // ---- 退出登录 ----
                 if (state.currentMid != 0L) {
                     item(key = "logout") {
-                        Spacer(Modifier.height(Space.x2))
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
+                                // 列表项 + 上边发丝线
+                                .ruleTop(color = Rule.subtle)
                                 .clickable { viewModel.logout() }
-                                .padding(Space.x4),
+                                .padding(horizontal = Space.x4, vertical = Space.x3),
                         ) {
                             Text(
                                 text = "退出当前账号",
@@ -262,9 +257,10 @@ fun AccountsScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
+                                // 列表项 + 上边发丝线
+                                .ruleTop(color = Rule.subtle)
                                 .clickable { viewModel.logoutAndForgetAll() }
-                                .padding(Space.x4),
+                                .padding(horizontal = Space.x4, vertical = Space.x3),
                         ) {
                             Text(
                                 text = "退出并清除全部账号",
@@ -331,7 +327,8 @@ private fun ConfirmPanel(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = Radius.card, topEnd = Radius.card))
+                // 底部确认面板是**独立浮起面**，用 `panel`（16dp）而非页面内元素圆角。
+                .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
                 .background(colors.bgCard)
                 // 阻止点击穿透到遮罩
                 .clickable(enabled = false) {}
@@ -412,8 +409,9 @@ private fun AccountRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // ⚠️ 账号行**不再是卡片** —— 列表用留白分组。
+            // ⚠️ 账号行**不再是卡片** —— 列表用留白分组，行间用发丝线分隔。
             // 切换中禁用整行，避免连点导致切换交错
+            .ruleTop(color = Rule.subtle)
             .clickable(enabled = !anySwitching, onClick = onClick)
             .padding(horizontal = Space.x4, vertical = Space.x3),
         verticalAlignment = Alignment.CenterVertically,

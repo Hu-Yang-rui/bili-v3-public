@@ -35,7 +35,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -46,10 +45,8 @@ import coil.compose.AsyncImage
 import com.example.biliv3.data.model.BannerItem
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
-import com.example.biliv3.design.tokens.Elevation
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Motion
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import kotlinx.coroutines.delay
@@ -121,8 +118,14 @@ fun BannerCarousel(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
-            .clip(RoundedCornerShape(Radius.card))
-            .shadow(Elevation.rest, RoundedCornerShape(Radius.card))
+            // 🔴 无卡片重构：Banner 是**图片**，一律直角（§5.1 硬规则 2）。
+            //
+            // 上一版是 `clip(card) + shadow(rest)` —— 一条横过来的圆角卡片。
+            // 网格去掉卡片后，它是首页剩下的最大一个"盒子"。
+            //
+            // ⚠️ 同时**删掉 `Modifier.shadow()`**（§5.2 明确禁止）：
+            // 深色底上投影渲染出来几乎为零，白费一次离屏合成。
+            // 它与下方内容的分离靠 `sectionSpacing`（44dp）承担，不靠投影。
             .clickable(
                 interactionSource = interaction,
                 indication = null,

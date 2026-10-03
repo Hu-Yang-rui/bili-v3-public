@@ -77,6 +77,9 @@ import com.example.biliv3.data.model.VideoDetail
 import com.example.biliv3.data.model.VideoItem
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.model.formatRelativeTime
+import com.example.biliv3.design.ruleTop
+import com.example.biliv3.design.tokens.Rhythm
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
 import com.example.biliv3.design.biliCard
@@ -1619,15 +1622,29 @@ private fun DetailContent(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = CARD_INSET)
-                        // C 方案：UP 信息区 + 标题 + 简介是**同一张卡片**
-                        // （它们语义上属于"这个视频是什么"，不该被切成三块）
-                        .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
+                        // 🔴 乙·质感：**不再是卡片**。
+                        //
+                        // 上一版是 `biliCard()` —— 圆角 + 描边 + 左右内缩
+                        // （`CARD_INSET`），把"这个视频是什么"整块装进一个盒子。
+                        //
+                        // 现在：**左右贴到屏幕边**（去掉 CARD_INSET），
+                        // 靠上下间距与内容自身分组。详情页的正文区
+                        // 本来就该通栏 —— 它是页面主体，不是页面里的一张卡。
+                        //
+                        // ## ⚠️ 间距只给上边，不给下边（这是系统性规则）
+                        //
+                        // 上一版上下都给了 `Rhythm.between`，而下一个区块
+                        // 上边**也**给了 `Rhythm.between` → 两块之间实际是
+                        // **28 + 28 = 56dp**，视觉上是一条突兀的空白带
+                        // （实测截图里互动栏与分P之间就是这个问题）。
+                        //
+                        // **规则：间距只由「下方那个区块的上边」提供。**
+                        // 这样任意两块之间恒为一份间距，不会因为"两边都加"
+                        // 而翻倍。全站统一遵守。
                         .padding(
                             start = Space.x4,
                             end = Space.x4,
-                            top = Space.x3,
-                            bottom = Space.x3,
+                            top = Rhythm.between,
                         ),
                 ) {
                     // ---- ① 头像 + ② 名字 / ③ 粉丝数·视频数 ----
@@ -1744,7 +1761,9 @@ private fun DetailContent(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(Radius.button))
+                                // 简介块**不是交互元素** —— 它只是可读的文本区，
+                                // 按 §5.1 硬规则 2 一律直角。
+                                // （原来用 `Radius.button`(12dp)，那是"卡片"的语言）
                                 .background(colors.bgHover)
                                 .padding(Space.x3),
                         )
@@ -1863,9 +1882,18 @@ private fun DetailContent(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = CARD_INSET)
-                            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
-                            .padding(vertical = Space.x3),
+                            // 🔴 乙·质感：去卡片，改用**上边一条发丝线**分组。
+                            //
+                            // 分P 与上方内容语义不同（"这个视频有哪些分P"），
+                            // 需要一条硬边界；但不需要一个盒子。
+                            .ruleTop(color = Rule.color)
+                            // 间距只给上边（见 Rhythm 的配套规则：只由下方区块提供）
+                            .padding(
+                                start = Space.x4,
+                                end = Space.x4,
+                                top = Rhythm.between,
+                                bottom = Rhythm.between,
+                            ),
                     ) {
                         Text(
                             text = "选集（${detail.pages.size}）",
@@ -2433,7 +2461,7 @@ internal fun PageChip(
             .clip(RoundedCornerShape(Radius.pill))
             .background(if (selected) colors.brandPrimary else colors.bgHover)
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x1 + 2.dp),
+            .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
     )
 }
 
@@ -2555,8 +2583,16 @@ private fun ResumeBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .biliCard(shape = RoundedCornerShape(Radius.pill))
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            // 🔴 乙·质感：从"胶囊卡片"改成**直角浮条**。
+            //
+            // 这是压在播放器上的浮层（"上次看到 12:34 · 继续"），
+            // 它需要从画面上"浮起来"，所以保留底色 —— 但**不再用胶囊**。
+            //
+            // 胶囊是"卡片"的语言；直角 + 半透明底是"浮层"的语言，
+            // 与右上角按钮组、进度条的直角体系一致。
+            .background(colors.overlayControl)
+            .clickable(onClick = onResume)
+            .padding(horizontal = Space.x4, vertical = Space.x3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

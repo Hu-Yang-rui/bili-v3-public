@@ -42,9 +42,12 @@ import com.example.biliv3.data.RankingTab
 import com.example.biliv3.data.model.VideoItem
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.ruleBottom
+import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rhythm
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
@@ -94,13 +97,8 @@ fun RankingScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
+                // 顶栏不再是卡片：与页面同明度，只留底边一条发丝线
+                .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -215,11 +213,10 @@ private fun RankRow(rank: Int, video: VideoItem, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // C 方案：每条榜单是独立卡片
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
+            // 榜单行不再是卡片：行与行靠发丝线 + 间距分组
+            .ruleTop(color = Rule.subtle)
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x3),
+            .padding(horizontal = Space.x4, vertical = Rhythm.inGroup),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // 名次：前三名高亮
@@ -248,7 +245,6 @@ private fun RankRow(rank: Int, video: VideoItem, onClick: () -> Unit) {
             modifier = Modifier
                 .width(RANK_THUMB_WIDTH)
                 .height(RANK_THUMB_HEIGHT)
-                .clip(RoundedCornerShape(Radius.cover))
                 .background(colors.coverPlaceholder),
         ) {
             AsyncImage(

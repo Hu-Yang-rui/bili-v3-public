@@ -105,8 +105,12 @@ fun ItemMoreMenu(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = Radius.card, topEnd = Radius.card))
-                    .background(colors.bgCard)
+                    .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
+                    // ⚠️ 弹层用 `surfaceElevated`（比卡片亮一档），不用 `bgCard`。
+                    //
+                    // 深色下投影不可见，分层**只能靠提亮**。弹层若与背景卡片
+                    // 同色就"浮不起来"，看起来像页面里本来就有的一块。
+                    .background(colors.surfaceElevated)
                     .clickable(enabled = false) {}
                     .navigationBarsPadding(),
             ) {
@@ -232,7 +236,7 @@ private fun ShareChannelItem(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.button))
+            .clip(RoundedCornerShape(Radius.interactive))
             .clickable(onClick = onClick)
             .padding(vertical = Space.x1),
     ) {

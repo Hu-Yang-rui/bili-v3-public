@@ -53,9 +53,11 @@ import com.example.biliv3.data.model.VideoItem
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.model.formatRelativeTime
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rhythm
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
@@ -147,16 +149,15 @@ fun SpaceScreen(
             .background(colors.bgBase),
     ) {
         // ---- 顶栏 ----
+        // 通栏：不再是卡片，内容直接排。
+        //
+        // ⚠️ 补底边线：其它二级页的标题栏都有（设置 / 排行 / 收藏 …），
+        // 本页原先没有 —— 头部信息块只给了 28dp 上间距、没有上边线，
+        // 于是标题栏与内容之间**没有任何硬边界**，标题像是浮在头像上。
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
+                .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -354,9 +355,8 @@ private fun ProfileHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x2)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
-            .padding(Space.x4),
+            // 头部信息区通栏：去掉卡片，靠组间距与下方 Tab 分开。
+            .padding(start = Space.x4, end = Space.x4, top = Rhythm.between),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
@@ -516,7 +516,7 @@ private fun HeaderActionChip(
     val colors = BiliTheme.colors
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.button))
+            .clip(RoundedCornerShape(Radius.interactive))
             .background(colors.bgHover)
             .clickable(onClick = onClick)
             .padding(horizontal = Space.x3, vertical = Space.x2),
@@ -552,8 +552,13 @@ private fun TabRow(
         modifier = Modifier
             .fillMaxWidth()
             // ⚠️ 标签条**不再是卡片** —— 它是一条切换栏，不是独立内容块。
-            // 套卡会立刻多一个框。
-            .padding(horizontal = Space.x4, vertical = Space.x1),
+            // 套卡会立刻多一个框。现在是一行纯文字 strip，靠上方组间距分隔。
+            .padding(
+                start = Space.x4,
+                end = Space.x4,
+                top = Rhythm.between,
+                bottom = Space.x1,
+            ),
         horizontalArrangement = Arrangement.spacedBy(Space.x5),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -562,9 +567,8 @@ private fun TabRow(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.button))
                     .clickable { onSelect(i) }
-                    .padding(horizontal = Space.x4, vertical = Space.x2),
+                    .padding(horizontal = Space.x1, vertical = Space.x2),
             ) {
                 Text(
                     text = label,
@@ -673,7 +677,8 @@ fun DynamicCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(Radius.button))
+                        // 可点区块 → 4dp；封面本身直角
+                        .clip(RoundedCornerShape(Radius.interactive))
                         .background(colors.bgHover)
                         .clickable { onVideoClick(item.bvid) }
                         .padding(Space.x2),
@@ -682,7 +687,6 @@ fun DynamicCard(
                     Box(
                         modifier = Modifier
                             .size(width = 112.dp, height = 63.dp)
-                            .clip(RoundedCornerShape(Radius.cover))
                             .background(colors.coverPlaceholder),
                     ) {
                         AsyncImage(
@@ -701,7 +705,6 @@ fun DynamicCard(
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
                                     .padding(2.dp)
-                                    .clip(RoundedCornerShape(Radius.badge))
                                     .background(colors.overlayCover)
                                     .padding(horizontal = 3.dp, vertical = 1.dp),
                             )
@@ -730,7 +733,7 @@ fun DynamicCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(180.dp)
-                        .clip(RoundedCornerShape(Radius.button))
+                        // 图片一律直角
                         .background(colors.coverPlaceholder),
                 )
             }

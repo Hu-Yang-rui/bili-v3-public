@@ -135,7 +135,7 @@ private fun SubtitleLine(text: String, emphasized: Boolean) {
     val colors = BiliTheme.colors
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.badge + 2.dp))
+            .clip(RoundedCornerShape(Radius.control))
             .background(colors.subtitleScrim)
             .padding(horizontal = Space.x2, vertical = Space.compactVertical),
     ) {

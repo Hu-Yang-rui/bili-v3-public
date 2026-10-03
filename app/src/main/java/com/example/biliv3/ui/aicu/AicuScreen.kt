@@ -60,9 +60,12 @@ import com.example.biliv3.data.AicuVideoDanmaku
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.model.formatRelativeTime
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.ruleBottom
+import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rhythm
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
@@ -167,16 +170,15 @@ fun AicuScreen(
             .background(colors.bgBase),
     ) {
         // ---- 顶栏 ----
+        // 通栏：不再是卡片，内容直接排。
+        //
+        // ⚠️ 补底边线：与其它二级页的标题栏一致。
+        // 本页下方是 UID 输入区（只有 8dp 内边距、无线），
+        // 原先标题栏与输入区之间没有任何硬边界。
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
+                .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -471,7 +473,8 @@ private fun UidSearchBar(
             singleLine = true,
             // UID 是纯数字 —— 直接弹数字键盘，少一次切换
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            shape = RoundedCornerShape(Radius.button),
+            // 输入框：交互元素，4dp
+            shape = RoundedCornerShape(Radius.interactive),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = colors.brandPrimary,
                 unfocusedBorderColor = colors.borderHairline,
@@ -507,9 +510,9 @@ private fun TabRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3)
-            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.button))
-            .padding(vertical = Space.x1),
+            // ⚠️ Tab 条**不再是卡片** —— 它是一条切换栏，不是独立内容块。
+            // 现在是一行纯文字 strip，选中态靠下划线表达。
+            .padding(horizontal = Space.x4),
         horizontalArrangement = Arrangement.spacedBy(Space.x2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -519,7 +522,6 @@ private fun TabRow(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(Radius.button))
                     .clickable { onSelect(t) }
                     .padding(vertical = Space.x2),
             ) {
@@ -588,11 +590,10 @@ private fun UserCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            // ⚠️ 用户资料卡**保留卡片** —— 它是页面上独立成块的内容
-            // （整个查询对象的信息），不是列表里的一行。
-            .padding(horizontal = Space.x3, vertical = Space.x2)
-            .biliCard(shape = RoundedCornerShape(Radius.card))
-            .padding(Space.x4),
+            // ⚠️ 查询对象信息块**不再是卡片** —— 它是通栏的整体信息块。
+            // 靠上边一条发丝线 + 组间距与上方输入区/ Tab 分开。
+            .ruleTop(color = Rule.subtle)
+            .padding(start = Space.x4, end = Space.x4, top = Rhythm.between),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
@@ -638,7 +639,8 @@ private fun UserCard(
             // 打开 B 站主页：真实可用的出口（不是死入口）
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.button))
+                    // 按钮：交互元素，4dp
+                    .clip(RoundedCornerShape(Radius.interactive))
                     .background(colors.bgHover)
                     .clickable { onOpenSpace(uid) }
                     .padding(horizontal = Space.x3, vertical = Space.x2),
@@ -1003,7 +1005,7 @@ private fun LiveDanmakuCard(item: AicuLiveDanmaku, onOpen: (String) -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(Radius.button))
+                    // 发言列表是面板（非交互）→ 直角
                     .background(colors.bgHover)
                     .padding(Space.x2),
             ) {

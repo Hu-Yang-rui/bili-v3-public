@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -29,12 +28,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.tokens.Motion
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 
@@ -66,7 +65,7 @@ fun SkeletonBox(
     height: Dp? = null,
     width: Dp? = null,
     aspectRatio: Float? = null,
-    shape: Shape = RoundedCornerShape(Radius.badge + 2.dp),
+    shape: Shape = RectangleShape,
 ) {
     val colors = BiliTheme.colors
     // 读共享相位（State 而不是裸值）—— 真正的读取发生在绘制阶段，
@@ -172,12 +171,20 @@ fun ProvideShimmer(content: @Composable () -> Unit) {
 }
 
 /**
- * 首页骨架卡片。与 [VideoCard] 布局同构：
- * 封面 16:10 → 标题两行 → 元信息行。
+ * 首页骨架卡片。与 [VideoCard] 布局**同构**：
+ * 封面 16:10（直角）→ 标题两行 → 元信息行。
  *
- * ⚠️ 比例与圆角**必须**跟着 VideoCard 走（`Sizes.coverAspectRatio` /
- * `Radius.cover`）。骨架与真实卡片不一致时，数据到达会"跳一下"，
- * 而骨架屏的意义正是消除这个跳动。
+ * ## 🔴 这里必须跟着 [VideoCard] 走，否则骨架白做
+ *
+ * 骨架屏的**唯一意义**是消除"数据到达时跳一下"（CLS）。
+ * 只要骨架与真实卡片有一点不同构，数据到达就会跳 —— 那还不如不显示骨架。
+ *
+ * ### 无卡片重构后同步修正的两处（v1.2.1）
+ *
+ * 1. **封面圆角 12dp → 0**：`VideoCard` 的封面已改直角（圆角是"卡片"的语言），
+ *    骨架若仍留 12dp，加载完成瞬间四个角会"收方"，是可见的跳动。
+ * 2. **间距与行数对齐**：改为 `封面 → 8dp → 标题两行(40dp) → 4dp → 元信息(16dp)`，
+ *    与 `VideoCard` 的 `Space.x2 / heightIn(min=40.dp) / Space.x1 / 头像 16dp` 逐项对应。
  */
 @Composable
 fun SkeletonVideoCard(modifier: Modifier = Modifier) {
@@ -185,16 +192,23 @@ fun SkeletonVideoCard(modifier: Modifier = Modifier) {
         SkeletonBox(
             modifier = Modifier.fillMaxWidth(),
             aspectRatio = Sizes.coverAspectRatio,
-            shape = RoundedCornerShape(Radius.cover),
         )
-        Spacer(Modifier.height(Space.x3))
-        SkeletonBox(Modifier.fillMaxWidth(), height = 14.dp)
+        // 与 VideoCard 的 `Spacer(Space.x2)` 一致
         Spacer(Modifier.height(Space.x2))
-        SkeletonBox(Modifier.fillMaxWidth(0.65f), height = 14.dp)
-        Spacer(Modifier.height(Space.x3))
-        SkeletonBox(Modifier.fillMaxWidth(0.45f), height = 12.dp)
+        // 标题两行：VideoCard 用 `heightIn(min = 40.dp)` 预留高度，骨架同样占 40dp
+        SkeletonBox(Modifier.fillMaxWidth(), height = TITLE_BLOCK_HEIGHT)
+        // 与 VideoCard 的 `Spacer(Space.x1)` 一致
+        Spacer(Modifier.height(Space.x1))
+        // 元信息行：VideoCard 是 16dp 头像 + 昵称
+        SkeletonBox(Modifier.fillMaxWidth(0.45f), height = META_ROW_HEIGHT)
     }
 }
+
+/** 标题两行的预留高度，与 `VideoCard` 的 `heightIn(min = 40.dp)` 对齐。 */
+private val TITLE_BLOCK_HEIGHT = 40.dp
+
+/** 元信息行高度，与 `VideoCard` 的 UP 头像（16dp）对齐。 */
+private val META_ROW_HEIGHT = 16.dp
 
 /**
  * 首页首屏骨架。

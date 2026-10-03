@@ -148,7 +148,7 @@ fun SkippedBanner(
                 .clip(RoundedCornerShape(Radius.pill))
                 .background(colors.overlayControl)
                 .clickable(enabled = canUndo, onClick = onUndo)
-                .padding(horizontal = Space.x3, vertical = Space.x1 + 2.dp),
+                .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start,
         ) {

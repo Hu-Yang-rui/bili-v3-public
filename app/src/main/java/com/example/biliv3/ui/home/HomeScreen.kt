@@ -25,7 +25,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
@@ -52,10 +51,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.biliv3.data.model.CategoryEntry
 import com.example.biliv3.data.model.HomeData
+import com.example.biliv3.design.grain
+import com.example.biliv3.design.DeviceTier
+import com.example.biliv3.design.LocalDeviceTier
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
 import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
@@ -162,6 +163,14 @@ fun HomeScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                // 🔴 乙·质感的核心：整页铺一层颗粒。
+                //
+                // 它不新增任何 UI 元素，只是把"数字纯色"变成"有材质"。
+                // 这是平面极简"太素"的解法，且低端档会自动关掉（见 grain()）。
+                //
+                // 必须在**页面级**铺，而不是每个卡片各铺 ——
+                // 后者会因为相邻项各铺一次而在边界处出现接缝。
+                .grain(enabled = LocalDeviceTier.current != DeviceTier.Low)
                 .padding(innerPadding),
         ) {
             when (val s = state) {
@@ -483,16 +492,22 @@ private fun ShuffleAction(onClick: () -> Unit) {
     val colors = BiliTheme.colors
     Row(
         verticalAlignment = Alignment.CenterVertically,
+        // 🔴 乙·质感：从"胶囊按钮"改成"纯文字动作"。
+        //
+        // 上一版是 clip(pill) + background(bgHover) —— 一个完整的圆角胶囊。
+        // 它和分区 Tab 并排，视觉上就是"一个按钮挤在一排文字里"。
+        //
+        // 现在：无底、无圆角、无边框。区分手段改为**颜色 + 图标**
+        // （次要色 + Refresh 图标，而 Tab 是主色纯文字）——
+        // 比加一个底色更轻，也更清楚。
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.pill))
-            .background(colors.bgHover)
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x1 + 2.dp),
+            .padding(vertical = Space.x2),
     ) {
         Icon(
             imageVector = Icons.Filled.Refresh,
             contentDescription = null,
-            tint = colors.textSecondarySafe,
+            tint = colors.textTertiary,
             modifier = Modifier.size(14.dp),
         )
         Spacer(Modifier.width(Space.x1))
@@ -553,12 +568,10 @@ private fun HomeSkeleton(windowSize: WindowSize) {
                 WindowSize.Tablet -> Sizes.bannerTablet
                 WindowSize.Mobile -> Sizes.bannerMobile
             },
-            shape = RoundedCornerShape(Radius.card),
         )
         SkeletonBox(
             modifier = Modifier.fillMaxWidth(),
             height = 104.dp,
-            shape = RoundedCornerShape(Radius.card),
         )
         SkeletonGrid(
             columns = windowSize.gridColumns,

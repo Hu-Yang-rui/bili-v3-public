@@ -32,6 +32,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.biliv3.design.ruleTop
+import com.example.biliv3.design.rule
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
 import com.example.biliv3.design.biliCard
@@ -170,14 +173,14 @@ fun BottomNav(
         modifier = modifier
             .fillMaxWidth()
             .height(Sizes.bottomNav)
-            // C 方案：底栏是通栏卡片。圆角只留上方两角（贴着屏幕底边）。
-            .biliCard(
-                elevation = 0.dp,
-                shape = RoundedCornerShape(
-                    topStart = Radius.card,
-                    topEnd = Radius.card,
-                ),
-            ),
+            // 🔴 乙·质感：底栏**不再是卡片**。
+            //
+            // 上一版是通栏卡片（上方两角圆角 + 底色），是屏幕上
+            // 最后一块"盒子"。网格去掉卡片后，它是最刺眼的一个。
+            //
+            // 现在：与页面同明度，只靠**上边一条发丝线**分隔。
+            // 底栏"融入页面"，而不是"浮在页面上"。
+            .ruleTop(color = Rule.color),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {

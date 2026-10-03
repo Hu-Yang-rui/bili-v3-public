@@ -30,7 +30,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +42,9 @@ import com.example.biliv3.data.model.NoticeItem
 import com.example.biliv3.data.model.RankItem
 import com.example.biliv3.data.model.TopicItem
 import com.example.biliv3.data.model.formatCount
+import com.example.biliv3.design.ruleTop
+import com.example.biliv3.design.tokens.Rule
+import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
@@ -107,10 +109,10 @@ private fun PanelCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            // C 方案：改用 biliCard() —— 它会按主题自动选投影（浅色）或描边（深色）。
-            // 首版这里写死 `.shadow(Elevation.rest)`，深色下是黑底黑影、完全不可见。
-            .biliCard(shape = RoundedCornerShape(Radius.card))
-            .padding(Space.x4),
+            // 🔴 乙·质感：侧栏区块**不再是卡片**。
+            // 靠上边一条发丝线与上方区块分隔，内容直接排。
+            .ruleTop(color = Rule.subtle)
+            .padding(top = Rhythm.between),
     ) {
         content()
     }
@@ -138,7 +140,7 @@ private fun PanelHeader(
                 tint = colors.brandPrimary,
                 modifier = Modifier.size(Sizes.iconLg),
             )
-            Spacer(Modifier.width(Space.x1 + 2.dp))
+            Spacer(Modifier.width(Space.compactHorizontal))
         }
         Text(
             text = title,
@@ -203,7 +205,7 @@ private fun RankPanel(
                             indication = null,
                         ) { onVideoClick(item.bvid) }
                         .background(if (hovered) colors.bgHover else Color.Transparent)
-                        .padding(horizontal = Space.x1, vertical = Space.x2 + 2.dp),
+                        .padding(horizontal = Space.x1, vertical = Space.rowVertical),
                 ) {
                     // 序号
                     Text(
@@ -266,7 +268,8 @@ private fun LivePanel(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(Radius.thumb))
+                        // 列表项 + 封面：一律直角（§5.1 硬规则 2）。
+                        // `Radius.thumb` 是卡片时代的兼容别名，已随重构废弃。
                         .clickable(
                             interactionSource = interaction,
                             indication = null,
@@ -277,7 +280,6 @@ private fun LivePanel(
                     Box(
                         modifier = Modifier
                             .size(width = Sizes.liveThumbWidth, height = Sizes.liveThumbHeight)
-                            .clip(RoundedCornerShape(Radius.thumb))
                             .background(colors.skeletonBase),
                     ) {
                         AsyncImage(
@@ -391,14 +393,13 @@ private fun TopicCell(
 
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(Radius.thumb))
+            // 封面是图片 → 直角（§5.1 硬规则 2）
             .clickable(interactionSource = interaction, indication = null, onClick = onClick),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(Radius.thumb))
                 .background(colors.skeletonBase),
         ) {
             AsyncImage(
@@ -408,7 +409,7 @@ private fun TopicCell(
                 modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
             )
         }
-        Spacer(Modifier.height(Space.x1 + 2.dp))
+        Spacer(Modifier.height(Space.compactHorizontal))
         Text(
             text = item.title,
             style = MaterialTheme.typography.labelMedium.copy(
@@ -442,7 +443,7 @@ private fun NoticePanel(notices: List<NoticeItem>) {
                     verticalAlignment = Alignment.Top,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = Space.x1 + 2.dp),
+                        .padding(vertical = Space.compactHorizontal),
                 ) {
                     Text(
                         text = "·",

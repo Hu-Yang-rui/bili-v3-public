@@ -54,9 +54,10 @@ import com.example.biliv3.data.model.PmMessage
 import com.example.biliv3.data.model.PmSession
 import com.example.biliv3.data.model.formatRelativeTime
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 
@@ -91,13 +92,8 @@ fun MessageListScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
+                // 顶栏不再是卡片：与页面同明度，靠底边一条发丝线分隔
+                .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -138,7 +134,7 @@ fun MessageListScreen(
                     modifier = Modifier
                         .clip(RoundedCornerShape(Radius.badge))
                         .background(colors.brandPrimary)
-                        .padding(horizontal = Space.x1 + 2.dp, vertical = 1.dp),
+                        .padding(horizontal = Space.compactHorizontal, vertical = 1.dp),
                 )
             }
         }
@@ -281,7 +277,7 @@ private fun SessionRow(
                     modifier = Modifier
                         .clip(RoundedCornerShape(Radius.badge))
                         .background(colors.brandPrimary)
-                        .padding(horizontal = Space.x1 + 2.dp, vertical = 1.dp),
+                        .padding(horizontal = Space.compactHorizontal, vertical = 1.dp),
                 )
             }
         }
@@ -323,13 +319,8 @@ fun ChatScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
+                // 顶栏不再是卡片：与页面同明度，靠底边一条发丝线分隔
+                .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -478,11 +469,16 @@ fun ChatScreen(
 @Composable
 private fun MessageBubble(message: PmMessage) {
     val colors = BiliTheme.colors
+    // ⚠️ 气泡**不是玻璃/浮层**，所以不该借 `Radius.card`（§5.2 已限定它只服务
+    // `biliCard`/`Glass` 两个原语）。它是一块有方向的**内容面**，走 `panel`(16dp)。
+    //
+    // "尾巴角"用 `badge`(4dp)：四角里最贴近说话人的那个收小，
+    // 是消息气泡的通用语言（位置 + 形状双重表达归属）。
     val bubbleShape = RoundedCornerShape(
-        topStart = Radius.card,
-        topEnd = Radius.card,
-        bottomStart = if (message.isMine) Radius.card else Radius.badge,
-        bottomEnd = if (message.isMine) Radius.badge else Radius.card,
+        topStart = Radius.panel,
+        topEnd = Radius.panel,
+        bottomStart = if (message.isMine) Radius.panel else Radius.badge,
+        bottomEnd = if (message.isMine) Radius.badge else Radius.panel,
     )
 
     Row(

@@ -28,7 +28,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,13 +38,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.biliv3.data.BangumiItem
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
@@ -97,16 +94,10 @@ fun BangumiScreen(
             .background(colors.bgBase),
     ) {
         // ---- 顶栏 ----
+        // 通栏顶栏：不再是卡片，内容直接排。
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -228,18 +219,14 @@ private fun BangumiCard(item: BangumiItem, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            // C 方案：番剧卡片也是卡片。
-            // ⚠️ elevation = 0 —— 3 列网格间距只有 12dp，投影会互相压住。
-            .biliCard(elevation = 0.dp, shape = RoundedCornerShape(Radius.card))
-            .clickable(onClick = onClick)
-            .padding(Space.x1),
+            // 网格项不再是卡片：封面直接排，网格自身的行列间距负责分组。
+            .clickable(onClick = onClick),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                // 番剧封面是 3:4 竖版
+                // 番剧封面是 3:4 竖版（直角，无卡片后不再需要圆角）
                 .aspectRatio(3f / 4f)
-                .clip(RoundedCornerShape(Radius.tag))
                 .background(colors.coverPlaceholder),
         ) {
             AsyncImage(
@@ -254,8 +241,8 @@ private fun BangumiCard(item: BangumiItem, onClick: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(Space.x1 + 2.dp)
-                        .clip(RoundedCornerShape(Radius.badge))
+                        .padding(Space.compactHorizontal)
+                        // 压在封面上的小标签用直角（同 DurationBadge）
                         .background(colors.overlayCover)
                         .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
                 ) {

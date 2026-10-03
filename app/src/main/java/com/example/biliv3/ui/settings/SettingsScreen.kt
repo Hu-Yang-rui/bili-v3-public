@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -43,9 +42,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.biliv3.data.Settings
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.RuleLine
+import com.example.biliv3.design.SectionMark
+import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rhythm
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.InlinePicker
@@ -125,13 +128,8 @@ fun SettingsScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
+                // 顶栏不再是卡片：与页面同明度，只靠底边一条发丝线分隔
+                .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -169,7 +167,11 @@ fun SettingsScreen(
                 .padding(bottom = Space.x8),
         ) {
             // ================= 播放 =================
-            SectionHeader("播放")
+            SectionMark(
+                index = 1,
+                title = "播放",
+                modifier = Modifier.padding(top = Rhythm.between),
+            )
 
             InlinePicker(
                 label = "默认倍速",
@@ -189,12 +191,14 @@ fun SettingsScreen(
                 },
             )
 
+
             SwitchRow(
                 title = "自动起播",
                 subtitle = "进入视频页立即开始播放（关闭则点封面才播）",
                 checked = settings.autoPlay,
                 onCheckedChange = viewModel::setAutoPlay,
             )
+
 
             InlinePicker(
                 label = "默认清晰度",
@@ -216,6 +220,7 @@ fun SettingsScreen(
                 },
             )
 
+
             SwitchRow(
                 title = "优先 H.264 编码",
                 subtitle = "部分设备的硬解不支持 HEVC，关闭后可能黑屏",
@@ -224,7 +229,11 @@ fun SettingsScreen(
             )
 
             // ================= 弹幕 =================
-            SectionHeader("弹幕")
+            SectionMark(
+                index = 2,
+                title = "弹幕",
+                modifier = Modifier.padding(top = Rhythm.section),
+            )
 
             SwitchRow(
                 title = "显示弹幕",
@@ -252,7 +261,7 @@ fun SettingsScreen(
                         picker = null
                     },
                 )
-                InlinePicker(
+                    InlinePicker(
                     label = "字号",
                     currentLabel = "${(settings.danmakuFontScale * 100).toInt()}%",
                     options = DANMAKU_FONT_OPTIONS.map {
@@ -269,7 +278,7 @@ fun SettingsScreen(
                         picker = null
                     },
                 )
-                InlinePicker(
+                    InlinePicker(
                     label = "显示区域",
                     currentLabel = areaLabel(settings.danmakuArea),
                     options = DANMAKU_AREA_OPTIONS.map {
@@ -295,7 +304,11 @@ fun SettingsScreen(
                 // - 类型：滚动 / 顶部 / 底部 各自开关
                 // - 关键词：命中任一即不渲染
                 // 「按用户屏蔽」需要拉黑名单接口，属另一件事，暂不做。
-                SectionHeader("弹幕屏蔽（本地生效）")
+                SectionMark(
+                    index = 3,
+                    title = "弹幕屏蔽（本地生效）",
+                    modifier = Modifier.padding(top = Rhythm.section),
+                )
 
                 SwitchRow(
                     title = "屏蔽滚动弹幕",
@@ -307,7 +320,7 @@ fun SettingsScreen(
                         )
                     },
                 )
-                SwitchRow(
+                    SwitchRow(
                     title = "屏蔽顶部弹幕",
                     subtitle = null,
                     checked = DANMAKU_MODE_TOP in settings.danmakuBlockModes,
@@ -317,7 +330,7 @@ fun SettingsScreen(
                         )
                     },
                 )
-                SwitchRow(
+                    SwitchRow(
                     title = "屏蔽底部弹幕",
                     subtitle = null,
                     checked = DANMAKU_MODE_BOTTOM in settings.danmakuBlockModes,
@@ -328,6 +341,7 @@ fun SettingsScreen(
                     },
                 )
 
+    
                 KeywordBlockRow(
                     keywords = settings.danmakuBlockKeywords,
                     editing = picker == SettingsPickerId.Keywords,
@@ -350,11 +364,15 @@ fun SettingsScreen(
             // 静态页背后是纯色底，没有东西可模糊。
             // 详见 `design/BiliTheme.kt` 的 KDoc。
             //
-            // **不保留一个点了没用的"主题"项** —— 那是死入口（§1.6）。
-            SectionHeader("外观")
+            // ⚠️ 该分组**已无任何设置项**，故连标题一并删掉 ——
+            // 留一个下面空无一物的章节标记比没有更糟（§1.6 死入口）。
 
             // ================= 隐私 =================
-            SectionHeader("隐私")
+            SectionMark(
+                index = 4,
+                title = "隐私",
+                modifier = Modifier.padding(top = Rhythm.section),
+            )
 
             SwitchRow(
                 title = "保存观看历史",
@@ -363,12 +381,14 @@ fun SettingsScreen(
                 onCheckedChange = viewModel::setSaveHistory,
             )
 
+
             SwitchRow(
                 title = "个性化推荐",
                 subtitle = "关闭后首页推荐将不基于观看偏好",
                 checked = settings.personalizedRecommend,
                 onCheckedChange = viewModel::setPersonalizedRecommend,
             )
+
 
             SwitchRow(
                 title = "凭据加密存储",
@@ -379,7 +399,11 @@ fun SettingsScreen(
             )
 
             // ================= 通知 =================
-            SectionHeader("通知")
+            SectionMark(
+                index = 5,
+                title = "通知",
+                modifier = Modifier.padding(top = Rhythm.section),
+            )
 
             SwitchRow(
                 title = "回复我的",
@@ -392,7 +416,11 @@ fun SettingsScreen(
             //
             // 数据来自第三方 bsbsb.top（社区标注的可跳过片段）。
             // 页面上**明确标注来源**（AGENTS.md §4.3 的合规要求）。
-            SectionHeader("空降助手（第三方数据）")
+            SectionMark(
+                index = 6,
+                title = "空降助手（第三方数据）",
+                modifier = Modifier.padding(top = Rhythm.section),
+            )
 
             SwitchRow(
                 title = "自动跳过赞助片段",
@@ -404,6 +432,7 @@ fun SettingsScreen(
             // 总开关关着时，下面的细项无意义 —— 不渲染（而不是灰掉，
             // 灰掉会让人以为"点了没反应"）
             if (settings.sponsorBlockEnabled) {
+    
                 CategoryPicker(
                     selected = settings.sponsorBlockCategories,
                     onToggle = { cat ->
@@ -423,6 +452,7 @@ fun SettingsScreen(
                     onCheckedChange = viewModel::setSponsorBlockShowToast,
                 )
 
+    
                 SwitchRow(
                     title = "允许撤销",
                     subtitle = "社区标注可能出错；开启后提示条可点「撤销」退回",
@@ -430,13 +460,20 @@ fun SettingsScreen(
                     onCheckedChange = viewModel::setSponsorBlockAllowUndo,
                 )
 
+    
                 InfoRow(label = "数据来源", value = "bsbsb.top（非官方接口）")
             }
 
             // ================= 存储 =================
-            SectionHeader("存储")
+            SectionMark(
+                index = 7,
+                title = "存储",
+                modifier = Modifier.padding(top = Rhythm.section),
+            )
 
             InfoRow(label = "图片缓存", value = cacheLabel)
+
+
             ActionRow(
                 label = "清理图片缓存",
                 subtitle = "清除已下载的封面与头像，下次进入页面会重新加载",
@@ -444,13 +481,26 @@ fun SettingsScreen(
             )
 
             // ================= 关于 =================
-            SectionHeader("关于")
+            SectionMark(
+                index = 8,
+                title = "关于",
+                modifier = Modifier.padding(top = Rhythm.section),
+            )
 
             // ⚠️ 版本号必须从构建配置读。硬编码 "0.6.1" 时
             // versionName 已经是 0.6.4 —— 这就是「反模式 #3」的实例。
+            //
+            // 这一组是**唯一保留发丝线**的地方：四行"标签 + 值"完全同构
+            // （同样的字号、同样的行高、同样的右对齐值），去掉线后整块
+            // 会糊成一片、看不出是四条独立信息。
+            //
+            // 其余分组已改为纯留白分组（§5.1 硬规则 4：优先间距，线是兜底）。
             InfoRow(label = "版本", value = com.example.biliv3.BuildConfig.VERSION_NAME)
+            RuleLine(color = Rule.subtle)
             InfoRow(label = "构建号", value = com.example.biliv3.BuildConfig.VERSION_CODE.toString())
+            RuleLine(color = Rule.subtle)
             InfoRow(label = "关于", value = "第三方 B 站客户端（个人自用）")
+            RuleLine(color = Rule.subtle)
             InfoRow(label = "合规", value = "不解析大会员 / 付费内容")
         }
     }
@@ -531,31 +581,12 @@ private fun CategoryPicker(
                             .clip(RoundedCornerShape(Radius.pill))
                             .background(if (on) colors.brandPrimary else colors.bgHover)
                             .clickable { onToggle(cat) }
-                            .padding(horizontal = Space.x3, vertical = Space.x1 + 2.dp),
+                            .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
                     )
                 }
             }
         }
     }
-}
-
-/** 分组标题。 */
-@Composable
-private fun SectionHeader(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.label,
-            fontWeight = FontWeight.SemiBold,
-            color = BiliTheme.colors.textTertiary,
-        ),
-        modifier = Modifier.padding(
-            start = Space.x4,
-            end = Space.x4,
-            top = Space.x5,
-            bottom = Space.x2,
-        ),
-    )
 }
 
 /**
@@ -625,7 +656,7 @@ private fun InfoRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.bgCard)
+            // 与开关行统一：无底色、无框，靠发丝线分隔
             .padding(horizontal = Space.x4, vertical = Space.x3),
         verticalAlignment = Alignment.CenterVertically,
     ) {

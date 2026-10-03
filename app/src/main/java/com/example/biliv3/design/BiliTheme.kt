@@ -131,21 +131,23 @@ fun BiliTheme(
  *
  * | M3 槽位 | M3 默认 | 我们应给 | 用在哪 |
  * |---|---|---|---|
- * | `extraSmall` | 4dp | `Radius.badge` 2dp | 角标 |
- * | `small` | 8dp | `Radius.tag` 6dp | 小标签 |
- * | `medium` | 12dp | `Radius.button` 12dp | 按钮、输入框 |
- * | `large` | 16dp | `Radius.card` 16dp | 卡片、面板 |
- * | `extraLarge` | 28dp | `Radius.card` 16dp | 大面板（C 方案不放大到 28） |
+ * | `extraSmall` | 4dp | `Radius.badge` 4dp | 角标 |
+ * | `small` | 8dp | `Radius.badge` 4dp | 小标签 |
+ * | `medium` | 12dp | `Radius.interactive` 4dp | 按钮、输入框（交互元素） |
+ * | `large` | 16dp | `Radius.panel` 16dp | 底部面板、浮层 |
+ * | `extraLarge` | 28dp | `Radius.panel` 16dp | 大面板（不放大到 28） |
  *
  * 首版没传这个参数，所以 `CoinDialog` 里的 `Checkbox`、`BrandButton`、
  * `Switch` 各自是 M3 默认圆角 —— 这就是"圆角看着不是一套"的来源。
+ *
+ * ⚠️ v1.2.1 起 `medium` 由 12dp 收敛到 4dp（§5.2：圆角只给交互元素 4dp）。
  */
 val BiliShapes = Shapes(
     extraSmall = RoundedCornerShape(Radius.badge),
-    small = RoundedCornerShape(Radius.tag),
-    medium = RoundedCornerShape(Radius.button),
-    large = RoundedCornerShape(Radius.card),
-    extraLarge = RoundedCornerShape(Radius.card),
+    small = RoundedCornerShape(Radius.badge),
+    medium = RoundedCornerShape(Radius.interactive),
+    large = RoundedCornerShape(Radius.panel),
+    extraLarge = RoundedCornerShape(Radius.panel),
 )
 
 /** `BiliTheme.colors.textPrimary` 取色。 */

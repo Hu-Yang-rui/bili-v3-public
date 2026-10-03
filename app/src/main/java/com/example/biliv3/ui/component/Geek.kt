@@ -261,7 +261,7 @@ fun TechTag(
         modifier = modifier
             .clip(RoundedCornerShape(Radius.badge))
             .background(colors.bgHover)
-            .padding(horizontal = Space.x1 + 2.dp, vertical = 1.dp),
+            .padding(horizontal = Space.compactHorizontal, vertical = 1.dp),
     )
 }
 

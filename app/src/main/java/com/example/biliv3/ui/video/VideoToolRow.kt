@@ -122,7 +122,7 @@ fun VideoToolRow(
                     .clip(RoundedCornerShape(Radius.pill))
                     .background(colors.bgHover)
                     .clickable(onClick = onSendDanmaku)
-                    .padding(horizontal = Space.x3, vertical = Space.x1 + 2.dp),
+                    .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
@@ -146,7 +146,7 @@ fun VideoToolRow(
             Box(
                 modifier = Modifier
                     .size(Sizes.iconXl + Space.x2)
-                    .clip(RoundedCornerShape(Radius.button))
+                    .clip(RoundedCornerShape(Radius.interactive))
                     .clickable(onClick = onToggleDanmaku),
                 contentAlignment = Alignment.Center,
             ) {
@@ -177,7 +177,7 @@ private fun TabItem(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.button))
+            .clip(RoundedCornerShape(Radius.interactive))
             .clickable(onClick = onClick)
             .padding(vertical = Space.x1),
     ) {

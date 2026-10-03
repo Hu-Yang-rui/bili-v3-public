@@ -28,12 +28,11 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
@@ -96,16 +95,18 @@ fun DynamicScreen(
         androidx.compose.foundation.layout.Column(
             modifier = Modifier.fillMaxSize(),
         ) {
+            // 通栏标题栏：不再是卡片，内容直接排。
+            //
+            // ⚠️ 这里**必须**画底边线。原先依赖"内容自己有上边线"来分隔，
+            // 但本页内容（空态 / 列表）顶部没有线 → 标题栏与内容**完全无边**，
+            // 标题看起来是"浮"在内容上的。
+            //
+            // 其它 12 个二级页（设置 / 排行 / 直播 / 缓存 / 收藏 …）的标题栏
+            // 都画了 `ruleBottom`，这里补齐后全站标题栏语义一致。
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .biliCard(
-                        elevation = 0.dp,
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                            bottomStart = Radius.card,
-                            bottomEnd = Radius.card,
-                        ),
-                    )
+                    .ruleBottom(color = Rule.color)
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .height(Sizes.topBarMobile),
                 contentAlignment = Alignment.CenterStart,

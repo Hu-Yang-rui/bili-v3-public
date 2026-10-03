@@ -85,5 +85,10 @@ _docs-private/
 # AGENTS.md 是给本地 Agent 看的工作约定（含本机绝对路径、签名密钥指纹、
 # 内部备注），不属于对外资料。README.md 才是公开介绍。
 # 文件仍在本地磁盘上，只是不参与版本控制。
+#
+# AGENTS-P2.md 是 AGENTS.md 的**档案分册**（接口表 / 历史踩坑 / aicu 接入细节），
+# 按需查阅、不自动加载。拆它的原因：AGENTS.md 超出工作区指令的字节预算
+# 会被整份截断，把"档案型参考"分出去才能保住规则主体的完整性。
 AGENTS.md
+AGENTS-P2.md
 CLAUDE.md

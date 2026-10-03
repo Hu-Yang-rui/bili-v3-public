@@ -36,6 +36,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.biliv3.design.ruleBottom
+import com.example.biliv3.design.rule
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
 import com.example.biliv3.design.biliCard
@@ -103,15 +106,23 @@ fun TopNav(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            // C 方案：顶栏是通栏卡片（不浮起），圆角只留下方两角 ——
-            // 它贴着屏幕顶端，上方圆角会被状态栏切掉，画了也看不见。
-            .biliCard(
-                elevation = 0.dp,
-                shape = RoundedCornerShape(
-                    bottomStart = Radius.card,
-                    bottomEnd = Radius.card,
-                ),
-            )
+            // 🔴 乙·质感：顶栏**不再是卡片**。
+            //
+            // 上一版是通栏卡片（下方两角圆角 + 底色）。那是一条横过来的卡片，
+            // 同样在切割画面 —— 网格去掉卡片后，它是最刺眼的一个。
+            //
+            // 现在：顶栏与页面**同一明度**（不铺底色），靠搜索框自身的底线
+            // 与内容区分隔。顶栏"融入页面"，而不是"浮在页面上"。
+            //
+            // ⚠️ **这里刻意不画线**。
+            //
+            // 曾经在这里加过 `ruleBottom`，结果与搜索框的底线形成**双线**：
+            // 顶栏 52dp 的底边与搜索框 40dp 的底边只差 12dp，
+            // 两条 1px 线几乎重叠 → 视觉上是一条粗细不匀的脏线。
+            //
+            // 实测取色抓到 y=254 与 y=270 两条相邻线（相隔 16dp），
+            // 就是这个问题。**顶栏不需要自己的线** —— 搜索框的底线
+            // 已经承担了"顶栏到此结束"的语义。
             .height(height),
     ) {
         Row(
@@ -179,18 +190,38 @@ fun pagePaddingFor(windowSize: WindowSize) = when (windowSize) {
     WindowSize.Mobile -> Space.pageMobile
 }
 
-/** 网格列间距按断点取值。 */
+/**
+ * 网格列间距按断点取值。
+ *
+ * ## 🔴 从 12dp 收到 8dp（乙·质感）
+ *
+ * 卡片架构下，相邻两项的视觉间距 = `gutter + 卡片内边距 × 2`
+ * （每张卡自己还有 8dp 内边距）→ 实际 28dp，明显过宽。
+ *
+ * 去掉卡片内边距后，间距**只剩 gutter 本身**。8dp 是网格的合理值：
+ * 再小封面会"粘"在一起，再大就不像网格而像散落的卡片。
+ */
 fun gridGutterFor(windowSize: WindowSize) = when (windowSize) {
     WindowSize.Desktop -> Space.gridGutterDesktop
     WindowSize.Tablet -> Space.gridGutterTablet
-    WindowSize.Mobile -> Space.gridGutterMobile
+    WindowSize.Mobile -> Space.x2
 }
 
-/** 网格行间距按断点取值。 */
+/**
+ * 网格行间距按断点取值。
+ *
+ * ## 🔴 从 12dp 增到 24dp（这是"分组"的来源）
+ *
+ * 卡片架构下，行间距只是"卡片之间的缝"。
+ * 无卡片后，行间距承担**分组职责** —— 它必须明显大于列间距，
+ * 否则一屏内容会糊成一片（看不出"一组"在哪）。
+ *
+ * 24dp = 列间距的 3 倍，符合 [Rhythm] 的"组间距 ≥ 2× 组内间距"。
+ */
 fun gridRowSpacingFor(windowSize: WindowSize) = when (windowSize) {
     WindowSize.Desktop -> Space.gridRowDesktop
     WindowSize.Tablet -> Space.gridRowTablet
-    WindowSize.Mobile -> Space.gridRowMobile
+    WindowSize.Mobile -> Space.x6
 }
 
 /** 区块纵向间距按断点取值。 */
@@ -284,19 +315,24 @@ private fun SearchBox(
     Row(
         modifier = widthModifier
             .height(Sizes.searchHeight)
-            .clip(RoundedCornerShape(Radius.button))
-            .background(if (hovered) colors.bgCard else colors.bgBase)
-            .border(
-                width = 1.dp,
-                color = if (hovered) colors.brandPrimary else colors.borderHairline,
-                shape = RoundedCornerShape(Radius.button),
+            // 🔴 乙·质感：搜索框从"圆角胶囊容器"改成"底线输入框"。
+            //
+            // 上一版是 `clip(button) + background + border` —— 一个完整的
+            // 圆角盒子。它是顶栏里最像卡片的元素。
+            //
+            // 现在：**无底色、无圆角、无四边框**，只有一条底边线。
+            // 这是"输入区"的通用语言，且视觉重量只有原来的 1/6。
+            //
+            // 交互不变（整行可点、hover 时底线变品牌色）。
+            .ruleBottom(
+                color = if (hovered) colors.brandPrimary else Rule.color,
             )
             .clickable(
                 interactionSource = interaction,
                 indication = null,
                 onClick = onClick,
             )
-            .padding(horizontal = Space.x3),
+            .padding(horizontal = Space.x1),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -333,7 +369,7 @@ private fun UploadButton(enabled: Boolean) {
     Row(
         modifier = Modifier
             .height(Sizes.searchHeight)
-            .clip(RoundedCornerShape(Radius.button))
+            .clip(RoundedCornerShape(Radius.interactive))
             .background(if (enabled) colors.brandPrimary else colors.skeletonBase)
             .padding(horizontal = Space.x4),
         verticalAlignment = Alignment.CenterVertically,

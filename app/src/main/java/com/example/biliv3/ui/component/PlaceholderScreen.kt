@@ -30,6 +30,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
+import com.example.biliv3.design.ruleBottom
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.Radius
@@ -73,13 +75,8 @@ fun PlaceholderScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .biliCard(
-                        elevation = 0.dp,
-                        shape = RoundedCornerShape(
-                            bottomStart = Radius.card,
-                            bottomEnd = Radius.card,
-                        ),
-                    )
+                    // 🔴 乙·质感：顶栏不再是卡片，只留底边一条发丝线
+                    .ruleBottom(color = Rule.color)
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .height(Sizes.topBarMobile)
                     .padding(horizontal = Space.x2),

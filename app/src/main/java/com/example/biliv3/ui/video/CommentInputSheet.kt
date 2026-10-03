@@ -141,8 +141,10 @@ fun CommentInputSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = Radius.card, topEnd = Radius.card))
-                .background(colors.bgCard)
+                .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
+                // 弹层用 `surfaceElevated`（比卡片亮一档）——
+                // 深色下投影不可见，分层只能靠提亮。
+                .background(colors.surfaceElevated)
                 .clickable(enabled = false) {}
                 .navigationBarsPadding()
                 .padding(horizontal = Space.x4, vertical = Space.x3),
@@ -163,7 +165,7 @@ fun CommentInputSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(INPUT_HEIGHT)
-                    .clip(RoundedCornerShape(Radius.button))
+                    .clip(RoundedCornerShape(Radius.interactive))
                     .background(colors.bgHover)
                     .padding(horizontal = Space.x3, vertical = Space.x2),
             ) {
@@ -282,8 +284,10 @@ fun DanmakuInputSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = Radius.card, topEnd = Radius.card))
-                .background(colors.bgCard)
+                .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
+                // 弹层用 `surfaceElevated`（比卡片亮一档）——
+                // 深色下投影不可见，分层只能靠提亮。
+                .background(colors.surfaceElevated)
                 .clickable(enabled = false) {}
                 .navigationBarsPadding()
                 .padding(horizontal = Space.x4, vertical = Space.x3),
@@ -302,7 +306,7 @@ fun DanmakuInputSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(INPUT_HEIGHT)
-                    .clip(RoundedCornerShape(Radius.button))
+                    .clip(RoundedCornerShape(Radius.interactive))
                     .background(colors.bgHover)
                     .padding(horizontal = Space.x3, vertical = Space.x2),
             ) {
@@ -394,7 +398,7 @@ fun DanmakuInputSheet(
                             .clip(RoundedCornerShape(Radius.pill))
                             .background(if (selected) colors.brandPrimary else colors.bgHover)
                             .clickable { modeIndex = i }
-                            .padding(horizontal = Space.x3, vertical = Space.x1 + 2.dp),
+                            .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
                     )
                     Spacer(Modifier.width(Space.x2))
                 }

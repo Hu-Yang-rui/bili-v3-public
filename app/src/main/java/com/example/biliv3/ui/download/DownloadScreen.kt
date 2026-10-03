@@ -44,9 +44,10 @@ import com.example.biliv3.data.download.DownloadState
 import com.example.biliv3.data.download.DownloadTask
 import com.example.biliv3.data.download.DownloadedItem
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
@@ -107,13 +108,8 @@ fun DownloadScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
+                // 顶栏不再是卡片：与页面同明度，只留底边一条发丝线
+                .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -339,7 +335,6 @@ private fun DownloadedRow(
         Box(
             modifier = Modifier
                 .size(width = 112.dp, height = 63.dp)
-                .clip(RoundedCornerShape(Radius.cover))
                 .background(colors.coverPlaceholder),
         ) {
             AsyncImage(

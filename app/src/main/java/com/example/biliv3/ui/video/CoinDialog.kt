@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.BiliTheme
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -115,7 +116,18 @@ fun CoinDialog(
                 modifier = Modifier
                     .padding(horizontal = Space.x6)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(Radius.card))
+                    // ⚠️ 弹层必须用 `surfaceElevated`，不能用 `bgCard`。
+                    //
+                    // `bgCard` 是**普通卡片**的色（#171B22）。弹层压在半透明遮罩上，
+                    // 若与背景里的卡片同色，就"浮不起来" —— 看起来像
+                    // 页面里本来就有的一个卡片，而不是盖在上面的一层。
+                    //
+                    // 深色下的分层手段是**提亮**（投影不可见），
+                    // 所以弹层要比卡片再亮一档（#232A35）。
+                    .biliCard(
+                        shape = RoundedCornerShape(Radius.panel),
+                        color = colors.surfaceElevated,
+                    )
                     // 弹层本体不穿透到遮罩
                     .clickable(enabled = false) {}
                     .padding(vertical = Space.x5),
@@ -143,7 +155,7 @@ fun CoinDialog(
                 // ---- 同时点赞 ----
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.button))
+                        .clip(RoundedCornerShape(Radius.interactive))
                         .clickable { alsoLike = !alsoLike }
                         .padding(horizontal = Space.x2, vertical = Space.x1),
                     verticalAlignment = Alignment.CenterVertically,
@@ -180,7 +192,7 @@ fun CoinDialog(
                         .fillMaxWidth()
                         .padding(horizontal = Space.x4)
                         .height(CONFIRM_BUTTON_H)
-                        .clip(RoundedCornerShape(Radius.button))
+                        .clip(RoundedCornerShape(Radius.interactive))
                         .background(colors.accentCoinBright)
                         .clickable { onConfirm(selected, alsoLike) },
                     contentAlignment = Alignment.Center,
@@ -238,7 +250,9 @@ private fun CoinOptionCard(
         modifier = Modifier
             .width(if (selected) CARD_SELECTED_W else CARD_W)
             .height(if (selected) CARD_SELECTED_H else CARD_H)
-            .clip(RoundedCornerShape(Radius.button + 2.dp))
+            // 币数是**可点选的交互元素**（§5.1 硬规则 2：交互元素 4dp）。
+            // 原来写 `Radius.button + 2.dp` = 14dp，是卡片时代的残留。
+            .clip(RoundedCornerShape(Radius.interactive))
             .background(
                 Brush.verticalGradient(
                     listOf(base, base.copy(alpha = 0.82f)),
@@ -282,7 +296,7 @@ private fun CheckBoxGlyph(checked: Boolean) {
     val colors = BiliTheme.colors
     val boxModifier = Modifier
         .size(CHECKBOX_SIZE)
-        .clip(RoundedCornerShape(Radius.badge + 1.dp))
+        .clip(RoundedCornerShape(Radius.control))
         .background(if (checked) colors.accentCoinBright else colors.borderStrong)
     Box(modifier = boxModifier, contentAlignment = Alignment.Center) {
         if (checked) {

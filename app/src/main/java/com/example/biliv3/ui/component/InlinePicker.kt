@@ -70,7 +70,7 @@ import com.example.biliv3.design.tokens.Space
  * ## 展开区样式
  *
  * - 背景用主题的 `bgHover`（浅一档的卡片色），与页面同色系
- * - 圆角 `Radius.button`，与其它控件一致
+ * - 圆角 `Radius.interactive`（4dp），与其它交互元素一致
  * - **不用纯黑、不用半透明遮罩**
  *
  * ## 收起时机（三种都支持）
@@ -166,7 +166,7 @@ fun <K> InlinePicker(
                         end = Space.x3,
                         bottom = Space.x1,
                     )
-                    .clip(RoundedCornerShape(Radius.button))
+                    .clip(RoundedCornerShape(Radius.interactive))
                     // ⚠️ 用主题的 bgHover，**不用黑色、不用半透明遮罩** ——
                     // 这是"无黑框、不穿模"的关键
                     .background(colors.bgHover)
@@ -205,7 +205,7 @@ private fun PickerRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x2 + 2.dp),
+            .padding(horizontal = Space.x3, vertical = Space.rowVertical),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start,
     ) {
@@ -233,7 +233,7 @@ private fun PickerRow(
                         modifier = Modifier
                             .clip(RoundedCornerShape(Radius.badge))
                             .background(colors.brandPrimary)
-                            .padding(horizontal = Space.x1 + 2.dp, vertical = 1.dp),
+                            .padding(horizontal = Space.compactHorizontal, vertical = 1.dp),
                     )
                 }
             }

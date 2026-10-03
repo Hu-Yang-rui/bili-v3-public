@@ -55,6 +55,10 @@ import coil.compose.AsyncImage
 import com.example.biliv3.data.model.CommentItem
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.model.formatRelativeTime
+import com.example.biliv3.design.ruler
+import com.example.biliv3.design.ruleTop
+import com.example.biliv3.design.tokens.Rhythm
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
@@ -186,8 +190,15 @@ fun CommentSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            // C 方案：评论区是独立卡片。
-            .biliCard(),
+            // 🔴 乙·质感：评论区**不再是卡片**。
+            //
+            // 上一版 `biliCard()` 给整块评论套了一个圆角容器。
+            // 评论本来就是"一长串内容"，容器对长列表毫无分组价值 ——
+            // 它只是把评论和页面底切开，制造了一条多余的边界。
+            //
+            // 现在：通栏，靠**上边一条发丝线**与简介区分隔，
+            // 评论之间靠间距分组。
+            .ruleTop(color = Rule.color),
     ) {
         // ================= 标题 + 排序 =================
         //
@@ -445,8 +456,9 @@ private fun ReportReasonSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = Radius.card, topEnd = Radius.card))
-                .background(colors.bgCard)
+                .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
+                // 弹层用 surfaceElevated（比卡片亮一档）—— 深色下投影不可见，分层靠提亮
+                .background(colors.surfaceElevated)
                 // 阻止点击穿透到遮罩（点面板内部不应关闭）
                 .clickable(enabled = false) {}
                 .navigationBarsPadding()
@@ -573,24 +585,39 @@ private fun CommentRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            // C 方案：评论是**独立卡片**（每条浮起）。
-            // 顶层回复带内边距 + 卡片底；内嵌回复（isReply）不加卡片，
-            // 而是靠父级的缩进 + bgHover 区分层次 —— 否则会出现"卡片套卡片"。
+            // 🔴 乙·质感：评论**不再是卡片**。
+            //
+            // 上一版每条顶层评论是一张浮起的小卡（`biliCard(elevation=1)`）。
+            // 评论是一串**同质、等权**的条目 —— 每条都装进一个盒子
+            // 会把列表切成一堆小方块，且和已删的评论区大卡形成"卡片套卡片"。
+            //
+            // 现在：顶层评论用**发丝线**分隔（线在条目上方），
+            // 内嵌回复（isReply）用**纵向标尺**表达层级。
+            //
+            // ## 为什么回复用标尺而不是缩进
+            //
+            // 缩进在 2~3 层后就把可用宽度吃掉了，手机竖屏下第 3 层
+            // 只剩半屏宽，正文被挤成"一字一行"。
+            //
+            // 标尺是一条竖线 + 左侧固定缩进：层级靠"线在不在"表达，
+            // 不靠"缩进多少" —— 无论多少层，正文宽度都不变。
             .then(
-                if (isReply) Modifier else Modifier
-                    .padding(horizontal = Space.x3, vertical = Space.x1)
-                    .biliCard(elevation = 1.dp, shape = RoundedCornerShape(Radius.button)),
+                if (isReply) Modifier.ruler(Rule.color)
+                else Modifier.ruleTop(color = Rule.subtle),
             )
             // 定位高亮：用品牌色的低透明度铺底，不改文字色 ——
             // 改文字色会破坏对比度约束（见 §5.2 的"文字安全版"）。
+            //
+            // ⚠️ 顺序：线在最外（横跨整个条目宽度），高亮底在内，
+            // 内边距在最内 —— 否则高亮底会把分隔线也染上颜色。
             .background(
                 colors.brandPrimary.copy(alpha = HIGHLIGHT_ALPHA * highlightAlpha),
             )
             .padding(
                 start = Space.x4,
                 end = Space.x4,
-                top = if (isReply) Space.x2 else Space.x3,
-                bottom = Space.x2,
+                top = if (isReply) Space.x2 else Rhythm.inGroup,
+                bottom = if (isReply) Space.x2 else Rhythm.inGroup,
             ),
     ) {
         Row(verticalAlignment = Alignment.Top) {

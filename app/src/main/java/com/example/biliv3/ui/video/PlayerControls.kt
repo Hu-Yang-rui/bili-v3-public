@@ -154,6 +154,32 @@ fun PlayerControls(
      */
     var pressSpeed by remember { mutableFloatStateOf(0f) }
 
+    /**
+     * 是否正在缓冲（`STATE_BUFFERING`）。
+     *
+     * ## 🔴 为什么必须补这个（这是一个真实的功能缺口）
+     *
+     * 排查时发现：**全项目此前没有任何缓冲指示** ——
+     * 没有任何地方读 `STATE_BUFFERING`。
+     *
+     * 后果：网络慢时画面静止、进度条不走，用户**无法区分**
+     * 「正在加载」和「卡死了 / 播放器崩了」。
+     * 这是最影响体感的一类缺失 —— 它不报错，只是让人以为坏了。
+     *
+     * ## 为什么不用 `CircularProgressIndicator`
+     *
+     * 播放器上的指示器有两个额外约束：
+     * 1. **必须在纯黑背景上也看得见** → 用 `onOverlay`（白）
+     * 2. **不能有跳动感** → Material 的转圈默认尺寸偏大且有色带，
+     *    这里用细线 + 小尺寸，与"控制层克制"一致
+     *
+     * ## 与"中央播放按钮"的关系
+     *
+     * 缓冲时**不显示**中央播放/暂停按钮（那会让人以为可以点），
+     * 只显示缓冲环。两者互斥，由 [buffering] 决定。
+     */
+    var buffering by remember { mutableStateOf(false) }
+
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
@@ -162,9 +188,13 @@ fun PlayerControls(
 
             override fun onPlaybackStateChanged(state: Int) {
                 duration = player.duration.coerceAtLeast(0)
+                // 缓冲状态必须单独跟踪（见下方 buffering 的 KDoc）
+                buffering = state == Player.STATE_BUFFERING
             }
         }
         player.addListener(listener)
+        // 首帧就可能已经处于缓冲态（进页面立刻卡住），补一次同步
+        buffering = player.playbackState == Player.STATE_BUFFERING
         onDispose { player.removeListener(listener) }
     }
 
@@ -286,6 +316,9 @@ fun PlayerControls(
         //
         // 只显示一个紧凑胶囊：`2× 快进中` / `0.5× 慢放中`。
         // 不做成"左右半屏各一个常驻图标" —— 那才是用户说的"独立按钮"。
+        //
+        // ⚠️ 读数用**等宽**：`0.5×` / `2×` 宽度不同，比例字体下
+        // 胶囊宽度会随速度变化而跳动（同一屏内）。
         if (pressSpeed > 0f) {
             Box(
                 modifier = Modifier
@@ -293,64 +326,82 @@ fun PlayerControls(
                     .padding(top = Space.x4)
                     .clip(RoundedCornerShape(Radius.pill))
                     .background(colors.overlayControl)
-                    .padding(horizontal = Space.x3, vertical = Space.x1 + 2.dp),
+                    .padding(horizontal = Space.x3, vertical = Space.x1 + Space.micro),
             ) {
-                Text(
+                MonoReadout(
                     text = if (pressSpeed > 1f) "${formatSpeed(pressSpeed)}× 快进中"
                     else "${formatSpeed(pressSpeed)}× 慢放中",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.onOverlay,
-                        fontWeight = FontWeight.Medium,
-                    ),
-                    maxLines = 1,
+                    color = colors.onOverlay,
+                    fontSize = FontSize.label,
+                    weight = FontWeight.Medium,
                 )
             }
         }
 
         // ================= seek 预览 =================
+        //
+        // ⚠️ 用等宽（与底部时间轴同族）。
+        // 拖动时读数每帧都在变，比例字体下**整个胶囊会左右抖**
+        // —— 这是"拖动进度条时中间那块东西在晃"的来源。
         seekPreview?.let { target ->
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .clip(RoundedCornerShape(Radius.button))
+                    // seek 预览是**读数浮层**，不是交互元素。
+                    // 它用 `pill` 才读得出"这是个临时读数胶囊"（与底部时间轴同族）。
+                    .clip(RoundedCornerShape(Radius.pill))
                     .background(colors.overlayControl)
-                    .padding(horizontal = Space.x3, vertical = Space.x1 + 2.dp),
+                    .padding(horizontal = Space.x3, vertical = Space.x1 + Space.micro),
             ) {
-                Text(
+                MonoReadout(
                     text = "${formatTime(target)} / ${formatTime(duration)}",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.onOverlay,
-                        fontWeight = FontWeight.Medium,
-                    ),
+                    color = colors.onOverlay,
+                    fontSize = FontSize.label,
+                    weight = FontWeight.Medium,
                 )
             }
         }
 
-        // ================= 中央播放/暂停 =================
-        AnimatedVisibility(
-            visible = controlsVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.Center),
-        ) {
+        // ================= 中央：缓冲环 / 播放暂停（互斥）=================
+        //
+        // 缓冲时**只显示环**，不显示播放键 —— 后者会让人以为可以点，
+        // 而这时点了也没用（ExoPlayer 在 BUFFERING 下的 play/pause 无视觉反馈）。
+        if (buffering) {
             Box(
-                modifier = Modifier
-                    .size(CENTER_BUTTON)
-                    .clip(CircleShape)
-                    .background(colors.overlayCover)
-                    .clickable {
-                        if (player.isPlaying) player.pause() else player.play()
-                    },
+                modifier = Modifier.align(Alignment.Center),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = if (isPlaying) "暂停" else "播放",
-                    tint = colors.onOverlay,
-                    modifier = Modifier.size(Sizes.iconXl + Space.x1),
+                androidx.compose.material3.CircularProgressIndicator(
+                    // 纯黑播放器底上必须用高对比的白
+                    color = colors.onOverlay,
+                    strokeWidth = Space.trackHeight,
+                    modifier = Modifier.size(Sizes.iconXl),
                 )
+            }
+        } else {
+            AnimatedVisibility(
+                visible = controlsVisible,
+                enter = fadeIn(animationSpec = tween(Motion.FADE_MS, easing = Motion.standard)),
+                exit = fadeOut(animationSpec = tween(Motion.FADE_MS, easing = Motion.standard)),
+                modifier = Modifier.align(Alignment.Center),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(CENTER_BUTTON)
+                        .clip(CircleShape)
+                        .background(colors.overlayCover)
+                        .clickable {
+                            if (player.isPlaying) player.pause() else player.play()
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = if (isPlaying) "暂停" else "播放",
+                        tint = colors.onOverlay,
+                        modifier = Modifier.size(Sizes.iconXl + Space.x1),
+                    )
+                }
             }
         }
 

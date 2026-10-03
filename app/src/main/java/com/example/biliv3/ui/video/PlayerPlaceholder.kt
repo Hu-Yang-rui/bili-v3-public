@@ -75,7 +75,7 @@ fun PlayerPlaceholder(
                             color = colors.onOverlay,
                         ),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.button))
+                            .clip(RoundedCornerShape(Radius.interactive))
                             .background(colors.brandPrimary)
                             .clickable(onClick = onRetry)
                             .padding(horizontal = Space.x4, vertical = Space.x2),

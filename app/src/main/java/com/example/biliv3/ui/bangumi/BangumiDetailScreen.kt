@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,10 +21,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,9 +42,10 @@ import coil.compose.AsyncImage
 import com.example.biliv3.data.BangumiEpisode
 import com.example.biliv3.data.model.CoverUrls
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rhythm
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
@@ -97,16 +95,10 @@ fun BangumiDetailScreen(
             .fillMaxSize()
             .background(colors.bgBase),
     ) {
+        // 通栏顶栏：不再是卡片，内容直接排。
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -198,7 +190,8 @@ fun BangumiDetailScreen(
                                 color = colors.textTertiary,
                             ),
                             modifier = Modifier.padding(
-                                top = Space.x3,
+                                // 章节标题自带组间距（头部区块不再提供 bottom）
+                                top = Rhythm.between,
                                 bottom = Space.x2,
                             ),
                         )
@@ -238,8 +231,10 @@ private fun BangumiHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .biliCard(shape = RoundedCornerShape(Radius.card))
-            .padding(Space.x3),
+            // 头部信息区通栏：去掉卡片，改用上边发丝线分隔。
+            // 间距只加在 top（下方区块各自负责自己的 top，避免翻倍）。
+            .ruleTop(color = Rule.subtle)
+            .padding(start = Space.x4, end = Space.x4, top = Rhythm.between),
     ) {
         // 竖版海报 3:4（番剧海报比例，不是 16:10 的横版封面）
         AsyncImage(
@@ -249,7 +244,7 @@ private fun BangumiHeader(
             modifier = Modifier
                 .width(96.dp)
                 .height(132.dp)
-                .clip(RoundedCornerShape(Radius.cover))
+                // 海报是封面 → 直角
                 .background(colors.coverPlaceholder),
         )
         Spacer(Modifier.width(Space.x3))
@@ -343,7 +338,7 @@ private fun EpisodeCell(ep: BangumiEpisode, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(Radius.button))
+            // 集数格子：直角（列表项一律直角），只有交互态保留可点。
             .background(colors.bgCard)
             .clickable(onClick = onClick)
             .padding(vertical = Space.x3, horizontal = Space.x2),

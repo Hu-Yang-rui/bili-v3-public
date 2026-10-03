@@ -52,11 +52,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
@@ -142,16 +140,10 @@ fun SearchScreen(
             .background(colors.bgBase),
     ) {
         // ---- 搜索栏 ----
+        // 通栏：不再是卡片，内容直接排。
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -352,7 +344,7 @@ private fun IdlePanel(
                             color = colors.textSecondarySafe,
                         ),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.button))
+                            .clip(RoundedCornerShape(Radius.interactive))
                             .clickable(onClick = onClearHistory)
                             .padding(horizontal = Space.x2, vertical = Space.x1),
                     )

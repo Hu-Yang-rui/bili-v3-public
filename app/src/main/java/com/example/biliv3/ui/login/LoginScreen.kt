@@ -42,9 +42,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.biliv3.data.auth.QrCode
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
@@ -143,13 +144,8 @@ private fun QrLoginContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .biliCard(
-                    elevation = 0.dp,
-                    shape = RoundedCornerShape(
-                        bottomStart = Radius.card,
-                        bottomEnd = Radius.card,
-                    ),
-                )
+                // 顶栏不再是卡片：与页面同明度，靠底边一条发丝线分隔
+                .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -352,7 +348,8 @@ private fun ManualConfirmHint(onClick: () -> Unit) {
             color = colors.textLinkSafe,
         ),
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.button))
+            // 文字链是交互元素 —— 4dp
+            .clip(RoundedCornerShape(Radius.interactive))
             .clickable(onClick = onClick)
             .padding(horizontal = Space.x3, vertical = Space.x2),
     )
@@ -377,7 +374,7 @@ private fun QrPanel(
     Box(
         modifier = Modifier
             .size(QR_BOX)
-            .clip(RoundedCornerShape(Radius.card))
+            // 二维码是图片/面板 —— 直角（圆角只给交互元素）
             .background(colors.onOverlay),
         contentAlignment = Alignment.Center,
     ) {

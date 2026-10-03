@@ -144,7 +144,7 @@ private fun ActionItem(
             // ⚠️ 首版写的是 `RoundedCornerShape(Space.x2)` —— **用间距令牌当圆角**。
             // 值恰好都是 8dp 所以看不出问题，但语义完全错：
             // 哪天 `Space.x2` 从 8 改成 10，这里会跟着变成一个奇怪的圆角。
-            .clip(RoundedCornerShape(Radius.button))
+            .clip(RoundedCornerShape(Radius.interactive))
             .clickable(onClick = onClick)
             .padding(horizontal = Space.x4, vertical = Space.x2),
     ) {

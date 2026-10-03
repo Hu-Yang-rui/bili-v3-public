@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -76,8 +77,25 @@ fun CategoryTabBar(
     val tabs = listOf(recommend) + categories
 
     // 外层 Box 用于叠一个右侧渐隐 —— Tab 条横向可滚动，
-    // 最后一个可见 Tab 会被硬裁切（实测「舞蹈」只剩半个字），
-    // 看起来像渲染坏了。渐隐既遮住切口，也暗示"还能往右滑"。
+    // 最后一个可见 Tab 会被硬裁切，渐隐既遮住切口，也暗示"还能往右滑"。
+    //
+    // ## 🔴 但渐隐**不能无条件常显**（v1.2.2 修）
+    //
+    // 实测证据：渐隐是 24dp 固定宽贴在右缘，而「舞蹈」正好落在它下面 ——
+    // 取色量到「舞」宽 33px（正常字宽），紧跟的「蹈」只剩 **5px**，
+    // 读起来不是"渐隐提示"，而是**"渲染坏了"**。
+    //
+    // 根因不是宽度不够，而是**语义用错了地方**：
+    // 渐隐表达"右边还有内容"，可当已经滑到底、右边**没有**内容时，
+    // 它仍然压在最后一个 Tab 上 —— 此时它是纯粹的遮挡物。
+    //
+    // 修法：渐隐改为**只在还能右滑时出现**（`canScrollForward`）。
+    // 滑到底自动撤掉，最后一个 Tab 就能完整显示。
+    val scrollState = rememberScrollState()
+    val canScrollForward by remember {
+        derivedStateOf { scrollState.canScrollForward }
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -86,7 +104,7 @@ fun CategoryTabBar(
         Row(
             modifier = Modifier
                 .height(Sizes.categoryTabBar)
-                .horizontalScroll(rememberScrollState()),
+                .horizontalScroll(scrollState),
             horizontalArrangement = Arrangement.spacedBy(Space.x5),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -101,21 +119,24 @@ fun CategoryTabBar(
             Spacer(Modifier.width(Space.x6))
         }
 
-        // 右侧渐隐（透明 -> 页面底色）
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .width(Space.x6)
-                .height(Sizes.categoryTabBar)
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            BiliTheme.colors.bgBase,
+        // 右侧渐隐（透明 -> 页面底色）—— **只在还能右滑时显示**。
+        // 滑到底就撤掉，否则它会盖住最后一个 Tab（见上方说明）。
+        if (canScrollForward) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .width(Space.x6)
+                    .height(Sizes.categoryTabBar)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                BiliTheme.colors.bgBase,
+                            ),
                         ),
                     ),
-                ),
-        )
+            )
+        }
     }
 }
 
@@ -136,7 +157,7 @@ private fun CategoryTab(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.button))
+            .clip(RoundedCornerShape(Radius.interactive))
             .clickable(
                 interactionSource = interaction,
                 indication = null,

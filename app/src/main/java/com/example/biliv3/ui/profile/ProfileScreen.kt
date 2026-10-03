@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -43,14 +42,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.biliv3.data.auth.UserInfo
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
+import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rhythm
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
@@ -124,13 +123,11 @@ private fun GuestPanel(
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        // 引导卡片（C 方案：独立卡片）
+        // 未登录引导：通栏，不再套卡片
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Space.x3, vertical = Space.x1)
-                .biliCard(shape = RoundedCornerShape(Radius.card))
-                .padding(Space.x4),
+                .padding(start = Space.x4, end = Space.x4, top = Rhythm.between),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
@@ -183,8 +180,6 @@ private fun GuestPanel(
             enabled = false,
         )
 
-        Spacer(Modifier.height(Space.x3))
-
         // 离线缓存**不依赖登录态**（本地文件），所以未登录也要能进 ——
         // 与上面那组"需要登录"的入口分开是刻意的。
         //
@@ -201,8 +196,6 @@ private fun GuestPanel(
             enabled = true,
             onNavigate = onNavigate,
         )
-
-        Spacer(Modifier.height(Space.x3))
 
         EntryGroup(
             entries = listOf(
@@ -249,13 +242,11 @@ private fun LoggedInPanel(
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        // 用户信息卡（C 方案：独立卡片）
+        // 用户信息：通栏
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Space.x3, vertical = Space.x1)
-                .biliCard(shape = RoundedCornerShape(Radius.card))
-                .padding(Space.x4),
+                .padding(start = Space.x4, end = Space.x4, top = Rhythm.between),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AsyncImage(
@@ -316,8 +307,6 @@ private fun LoggedInPanel(
             onNavigate = onNavigate,
         )
 
-        Spacer(Modifier.height(Space.x3))
-
         EntryGroup(
             entries = listOf(
                 Entry("设置", Icons.Outlined.Settings, "settings"),
@@ -352,6 +341,9 @@ private data class Entry(
 /**
  * 功能入口分组。
  *
+ * 不再是卡片：入口行通栏排列，行与行之间用发丝线，分组之间靠
+ * [Rhythm.between] 间距。
+ *
  * @param enabled false 时整体弱化且不可点 —— 未登录状态下这些功能
  *   确实不可用，做成"看着能点但点了没反应"是错误做法
  *   （`AGENTS.md` §5.1 反模式）。
@@ -367,17 +359,23 @@ private fun EntryGroup(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x1)
-            .biliCard(shape = RoundedCornerShape(Radius.card)),
+            // 组间距只由下方区块的 top 提供（全站规则：bottom 一律不加）
+            .padding(top = Rhythm.between),
     ) {
         entries.forEachIndexed { index, entry ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    // 第一项不画线（线在条目上方，避免顶部多一条）
+                    .then(
+                        if (index == 0) Modifier
+                        else Modifier.ruleTop(color = Rule.subtle),
+                    )
                     .clickable(enabled = enabled && entry.route != null) {
                         entry.route?.let(onNavigate)
                     }
-                    .padding(horizontal = Space.x4, vertical = Space.x4),
+                    // 组内间距 + 余量，保证行高 ≥ 48dp 触摸目标
+                    .padding(horizontal = Space.x4, vertical = Rhythm.inGroup + Space.x2),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start,
             ) {
@@ -411,17 +409,6 @@ private fun EntryGroup(
                     contentDescription = null,
                     tint = colors.textTertiary,
                     modifier = Modifier.size(Sizes.iconLg),
-                )
-            }
-
-            // 分隔线（最后一项不加）
-            if (index != entries.lastIndex) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = Space.x4)
-                        .height(1.dp)
-                        .background(colors.borderHairline),
                 )
             }
         }
