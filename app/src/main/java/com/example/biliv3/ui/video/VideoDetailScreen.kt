@@ -1665,7 +1665,7 @@ private fun DetailContent(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
-                            Spacer(Modifier.height(2.dp))
+                            Spacer(Modifier.height(Space.micro))
                             // ③ 粉丝数 · 视频数
                             //
                             // ⚠️ 两项都是"增强信息"，取不到时**不显示该项**
@@ -2370,7 +2370,7 @@ private fun CoverWithPlayButton(
         if (loading) {
             androidx.compose.material3.CircularProgressIndicator(
                 color = colors.onOverlay,
-                strokeWidth = 2.dp,
+                strokeWidth = Space.trackHeight,
                 modifier = Modifier.size(Sizes.iconXl + Sizes.iconMd),
             )
         } else if (onClick != null) {

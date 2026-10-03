@@ -50,7 +50,7 @@ fun PlayerPlaceholder(
         if (loading) {
             CircularProgressIndicator(
                 color = colors.brandPrimary,
-                strokeWidth = 2.dp,
+                strokeWidth = Space.trackHeight,
                 modifier = Modifier.size(Sizes.iconXl + Sizes.iconMd),
             )
         } else {

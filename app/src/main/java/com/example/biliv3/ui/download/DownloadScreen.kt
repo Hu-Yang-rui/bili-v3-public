@@ -306,7 +306,7 @@ private fun FailedRow(task: DownloadTask) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Space.micro))
             Text(
                 // 给出**可操作的原因**，不是"出错了"
                 text = "$msg（已下载的部分保留，可重试续传）",
@@ -362,7 +362,7 @@ private fun DownloadedRow(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.clickable(onClick = onOpenDetail),
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Space.micro))
             Text(
                 text = buildString {
                     append(item.authorName)

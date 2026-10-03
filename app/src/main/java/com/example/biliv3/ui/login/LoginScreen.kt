@@ -266,7 +266,7 @@ private fun ModeTabs(current: LoginMode, onSelect: (LoginMode) -> Unit) {
                         color = if (selected) colors.textPrimary else colors.textSecondarySafe,
                     ),
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(Space.x1))
                 // 下划线始终占位，切换时高度不抖
                 Box(
                     modifier = Modifier
@@ -294,7 +294,7 @@ private fun QrSection(
             Spacer(Modifier.height(Space.x12))
             CircularProgressIndicator(
                 color = colors.brandPrimary,
-                strokeWidth = 2.dp,
+                strokeWidth = Space.trackHeight,
                 modifier = Modifier.size(Sizes.iconXl * 1.5f),
             )
         }

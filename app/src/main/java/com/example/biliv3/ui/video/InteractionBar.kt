@@ -154,7 +154,7 @@ private fun ActionItem(
             tint = tint,
             modifier = Modifier.size(Sizes.iconXl),
         )
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(Space.micro))
         // 计数用等宽：点赞/投币数会实时变化，比例字体下四个数字
         // 宽度不一，整栏会随交互轻微抖动。
         MonoReadout(

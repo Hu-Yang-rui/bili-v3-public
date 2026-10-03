@@ -549,7 +549,7 @@ private fun ResultList(
                 when {
                     state.loadingMore -> CircularProgressIndicator(
                         color = colors.brandPrimary,
-                        strokeWidth = 2.dp,
+                        strokeWidth = Space.trackHeight,
                         modifier = Modifier.size(Sizes.iconXl),
                     )
                     !state.hasMore -> Text(

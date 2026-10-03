@@ -238,7 +238,7 @@ private fun PickerRow(
                 }
             }
             if (description != null) {
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Space.micro))
                 Text(
                     text = description,
                     style = MaterialTheme.typography.labelMedium.copy(

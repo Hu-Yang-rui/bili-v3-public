@@ -236,7 +236,7 @@ fun AicuScreen(
                 ) {
                     CircularProgressIndicator(
                         color = colors.brandPrimary,
-                        strokeWidth = 2.dp,
+                        strokeWidth = Space.trackHeight,
                         modifier = Modifier.size(Sizes.iconXl),
                     )
                 }
@@ -355,7 +355,7 @@ fun AicuScreen(
                             when {
                                 loadingMore -> CircularProgressIndicator(
                                     color = colors.brandPrimary,
-                                    strokeWidth = 2.dp,
+                                    strokeWidth = Space.trackHeight,
                                     modifier = Modifier.size(Sizes.iconXl),
                                 )
                                 !hasMore -> Text(
@@ -531,12 +531,12 @@ private fun TabRow(
                         color = if (isSelected) colors.textPrimary else colors.textSecondarySafe,
                     ),
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Space.micro))
                 // 下划线固定高度，切换时不抖
                 Box(
                     modifier = Modifier
                         .width(20.dp)
-                        .height(2.dp)
+                        .height(Space.trackHeight)
                         .background(
                             if (isSelected) colors.brandPrimary
                             else androidx.compose.ui.graphics.Color.Transparent,
@@ -617,7 +617,7 @@ private fun UserCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Space.micro))
                 Text(
                     text = buildString {
                         append("UID $uid")
@@ -759,7 +759,7 @@ private fun ReplyCard(
                     modifier = Modifier
                         .clip(RoundedCornerShape(Radius.badge))
                         .background(colors.brandPrimaryDim)
-                        .padding(horizontal = 4.dp, vertical = 1.dp),
+                        .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
                 )
                 Spacer(Modifier.width(Space.x2))
             }
@@ -817,7 +817,7 @@ private fun ReplyCard(
                         modifier = Modifier
                             .clip(RoundedCornerShape(Radius.badge))
                             .clickable { onOpenInApp(reply.oid, reply.rpid, reply.dynType) }
-                            .padding(vertical = 2.dp),
+                            .padding(vertical = Space.compactVertical),
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.PlayCircleOutline,
@@ -843,7 +843,7 @@ private fun ReplyCard(
                         modifier = Modifier
                             .clip(RoundedCornerShape(Radius.badge))
                             .clickable { onOpen(reply.targetUrl) }
-                            .padding(vertical = 2.dp),
+                            .padding(vertical = Space.compactVertical),
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
@@ -979,7 +979,7 @@ private fun LiveDanmakuCard(item: AicuLiveDanmaku, onOpen: (String) -> Unit) {
                     modifier = Modifier
                         .clip(RoundedCornerShape(Radius.badge))
                         .clickable { onOpen(item.targetUrl) }
-                        .padding(horizontal = Space.x1, vertical = 2.dp),
+                        .padding(horizontal = Space.x1, vertical = Space.compactVertical),
                 )
             }
         }

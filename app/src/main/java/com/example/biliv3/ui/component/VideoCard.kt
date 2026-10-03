@@ -195,7 +195,7 @@ fun VideoCard(
                     tint = colors.onOverlay,
                     modifier = Modifier.size(13.dp),
                 )
-                Spacer(Modifier.width(2.dp))
+                Spacer(Modifier.width(Space.micro))
                 Text(
                     text = formatCount(video.playCount),
                     style = MaterialTheme.typography.labelMedium.copy(
@@ -344,7 +344,7 @@ private fun DurationBadge(text: String, modifier: Modifier = Modifier) {
         modifier = modifier
             .clip(RoundedCornerShape(Radius.badge))
             .background(colors.overlayCover)
-            .padding(horizontal = 4.dp, vertical = 1.dp),
+            .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
     ) {
         // 时长用等宽：网格里多个卡片的时长会上下对齐，
         // 比例字体下 `1:05` 与 `11:05` 宽度差很多，整列看着参差。

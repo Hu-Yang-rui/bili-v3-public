@@ -242,7 +242,7 @@ fun CommentSection(
             ) {
                 CircularProgressIndicator(
                     color = colors.brandPrimary,
-                    strokeWidth = 2.dp,
+                    strokeWidth = Space.trackHeight,
                     modifier = Modifier.size(Sizes.iconXl),
                 )
             }
@@ -307,7 +307,7 @@ fun CommentSection(
                         when {
                             loadingMore -> CircularProgressIndicator(
                                 color = colors.brandPrimary,
-                                strokeWidth = 2.dp,
+                                strokeWidth = Space.trackHeight,
                                 modifier = Modifier.size(Sizes.iconXl),
                             )
                             hasMore -> Text(
@@ -651,7 +651,7 @@ private fun CommentRow(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(Radius.badge))
                                     .background(colors.brandPrimary)
-                                    .padding(horizontal = 4.dp, vertical = 1.dp),
+                                    .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
                             )
                         }
                     }
@@ -781,7 +781,7 @@ private fun CommentRow(
                             },
                     )
                     if (comment.likeCount > 0) {
-                        Spacer(Modifier.width(2.dp))
+                        Spacer(Modifier.width(Space.micro))
                         Text(
                             text = formatCount(comment.likeCount),
                             style = MaterialTheme.typography.labelMedium.copy(
@@ -835,7 +835,7 @@ private fun CommentRow(
                     .padding(start = COMMENT_AVATAR + Space.x2)
                     .clip(RoundedCornerShape(Radius.badge))
                     .clickable(onClick = onToggleReplies)
-                    .padding(horizontal = Space.x1, vertical = 2.dp),
+                    .padding(horizontal = Space.x1, vertical = Space.compactVertical),
             )
         }
 
@@ -868,7 +868,7 @@ private fun CommentRow(
                             color = replyGuideColor,
                             start = Offset(x, 0f),
                             end = Offset(x, size.height),
-                            strokeWidth = 2.dp.toPx(),
+                            strokeWidth = Space.trackHeight.toPx(),
                         )
                     }
                     .padding(start = Space.x3),
@@ -924,7 +924,7 @@ private fun CommentRow(
                             .clip(RoundedCornerShape(Radius.badge))
                             // 跳楼中楼详情页（真正分页拉全量）
                             .clickable { onViewAllReplies() }
-                            .padding(horizontal = Space.x1, vertical = 2.dp),
+                            .padding(horizontal = Space.x1, vertical = Space.compactVertical),
                     )
                 }
             }

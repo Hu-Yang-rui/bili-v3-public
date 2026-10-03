@@ -360,7 +360,7 @@ private fun EpisodeCell(ep: BangumiEpisode, onClick: () -> Unit) {
             textAlign = TextAlign.Center,
         )
         if (ep.title.isNotEmpty()) {
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Space.micro))
             Text(
                 text = ep.title,
                 style = MaterialTheme.typography.labelMedium.copy(
@@ -373,7 +373,7 @@ private fun EpisodeCell(ep: BangumiEpisode, onClick: () -> Unit) {
             )
         }
         if (!playable) {
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Space.micro))
             Text(
                 text = "官方 App",
                 style = MaterialTheme.typography.labelMedium.copy(

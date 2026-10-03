@@ -403,7 +403,7 @@ fun PlayerControls(
                         ),
                     )
                     // 紧凑：垂直 2dp、水平 8dp（播放器每多一像素都是从画面里抢的）
-                    .padding(horizontal = Space.x2, vertical = 2.dp),
+                    .padding(horizontal = Space.x2, vertical = Space.compactVertical),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // 当前进度（等宽）

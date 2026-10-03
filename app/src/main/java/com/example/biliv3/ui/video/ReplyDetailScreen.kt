@@ -188,7 +188,7 @@ fun ReplyDetailScreen(
                     ) {
                         CircularProgressIndicator(
                             color = colors.brandPrimary,
-                            strokeWidth = 2.dp,
+                            strokeWidth = Space.trackHeight,
                             modifier = Modifier.size(Sizes.iconXl),
                         )
                     }
@@ -221,7 +221,7 @@ fun ReplyDetailScreen(
                             when {
                                 loadingMore -> CircularProgressIndicator(
                                     color = colors.brandPrimary,
-                                    strokeWidth = 2.dp,
+                                    strokeWidth = Space.trackHeight,
                                     modifier = Modifier.size(Sizes.iconXl),
                                 )
                                 !hasMore -> Text(
@@ -336,7 +336,7 @@ private fun ReplyRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Space.micro))
             Text(
                 text = comment.content,
                 style = MaterialTheme.typography.bodyMedium.copy(
@@ -375,7 +375,7 @@ private fun ReplyRow(
                         .clickable(onClick = onLike),
                 )
                 if (comment.likeCount > 0) {
-                    Spacer(Modifier.width(2.dp))
+                    Spacer(Modifier.width(Space.micro))
                     Text(
                         text = formatCount(comment.likeCount),
                         style = MaterialTheme.typography.labelMedium.copy(

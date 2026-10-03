@@ -137,7 +137,7 @@ fun DynamicScreen(
                 ) {
                     CircularProgressIndicator(
                         color = colors.brandPrimary,
-                        strokeWidth = 2.dp,
+                        strokeWidth = Space.trackHeight,
                         modifier = Modifier.size(Sizes.iconXl),
                     )
                 }
@@ -178,7 +178,7 @@ fun DynamicScreen(
                             when {
                                 loadingMore -> CircularProgressIndicator(
                                     color = colors.brandPrimary,
-                                    strokeWidth = 2.dp,
+                                    strokeWidth = Space.trackHeight,
                                     modifier = Modifier.size(Sizes.iconXl),
                                 )
                                 !hasMore -> Text(

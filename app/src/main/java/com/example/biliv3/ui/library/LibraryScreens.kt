@@ -380,7 +380,7 @@ private fun VisibilityBadge(isPrivate: Boolean) {
         modifier = Modifier
             .clip(RoundedCornerShape(Radius.badge))
             .background(colors.bgHover)
-            .padding(horizontal = 4.dp, vertical = 1.dp),
+            .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
     )
 }
 
@@ -616,7 +616,7 @@ private fun FavoriteRow(
                         .padding(2.dp)
                         .clip(RoundedCornerShape(Radius.badge))
                         .background(colors.overlayCover)
-                        .padding(horizontal = 4.dp, vertical = 1.dp),
+                        .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
                 )
             }
         }
@@ -803,7 +803,7 @@ private fun <T> LoadMoreList(
                 when {
                     loadingMore -> CircularProgressIndicator(
                         color = colors.brandPrimary,
-                        strokeWidth = 2.dp,
+                        strokeWidth = Space.trackHeight,
                         modifier = Modifier.size(Sizes.iconXl),
                     )
                     !hasMore -> Text(
@@ -854,13 +854,13 @@ private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .fillMaxWidth()
-                        .height(2.dp)
+                        .height(Space.trackHeight)
                         .background(colors.overlayCover),
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(entry.progressRatio)
-                            .height(2.dp)
+                            .height(Space.trackHeight)
                             .background(colors.brandPrimary),
                     )
                 }
@@ -894,7 +894,7 @@ private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
             )
             // 继续播放提示
             if (entry.progressSeconds > 0 && !entry.isFinished) {
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Space.micro))
                 Text(
                     text = "看到 ${formatDuration(entry.progressSeconds)}",
                     style = MaterialTheme.typography.labelMedium.copy(
@@ -1005,7 +1005,7 @@ private fun LoadingPanel() {
     ) {
         CircularProgressIndicator(
             color = BiliTheme.colors.brandPrimary,
-            strokeWidth = 2.dp,
+            strokeWidth = Space.trackHeight,
             modifier = Modifier.size(Sizes.iconXl * 1.5f),
         )
     }

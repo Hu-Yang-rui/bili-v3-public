@@ -376,7 +376,7 @@ fun TechInfoRow(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 2.dp),
+                    .padding(vertical = Space.compactVertical),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(

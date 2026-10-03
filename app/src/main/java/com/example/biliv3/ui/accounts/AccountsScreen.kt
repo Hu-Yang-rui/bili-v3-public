@@ -440,7 +440,7 @@ private fun AccountRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Space.micro))
             Text(
                 text = "UID ${account.mid}",
                 style = MaterialTheme.typography.labelMedium.copy(
@@ -455,7 +455,7 @@ private fun AccountRow(
             // 切换中：转圈（给明确反馈，不是"点了没反应"）
             switching -> CircularProgressIndicator(
                 color = colors.brandPrimary,
-                strokeWidth = 2.dp,
+                strokeWidth = Space.trackHeight,
                 modifier = Modifier.size(Sizes.iconXl),
             )
 

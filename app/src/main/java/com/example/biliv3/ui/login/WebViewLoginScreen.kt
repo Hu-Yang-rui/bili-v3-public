@@ -320,7 +320,7 @@ fun WebViewLoginScreen(
                 ) {
                     CircularProgressIndicator(
                         color = colors.brandPrimary,
-                        strokeWidth = 2.dp,
+                        strokeWidth = Space.trackHeight,
                         modifier = Modifier.size(Sizes.iconXl * 1.5f),
                     )
                 }

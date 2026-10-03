@@ -178,7 +178,7 @@ fun SkippedBanner(
                     tint = colors.brandPrimary,
                     modifier = Modifier.size(Sizes.iconSm),
                 )
-                Spacer(Modifier.width(2.dp))
+                Spacer(Modifier.width(Space.micro))
                 Text(
                     text = "撤销",
                     style = MaterialTheme.typography.labelMedium.copy(

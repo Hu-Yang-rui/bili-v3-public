@@ -606,7 +606,7 @@ private fun SwitchRow(
                 ),
             )
             if (subtitle != null) {
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Space.micro))
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.labelMedium.copy(
@@ -721,7 +721,7 @@ private fun KeywordBlockRow(
                         color = colors.textPrimary,
                     ),
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Space.micro))
                 Text(
                     text = if (keywords.isEmpty()) {
                         "点此添加（空格或逗号分隔多个）"
@@ -810,7 +810,7 @@ private fun ActionRow(
                 ),
             )
             if (subtitle != null) {
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Space.micro))
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.labelMedium.copy(

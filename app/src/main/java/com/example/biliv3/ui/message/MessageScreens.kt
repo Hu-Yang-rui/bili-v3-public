@@ -156,7 +156,7 @@ fun MessageListScreen(
             ) {
                 CircularProgressIndicator(
                     color = colors.brandPrimary,
-                    strokeWidth = 2.dp,
+                    strokeWidth = Space.trackHeight,
                     modifier = Modifier.size(Sizes.iconXl),
                 )
             }
@@ -243,7 +243,7 @@ private fun SessionRow(
                 overflow = TextOverflow.Ellipsis,
             )
             if (session.lastMessage.isNotEmpty()) {
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Space.micro))
                 Text(
                     text = session.lastMessage,
                     style = MaterialTheme.typography.labelMedium.copy(
@@ -375,7 +375,7 @@ fun ChatScreen(
             ) {
                 CircularProgressIndicator(
                     color = colors.brandPrimary,
-                    strokeWidth = 2.dp,
+                    strokeWidth = Space.trackHeight,
                     modifier = Modifier.size(Sizes.iconXl),
                 )
             }

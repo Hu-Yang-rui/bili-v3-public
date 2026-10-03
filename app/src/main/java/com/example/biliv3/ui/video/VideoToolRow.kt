@@ -190,12 +190,12 @@ private fun TabItem(
             ),
             maxLines = 1,
         )
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(Space.micro))
         // 下划线：选中时才显示（高度固定，避免切换时行高跳动）
         Box(
             modifier = Modifier
                 .width(TAB_UNDERLINE)
-                .height(2.dp)
+                .height(Space.trackHeight)
                 .background(
                     if (selected) colors.brandPrimary else androidx.compose.ui.graphics.Color.Transparent,
                 ),

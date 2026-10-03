@@ -161,7 +161,7 @@ fun BangumiScreen(
                             color = if (selected) colors.textPrimary else colors.textSecondarySafe,
                         ),
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(Space.x1))
                     Box(
                         modifier = Modifier
                             .width(20.dp)
@@ -257,7 +257,7 @@ private fun BangumiCard(item: BangumiItem, onClick: () -> Unit) {
                         .padding(Space.x1 + 2.dp)
                         .clip(RoundedCornerShape(Radius.badge))
                         .background(colors.overlayCover)
-                        .padding(horizontal = 4.dp, vertical = 1.dp),
+                        .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
                 ) {
                     Text(
                         text = "%.1f".format(item.score),
@@ -287,7 +287,7 @@ private fun BangumiCard(item: BangumiItem, onClick: () -> Unit) {
 
         // 更新状态（如「全8话」）
         if (item.indexShow.isNotEmpty()) {
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Space.micro))
             Text(
                 text = item.indexShow,
                 style = MaterialTheme.typography.labelMedium.copy(

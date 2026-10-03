@@ -202,7 +202,7 @@ fun LiveScreen(
                         when {
                             loadingMore -> CircularProgressIndicator(
                                 color = colors.brandPrimary,
-                                strokeWidth = 2.dp,
+                                strokeWidth = Space.trackHeight,
                                 modifier = Modifier.size(Sizes.iconXl),
                             )
                             !hasMore -> Text(
@@ -277,7 +277,7 @@ private fun LiveCard(room: LiveRoom, onClick: () -> Unit) {
                         .padding(Space.x1 + 2.dp)
                         .clip(RoundedCornerShape(Radius.badge))
                         .background(colors.overlayCover)
-                        .padding(horizontal = 4.dp, vertical = 1.dp),
+                        .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
                 )
             }
         }
@@ -294,7 +294,7 @@ private fun LiveCard(room: LiveRoom, onClick: () -> Unit) {
             overflow = TextOverflow.Ellipsis,
         )
 
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(Space.micro))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(

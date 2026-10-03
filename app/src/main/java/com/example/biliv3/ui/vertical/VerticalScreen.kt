@@ -169,7 +169,7 @@ fun VerticalScreen(
             ) {
                 CircularProgressIndicator(
                     color = colors.brandPrimary,
-                    strokeWidth = 2.dp,
+                    strokeWidth = Space.trackHeight,
                     modifier = Modifier.size(Sizes.iconXl * 1.5f),
                 )
             }
@@ -372,7 +372,7 @@ private fun VerticalPage(
             ) {
                 CircularProgressIndicator(
                     color = Color.White,
-                    strokeWidth = 2.dp,
+                    strokeWidth = Space.trackHeight,
                     modifier = Modifier.size(Sizes.iconXl * 1.5f),
                 )
             }
@@ -483,7 +483,7 @@ private fun ActionItem(
             tint = tint,
             modifier = Modifier.size(ACTION_ICON),
         )
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(Space.micro))
         // 计数用等宽：数字每秒/每次互动都在变，比例字体下整列会左右抖动。
         // 竖屏互动栏是纵向排列的多个读数，抖动尤其明显。
         MonoReadout(

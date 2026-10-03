@@ -92,7 +92,7 @@ fun ProfileScreen(
             ) {
                 CircularProgressIndicator(
                     color = colors.brandPrimary,
-                    strokeWidth = 2.dp,
+                    strokeWidth = Space.trackHeight,
                     modifier = Modifier.size(Sizes.iconXl),
                 )
             }
@@ -149,7 +149,7 @@ private fun GuestPanel(
                         color = colors.textPrimary,
                     ),
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Space.micro))
                 Text(
                     text = "登录后可同步历史与收藏",
                     style = MaterialTheme.typography.labelMedium.copy(
@@ -279,7 +279,7 @@ private fun LoggedInPanel(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Space.micro))
                 Text(
                     text = "UID ${user.mid}",
                     style = MaterialTheme.typography.labelMedium.copy(

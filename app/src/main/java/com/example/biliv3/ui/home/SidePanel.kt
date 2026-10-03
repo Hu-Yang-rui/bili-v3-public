@@ -159,7 +159,7 @@ private fun PanelHeader(
                 modifier = Modifier
                     .clip(RoundedCornerShape(Radius.badge))
                     .clickable(onClick = onAction)
-                    .padding(horizontal = Space.x1, vertical = 2.dp),
+                    .padding(horizontal = Space.x1, vertical = Space.compactVertical),
             )
         }
     }
@@ -294,7 +294,7 @@ private fun LivePanel(
                                 .padding(Space.x1)
                                 .clip(RoundedCornerShape(Radius.badge))
                                 .background(colors.stateLive)
-                                .padding(horizontal = 4.dp, vertical = 1.dp),
+                                .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
                         ) {
                             Box(
                                 modifier = Modifier

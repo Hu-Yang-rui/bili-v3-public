@@ -449,7 +449,7 @@ private fun androidx.compose.foundation.lazy.grid.LazyGridScope.MainColumnItems(
             when {
                 loadingMore -> CircularProgressIndicator(
                     color = colors.brandPrimary,
-                    strokeWidth = 2.dp,
+                    strokeWidth = Space.trackHeight,
                     modifier = Modifier.size(24.dp),
                 )
                 !hasMore -> Text(

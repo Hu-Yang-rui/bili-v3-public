@@ -160,7 +160,7 @@ private fun CategoryTab(
             maxLines = 1,
         )
 
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Space.x1))
 
         Box(
             modifier = Modifier

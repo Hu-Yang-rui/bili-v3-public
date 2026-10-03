@@ -98,7 +98,7 @@ fun Footer(
                         modifier = Modifier
                             .clip(RoundedCornerShape(Radius.badge))
                             .clickable { onOpenLink(label) }
-                            .padding(horizontal = Space.x1, vertical = 2.dp),
+                            .padding(horizontal = Space.x1, vertical = Space.compactVertical),
                     )
                     if (i != links.lastIndex) {
                         Text(
@@ -204,7 +204,7 @@ fun BottomNav(
                     },
                     modifier = Modifier.size(Sizes.iconXl),
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Space.micro))
                 Text(
                     text = item.label,
                     style = MaterialTheme.typography.labelSmall.copy(

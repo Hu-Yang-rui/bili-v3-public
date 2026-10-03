@@ -155,7 +155,7 @@ fun RankingScreen(
                             color = if (selected) colors.textPrimary else colors.textSecondarySafe,
                         ),
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(Space.x1))
                     Box(
                         modifier = Modifier
                             .width(20.dp)
@@ -177,7 +177,7 @@ fun RankingScreen(
             ) {
                 CircularProgressIndicator(
                     color = colors.brandPrimary,
-                    strokeWidth = 2.dp,
+                    strokeWidth = Space.trackHeight,
                     modifier = Modifier.size(Sizes.iconXl * 1.5f),
                 )
             }

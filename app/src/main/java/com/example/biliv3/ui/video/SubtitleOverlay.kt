@@ -137,7 +137,7 @@ private fun SubtitleLine(text: String, emphasized: Boolean) {
         modifier = Modifier
             .clip(RoundedCornerShape(Radius.badge + 2.dp))
             .background(colors.subtitleScrim)
-            .padding(horizontal = Space.x2, vertical = 2.dp),
+            .padding(horizontal = Space.x2, vertical = Space.compactVertical),
     ) {
         Text(
             text = text,

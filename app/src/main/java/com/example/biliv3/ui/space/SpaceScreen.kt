@@ -196,7 +196,7 @@ fun SpaceScreen(
             ) {
                 CircularProgressIndicator(
                     color = colors.brandPrimary,
-                    strokeWidth = 2.dp,
+                    strokeWidth = Space.trackHeight,
                     modifier = Modifier.size(Sizes.iconXl),
                 )
             }
@@ -300,7 +300,7 @@ fun SpaceScreen(
                             ) {
                                 CircularProgressIndicator(
                                     color = colors.brandPrimary,
-                                    strokeWidth = 2.dp,
+                                    strokeWidth = Space.trackHeight,
                                     modifier = Modifier.size(Sizes.iconXl),
                                 )
                             }
@@ -396,11 +396,11 @@ private fun ProfileHeader(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(Radius.badge))
                                 .background(colors.brandPrimary)
-                                .padding(horizontal = 4.dp, vertical = 1.dp),
+                                .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
                         )
                     }
                 }
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Space.micro))
                 Text(
                     text = "UID $mid",
                     style = MaterialTheme.typography.labelMedium.copy(
@@ -574,12 +574,12 @@ private fun TabRow(
                         color = if (isSelected) colors.textPrimary else colors.textSecondarySafe,
                     ),
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Space.micro))
                 // 下划线固定高度，切换时不抖
                 Box(
                     modifier = Modifier
                         .width(20.dp)
-                        .height(2.dp)
+                        .height(Space.trackHeight)
                         .background(
                             if (isSelected) colors.brandPrimary
                             else androidx.compose.ui.graphics.Color.Transparent,

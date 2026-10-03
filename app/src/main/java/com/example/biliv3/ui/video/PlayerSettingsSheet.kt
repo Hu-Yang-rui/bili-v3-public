@@ -361,7 +361,7 @@ private fun SubtitleSection(
             ) {
                 CircularProgressIndicator(
                     color = colors.brandPrimary,
-                    strokeWidth = 2.dp,
+                    strokeWidth = Space.trackHeight,
                     modifier = Modifier.size(Sizes.iconLg),
                 )
                 Spacer(Modifier.width(Space.x3))
