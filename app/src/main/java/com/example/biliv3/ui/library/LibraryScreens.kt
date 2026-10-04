@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -1074,7 +1075,18 @@ private fun VideoRow(video: VideoItem, onClick: () -> Unit) {
             // 列表用留白分组，不用卡片分组。
             .clickable(onClick = onClick)
             .padding(horizontal = Space.x4, vertical = Space.x2),
-        verticalAlignment = Alignment.Top,
+        // 🔴 内容**垂直居中**，不是 `Alignment.Top`（v1.4.2 修 #2）。
+        //
+        // 首版是 Top：缩略图 80dp 高，而文字块只有 2 行标题 + 1 行元信息
+        // （约 56dp），于是文字贴着顶部、缩略图下方留 24dp 空白 ——
+        // 视觉上就是用户反馈的「文本偏左下、信息堆在左下角」。
+        //
+        // 改居中后文字与缩略图形成一条稳定的中轴线：
+        // ┌────────────┐  标题
+        // │            │  UP · 播放
+        // │  thumbnail │
+        // └────────────┘
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
@@ -1096,10 +1108,17 @@ private fun VideoRow(video: VideoItem, onClick: () -> Unit) {
                 text = video.title,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = FontSize.body,
+                    lineHeight = FontSize.bodyLine,
                     color = colors.textPrimary,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                // 🔴 预留两行高度（v1.4.2 修 #2）。
+                //
+                // 与 `VideoCard` 同一做法：标题一行时不再让元信息上移，
+                // 标题两行时也不会把行撑高 —— 不同视频的行高因此一致，
+                // 滚动时不会有"忽高忽低"的跳动。
+                modifier = Modifier.heightIn(min = ROW_TITLE_MIN_HEIGHT),
             )
             Spacer(Modifier.height(Space.x1))
             Text(
@@ -1193,3 +1212,19 @@ private fun formatDuration(seconds: Int): String {
  */
 private val HISTORY_THUMB_WIDTH = 128.dp
 private val HISTORY_THUMB_HEIGHT = 80.dp
+
+/**
+ * 列表行标题的最小高度（两行）。
+ *
+ * ## 为什么必须预留
+ *
+ * 不预留时，标题一行 / 两行会得到不同的文字块高度，而
+ * [VideoRow] 的内容是垂直居中的 —— 于是**元信息行的位置随标题长度浮动**，
+ * 同一屏里不同视频的 UP 名/播放量不在同一条基线上。
+ *
+ * `VideoCard` 用 `heightIn(min = 40.dp)` 解决同一问题。
+ * 这里取 42dp：`FontSize.bodyLine` 是 21sp，两行即 42 ——
+ * 字面量在这里可接受，因为 `sp → dp` 需要 `LocalDensity`，
+ * 而本常量在 Composable 之外（注释记下这个换算关系即可）。
+ */
+private val ROW_TITLE_MIN_HEIGHT = 42.dp
