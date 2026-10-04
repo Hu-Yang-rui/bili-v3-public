@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/Kotlin-2.0.21-4FD1C5?style=flat-square&labelColor=171B22" alt="Kotlin">
   <img src="https://img.shields.io/badge/Compose-BOM%202024.09-4FD1C5?style=flat-square&labelColor=171B22" alt="Compose">
   <img src="https://img.shields.io/badge/Media3-1.4.1-4FD1C5?style=flat-square&labelColor=171B22" alt="Media3">
-  <img src="https://img.shields.io/badge/tests-379%20passing-4FD1C5?style=flat-square&labelColor=171B22" alt="379 tests">
+  <img src="https://img.shields.io/badge/tests-384%20passing-4FD1C5?style=flat-square&labelColor=171B22" alt="384 tests">
 </p>
 
 <p>
@@ -309,7 +309,7 @@ The second is the dangerous one: it needs no root and no user trust. Same packag
   <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/Hu-Yang-rui/bili-v3-public?style=for-the-badge&label=DOWNLOAD%20APK&color=FF8FB0&labelColor=171B22" alt="Download the latest release APK"></a>
 </p>
 
-**`bili-v3-v1.4.1-release.apk`** · 3.42 MB · `versionCode 32`
+**`bili-v3-v1.4.2-release.apk`** · 3.44 MB · `versionCode 33`
 
 </div>
 
@@ -383,7 +383,7 @@ This is a personal project that happens to be public. Issues and pull requests a
 |---|---|
 | **Home** | recommendation feed (WBI-signed), banner carousel, 12 category entries, live sidebar |
 | **Video detail** | DASH playback, part switching, quality / speed, resume prompt |
-| **Player** | unified core, queue, sleep timer, PiP, background playback, media session |
+| **Player** | unified core, queue, sleep timer, PiP (incl. optional auto-enter on leaving the app), background playback, media session |
 | **Listen / Vinyl** | audio-only mode with no video track; rotating record |
 | **Lyrics** | provider chain, LRC parsing, auto-scroll, offset nudge |
 | **Danmaku** | custom renderer, protobuf parsing, local filtering by type and keyword |
