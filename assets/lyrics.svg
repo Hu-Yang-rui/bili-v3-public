@@ -1,30 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 380" width="1200" height="380" role="img" aria-label="歌词：可插拔 LyricsProvider 链式回退，字幕优先、第三方兜底">
-<title>歌词：可插拔 LyricsProvider 链式回退，字幕优先、第三方兜底</title>
-<defs>
-<linearGradient id="fadeR" x1="0" y1="0" x2="1" y2="0">
-<stop offset="0" stop-color="#0E1116" stop-opacity="0"/><stop offset="1" stop-color="#0E1116" stop-opacity="1"/>
-</linearGradient>
-<radialGradient id="glow" cx="50%" cy="50%" r="50%">
-<stop offset="0" stop-color="#FF8FB0" stop-opacity="0.10"/><stop offset="1" stop-color="#FF8FB0" stop-opacity="0"/>
-</radialGradient>
-</defs>
-<rect width="1200" height="380" fill="#0E1116"/>
-<text x="72" y="62" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">08</text>
-<rect x="98" y="53" width="22" height="1" fill="#66707F"/>
-<text x="130" y="62" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="1.5">LYRICS</text>
-<rect x="72" y="96" width="700" height="220" fill="#171B22" stroke="#ffffff14"/>
-<text x="422" y="146" fill="#66707F" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13" text-anchor="middle" opacity="0.35"><animate attributeName="opacity" values="0.35;1;0.35" dur="8s" begin="0.0s" repeatCount="indefinite"/></text>
-<text x="422" y="192" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" text-anchor="middle" opacity="0.6"><animate attributeName="opacity" values="0.6;1;0.6" dur="8s" begin="0.6s" repeatCount="indefinite"/></text>
-<text x="422" y="238" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="19" text-anchor="middle" opacity="1.0"><animate attributeName="opacity" values="1.0;1;1.0" dur="8s" begin="1.2s" repeatCount="indefinite"/></text>
-<text x="422" y="284" fill="#66707F" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13" text-anchor="middle" opacity="0.35"><animate attributeName="opacity" values="0.35;1;0.35" dur="8s" begin="1.7999999999999998s" repeatCount="indefinite"/></text>
-<rect x="96" y="184" width="3" height="26" fill="#FF8FB0"><animate attributeName="y" values="138;184;230;276;230;184;138" dur="8s" repeatCount="indefinite"/></rect>
-<rect x="808" y="96" width="320" height="220" fill="#1F2530" stroke="#ffffff14"/>
-<text x="832" y="128" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="start" letter-spacing="1.5">PROVIDER CHAIN</text>
-<rect x="832" y="142" width="272" height="1" fill="#ffffff14"/>
-<text x="832" y="178" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">SubtitleLyricsProvider</text>
-<text x="832" y="196" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">字幕优先</text>
-<text x="832" y="230" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">third-party provider</text>
-<text x="832" y="248" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">兜底</text>
-<rect x="832" y="268" width="272" height="1" fill="#ffffff14"/>
-<text x="832" y="296" fill="#4FD1C5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="start" letter-spacing="0">NoLyrics ≠ Failed</text>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 560" width="1600" height="560" role="img" aria-labelledby="ttl dsc">
+<title id="ttl">BiliV3 lyrics</title>
+<desc id="dsc">A lyrics view centred on the current line, with the previous and next lines dimmed above and below. Lyrics come from a provider chain that tries subtitles first and falls back to a third party.</desc>
+<defs></defs>
+<rect width="1600" height="560" fill="#0E1116"/>
+<text x="80" y="92" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">07</text>
+<rect x="124" y="84" width="40" height="1" fill="#66707F"/>
+<text x="180" y="92" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="2">LYRICS</text>
+<text x="800" y="216" fill="#66707F" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="middle" letter-spacing="0" opacity="0.55">只愿君心似我心</text>
+<text x="800" y="336" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="44" font-weight="600" text-anchor="middle" letter-spacing="0">此水几时休</text>
+<rect x="650" y="368" width="300" height="2" fill="#FF8FB0"/>
+<text x="800" y="452" fill="#66707F" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="middle" letter-spacing="0" opacity="0.4">此恨何时已</text>
+<rect x="80" y="496" width="1440" height="1" fill="#ffffff14"/>
+<text x="80" y="532" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="1.5">SUBTITLE FIRST · PROVIDER CHAIN · LRC OFFSET</text>
+<text x="1520" y="532" fill="#4FD1C5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="end" letter-spacing="1.5">NO LYRICS ≠ FAILED</text>
 </svg>

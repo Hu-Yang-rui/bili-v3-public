@@ -1,41 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 460" width="1200" height="460" role="img" aria-label="播放队列：独立于播放器，支持随机、循环、拖拽排序">
-<title>播放队列：独立于播放器，支持随机、循环、拖拽排序</title>
-<defs>
-<linearGradient id="fadeR" x1="0" y1="0" x2="1" y2="0">
-<stop offset="0" stop-color="#0E1116" stop-opacity="0"/><stop offset="1" stop-color="#0E1116" stop-opacity="1"/>
-</linearGradient>
-<radialGradient id="glow" cx="50%" cy="50%" r="50%">
-<stop offset="0" stop-color="#FF8FB0" stop-opacity="0.10"/><stop offset="1" stop-color="#FF8FB0" stop-opacity="0"/>
-</radialGradient>
-</defs>
-<rect width="1200" height="460" fill="#0E1116"/>
-<text x="72" y="62" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">07</text>
-<rect x="98" y="53" width="22" height="1" fill="#66707F"/>
-<text x="130" y="62" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="1.5">QUEUE</text>
-<rect x="72" y="96" width="1056" height="330" fill="#171B22" stroke="#ffffff14"/>
-<rect x="72" y="96" width="4" height="54" fill="#FF8FB0"><animate attributeName="y" values="96;150;204;258;312;366;312;258;204;150;96" dur="16s" repeatCount="indefinite"/></rect>
-<text x="100" y="129" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">01  循环歌单｜FLUXO TROPICAL</text>
-<text x="1108" y="129" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="end" letter-spacing="0">2:10</text>
-<rect x="72" y="150" width="1056" height="1" fill="#ffffff14"/>
-<text x="100" y="183" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">02  只愿君心似我心</text>
-<text x="1108" y="183" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="end" letter-spacing="0">3:13</text>
-<rect x="72" y="204" width="1056" height="1" fill="#ffffff14"/>
-<text x="100" y="237" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">03  【一百日】第二日</text>
-<text x="1108" y="237" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="end" letter-spacing="0">4:16</text>
-<rect x="72" y="258" width="1056" height="1" fill="#ffffff14"/>
-<text x="100" y="291" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">04  猫狗养娃记｜5-8 合集</text>
-<text x="1108" y="291" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="end" letter-spacing="0">5:19</text>
-<rect x="72" y="312" width="1056" height="1" fill="#ffffff14"/>
-<text x="100" y="345" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">05  曾哥来了</text>
-<text x="1108" y="345" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="end" letter-spacing="0">6:22</text>
-<rect x="72" y="366" width="1056" height="1" fill="#ffffff14"/>
-<text x="100" y="399" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">06  小橘的过往</text>
-<text x="1108" y="399" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="end" letter-spacing="0">7:25</text>
-<rect x="72" y="442" width="1056" height="1" fill="#ffffff14"/>
-<rect x="72" y="402" width="132" height="22" fill="#1F2530"/>
-<text x="138.0" y="417" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="middle" letter-spacing="0">SHUFFLE</text>
-<rect x="222" y="402" width="132" height="22" fill="#FF8FB0"/>
-<text x="288.0" y="417" fill="#0E1116" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="middle" letter-spacing="0">REPEAT ALL</text>
-<rect x="372" y="402" width="132" height="22" fill="#1F2530"/>
-<text x="438.0" y="417" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="middle" letter-spacing="0">DRAG REORDER</text>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 560" width="1600" height="560" role="img" aria-labelledby="ttl dsc">
+<title id="ttl">BiliV3 playback queue</title>
+<desc id="dsc">A five item playback queue. Item 02 is current, marked by a pink bar and a partial progress line. Shuffle is off, repeat all is on, and rows can be dragged to reorder.</desc>
+<defs></defs>
+<rect width="1600" height="560" fill="#0E1116"/>
+<text x="80" y="92" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">06</text>
+<rect x="124" y="84" width="40" height="1" fill="#66707F"/>
+<text x="180" y="92" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="2">QUEUE</text>
+<text x="80" y="180" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">01</text>
+<text x="170" y="180" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">循环歌单｜FLUXO TROPICAL</text>
+<text x="1520" y="180" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="end" letter-spacing="0">10:42</text>
+<rect x="80" y="206" width="1440" height="1" fill="#ffffff14"/>
+<rect x="62" y="222" width="3" height="46" fill="#FF8FB0"/>
+<text x="80" y="248" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">02</text>
+<text x="170" y="248" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">只愿君心似我心【卜算子】</text>
+<text x="1520" y="248" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="end" letter-spacing="0">3:06</text>
+<rect x="170" y="262" width="320" height="3" fill="#ffffff14"/>
+<rect x="170" y="262" width="134.4" height="3" fill="#FF8FB0"/>
+<rect x="80" y="274" width="1440" height="1" fill="#ffffff14"/>
+<text x="80" y="316" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">03</text>
+<text x="170" y="316" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">【一百日】第二日：另一战场</text>
+<text x="1520" y="316" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="end" letter-spacing="0">6:31</text>
+<rect x="80" y="342" width="1440" height="1" fill="#ffffff14"/>
+<text x="80" y="384" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">04</text>
+<text x="170" y="384" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">猫狗养娃记｜5-8 合集</text>
+<text x="1520" y="384" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="end" letter-spacing="0">9:13</text>
+<rect x="80" y="410" width="1440" height="1" fill="#ffffff14"/>
+<text x="80" y="452" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">05</text>
+<text x="170" y="452" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">曾哥来了</text>
+<text x="1520" y="452" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="end" letter-spacing="0">15:00</text>
+<rect x="80" y="478" width="1440" height="1" fill="#ffffff14"/>
+<text x="80" y="536" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="1.5">SHUFFLE OFF · REPEAT ALL · DRAG TO REORDER</text>
 </svg>

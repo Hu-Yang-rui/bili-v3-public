@@ -1,53 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 430" width="1200" height="430" role="img" aria-label="统一播放核心：DASH 音视频分离经 MergingMediaSource 合轨，由 PlaybackController 单一写入状态">
-<title>统一播放核心：DASH 音视频分离经 MergingMediaSource 合轨，由 PlaybackController 单一写入状态</title>
-<defs>
-<linearGradient id="fadeR" x1="0" y1="0" x2="1" y2="0">
-<stop offset="0" stop-color="#0E1116" stop-opacity="0"/><stop offset="1" stop-color="#0E1116" stop-opacity="1"/>
-</linearGradient>
-<radialGradient id="glow" cx="50%" cy="50%" r="50%">
-<stop offset="0" stop-color="#FF8FB0" stop-opacity="0.10"/><stop offset="1" stop-color="#FF8FB0" stop-opacity="0"/>
-</radialGradient>
-</defs>
-<rect width="1200" height="430" fill="#0E1116"/>
-<text x="72" y="62" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">03</text>
-<rect x="98" y="53" width="22" height="1" fill="#66707F"/>
-<text x="130" y="62" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="1.5">PLAYER</text>
-<text x="72" y="108" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="start" letter-spacing="0">DASH 音视频分离</text>
-<rect x="72" y="126" width="220" height="52" fill="#171B22" stroke="#ffffff14"/>
-<text x="90" y="150" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">video.m4s</text>
-<text x="90" y="168" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">H.264 / 1080P60</text>
-<rect x="72" y="190" width="220" height="52" fill="#171B22" stroke="#ffffff14"/>
-<text x="90" y="214" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">audio.m4s</text>
-<text x="90" y="232" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">AAC / 192kbps</text>
-<path d="M292 152 H360 Q376 152 376 168 V196 Q376 212 392 212" fill="none" stroke="#ffffff14"/><path d="M292 216 H360 Q376 216 376 208 V196 Q376 212 392 212" fill="none" stroke="#ffffff14"/>
-<rect x="392" y="182" width="150" height="60" fill="#1F2530" stroke="#ffffff14"/>
-<text x="467" y="206" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="middle" letter-spacing="0">MergingMediaSource</text>
-<text x="467" y="224" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="middle" letter-spacing="0">Media3 1.4.1</text>
-<path d="M542 212 H600" stroke="#ffffff14"/>
-<rect x="600" y="150" width="228" height="124" fill="#171B22" stroke="#FF8FB0" stroke-opacity="0.4"/>
-<text x="618" y="178" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" font-weight="600" text-anchor="start" letter-spacing="0">PlaybackController</text>
-<text x="618" y="198" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">single writer of state</text>
-<rect x="618" y="210" width="192" height="1" fill="#ffffff14"/>
-<text x="618" y="232" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">mode  VIDEO / AUDIO / VINYL</text>
-<text x="618" y="249" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">speed  0.5x — 2.0x</text>
-<text x="618" y="266" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">sleep timer  deadline-based</text>
-<path d="M828 212 H880" stroke="#ffffff14"/>
-<rect x="880" y="76" width="248" height="58" fill="#1F2530" stroke="#ffffff14"/>
-<text x="898" y="102" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">PlaybackQueue</text>
-<text x="898" y="120" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">decoupled</text>
-<circle cx="1108" cy="105" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="2.0s" repeatCount="indefinite"/></circle>
-<rect x="880" y="154" width="248" height="58" fill="#1F2530" stroke="#ffffff14"/>
-<text x="898" y="180" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">MediaSession</text>
-<text x="898" y="198" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">lock screen</text>
-<circle cx="1108" cy="183" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="2.4s" repeatCount="indefinite"/></circle>
-<rect x="880" y="232" width="248" height="58" fill="#1F2530" stroke="#ffffff14"/>
-<text x="898" y="258" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">PlaybackProgress</text>
-<text x="898" y="276" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">bvid:cid</text>
-<circle cx="1108" cy="261" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="2.8s" repeatCount="indefinite"/></circle>
-<rect x="880" y="310" width="248" height="58" fill="#1F2530" stroke="#ffffff14"/>
-<text x="898" y="336" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">PlayerHolder</text>
-<text x="898" y="354" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">Activity-scoped</text>
-<circle cx="1108" cy="339" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="3.2s" repeatCount="indefinite"/></circle>
-<rect x="72" y="372" width="1056" height="1" fill="#ffffff14"/>
-<text x="72" y="400" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">No second player. No second progress store. Every surface reads the same StateFlow.</text>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 560" width="1600" height="560" role="img" aria-labelledby="ttl dsc">
+<title id="ttl">BiliV3 player architecture</title>
+<desc id="dsc">Two DASH media streams, video and audio, converge through MergingMediaSource into a single Playback Core on Media3, which emits to MediaSession, queue and playback progress. One writer of state.</desc>
+<defs></defs>
+<rect width="1600" height="560" fill="#0E1116"/>
+<text x="80" y="92" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">02</text>
+<rect x="124" y="84" width="40" height="1" fill="#66707F"/>
+<text x="180" y="92" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="2">PLAYER</text>
+<text x="80" y="186" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="30" font-weight="500" text-anchor="start" letter-spacing="0">VIDEO STREAM</text>
+<text x="80" y="214" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">DASH · H.264 · 1080P60</text>
+<path d="M80 248 H520 C596 248 604 300 664 300" fill="none" stroke="#ffffff14" stroke-width="1.5"/>
+<text x="80" y="380" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="30" font-weight="500" text-anchor="start" letter-spacing="0">AUDIO STREAM</text>
+<text x="80" y="408" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">DASH · AAC · 192K</text>
+<path d="M80 442 H520 C596 442 604 390 664 390" fill="none" stroke="#ffffff14" stroke-width="1.5"/>
+<rect x="700" y="248" width="3" height="194" fill="#FF8FB0"/>
+<text x="728" y="336" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="44" font-weight="600" text-anchor="start" letter-spacing="0">PLAYBACK CORE</text>
+<text x="728" y="378" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">MERGING MEDIA SOURCE · MEDIA3</text>
+<text x="728" y="412" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">single writer of state</text>
+<path d="M1140 345 H1520" fill="none" stroke="#ffffff14" stroke-width="1.5"/>
+<polygon points="1514,340 1522,345 1514,350" fill="#66707F"/>
+<text x="1140" y="322" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="start" letter-spacing="2">OUTPUT</text>
+<text x="1140" y="384" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">MEDIA SESSION</text>
+<circle cx="1144" cy="404" r="3" fill="#4FD1C5"/>
+<text x="1272" y="384" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">QUEUE</text>
+<circle cx="1276" cy="404" r="3" fill="#4FD1C5"/>
+<text x="1404" y="384" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">PROGRESS</text>
+<circle cx="1408" cy="404" r="3" fill="#4FD1C5"/>
+<rect x="80" y="496" width="1440" height="1" fill="#ffffff14"/>
+<text x="80" y="532" fill="#66707F" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">No second player. Every surface reads the same state.</text>
 </svg>

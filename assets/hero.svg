@@ -1,113 +1,110 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" width="1200" height="620" role="img" aria-label="BiliV3 — 第三方 B 站 Android 客户端，展示播放器、播放队列与黑胶模式">
-<title>BiliV3 — 第三方 B 站 Android 客户端，展示播放器、播放队列与黑胶模式</title>
-<defs>
-<linearGradient id="fadeR" x1="0" y1="0" x2="1" y2="0">
-<stop offset="0" stop-color="#0E1116" stop-opacity="0"/><stop offset="1" stop-color="#0E1116" stop-opacity="1"/>
-</linearGradient>
-<radialGradient id="glow" cx="50%" cy="50%" r="50%">
-<stop offset="0" stop-color="#FF8FB0" stop-opacity="0.10"/><stop offset="1" stop-color="#FF8FB0" stop-opacity="0"/>
-</radialGradient>
-</defs>
-<rect width="1200" height="620" fill="#0E1116"/>
-<ellipse cx="880" cy="250" rx="380" ry="240" fill="url(#glow)"/>
-<text x="72" y="150" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="76" font-weight="700" text-anchor="start" letter-spacing="-2">BiliV3</text>
-<text x="74" y="190" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16" font-weight="400" text-anchor="start" letter-spacing="0">A third-party Bilibili Android client.</text>
-<rect x="74" y="216" width="96" height="1" fill="#FF8FB0"/>
-<text x="74" y="258" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" font-weight="400" text-anchor="start" letter-spacing="0">Kotlin · Jetpack Compose · Media3</text>
-<text x="74" y="282" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">versionName 1.4.1 / versionCode 32</text>
-<rect x="74" y="312" width="63" height="22" fill="#1F2530"/>
-<text x="105.6" y="327" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="middle" letter-spacing="0">KOTLIN</text>
-<rect x="178" y="312" width="70" height="22" fill="#1F2530"/>
-<text x="213.2" y="327" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="middle" letter-spacing="0">COMPOSE</text>
-<rect x="282" y="312" width="63" height="22" fill="#1F2530"/>
-<text x="313.6" y="327" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="middle" letter-spacing="0">MEDIA3</text>
-<rect x="386" y="312" width="49" height="22" fill="#1F2530"/>
-<text x="410.4" y="327" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="middle" letter-spacing="0">DASH</text>
-<rect x="470" y="120" width="660" height="380" fill="#171B22"/>
-<rect x="470" y="120" width="660" height="380" fill="none" stroke="#ffffff14"/>
-<rect x="471" y="121" width="658" height="214" fill="#0A0D12"/>
-<rect x="471" y="147" width="658" height="1" fill="#ffffff14"/>
-<rect x="471" y="175" width="658" height="1" fill="#ffffff14"/>
-<rect x="471" y="203" width="658" height="1" fill="#ffffff14"/>
-<rect x="471" y="231" width="658" height="1" fill="#ffffff14"/>
-<rect x="471" y="259" width="658" height="1" fill="#ffffff14"/>
-<rect x="471" y="287" width="658" height="1" fill="#ffffff14"/>
-<rect x="471" y="315" width="658" height="1" fill="#ffffff14"/>
-<rect x="501" y="237" width="3" height="34" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="8;34;8" dur="1.10s" repeatCount="indefinite"/></rect>
-<rect x="501" y="237" width="3" height="34" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="263;237;263" dur="1.10s" repeatCount="indefinite"/></rect>
-<rect x="524" y="231" width="3" height="40" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="11;40;11" dur="1.32s" repeatCount="indefinite"/></rect>
-<rect x="524" y="231" width="3" height="40" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="260;231;260" dur="1.32s" repeatCount="indefinite"/></rect>
-<rect x="547" y="225" width="3" height="46" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="14;46;14" dur="1.54s" repeatCount="indefinite"/></rect>
-<rect x="547" y="225" width="3" height="46" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="257;225;257" dur="1.54s" repeatCount="indefinite"/></rect>
-<rect x="570" y="219" width="3" height="52" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="17;52;17" dur="1.76s" repeatCount="indefinite"/></rect>
-<rect x="570" y="219" width="3" height="52" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="254;219;254" dur="1.76s" repeatCount="indefinite"/></rect>
-<rect x="593" y="213" width="3" height="58" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="20;58;20" dur="1.98s" repeatCount="indefinite"/></rect>
-<rect x="593" y="213" width="3" height="58" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="251;213;251" dur="1.98s" repeatCount="indefinite"/></rect>
-<rect x="616" y="207" width="3" height="64" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="8;64;8" dur="1.10s" repeatCount="indefinite"/></rect>
-<rect x="616" y="207" width="3" height="64" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="263;207;263" dur="1.10s" repeatCount="indefinite"/></rect>
-<rect x="639" y="201" width="3" height="70" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="11;70;11" dur="1.32s" repeatCount="indefinite"/></rect>
-<rect x="639" y="201" width="3" height="70" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="260;201;260" dur="1.32s" repeatCount="indefinite"/></rect>
-<rect x="662" y="237" width="3" height="34" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="14;34;14" dur="1.54s" repeatCount="indefinite"/></rect>
-<rect x="662" y="237" width="3" height="34" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="257;237;257" dur="1.54s" repeatCount="indefinite"/></rect>
-<rect x="685" y="231" width="3" height="40" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="17;40;17" dur="1.76s" repeatCount="indefinite"/></rect>
-<rect x="685" y="231" width="3" height="40" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="254;231;254" dur="1.76s" repeatCount="indefinite"/></rect>
-<rect x="708" y="225" width="3" height="46" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="20;46;20" dur="1.98s" repeatCount="indefinite"/></rect>
-<rect x="708" y="225" width="3" height="46" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="251;225;251" dur="1.98s" repeatCount="indefinite"/></rect>
-<rect x="731" y="219" width="3" height="52" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="8;52;8" dur="1.10s" repeatCount="indefinite"/></rect>
-<rect x="731" y="219" width="3" height="52" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="263;219;263" dur="1.10s" repeatCount="indefinite"/></rect>
-<rect x="754" y="213" width="3" height="58" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="11;58;11" dur="1.32s" repeatCount="indefinite"/></rect>
-<rect x="754" y="213" width="3" height="58" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="260;213;260" dur="1.32s" repeatCount="indefinite"/></rect>
-<rect x="777" y="207" width="3" height="64" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="14;64;14" dur="1.54s" repeatCount="indefinite"/></rect>
-<rect x="777" y="207" width="3" height="64" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="257;207;257" dur="1.54s" repeatCount="indefinite"/></rect>
-<rect x="800" y="201" width="3" height="70" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="17;70;17" dur="1.76s" repeatCount="indefinite"/></rect>
-<rect x="800" y="201" width="3" height="70" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="254;201;254" dur="1.76s" repeatCount="indefinite"/></rect>
-<rect x="823" y="237" width="3" height="34" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="20;34;20" dur="1.98s" repeatCount="indefinite"/></rect>
-<rect x="823" y="237" width="3" height="34" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="251;237;251" dur="1.98s" repeatCount="indefinite"/></rect>
-<rect x="846" y="231" width="3" height="40" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="8;40;8" dur="1.10s" repeatCount="indefinite"/></rect>
-<rect x="846" y="231" width="3" height="40" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="263;231;263" dur="1.10s" repeatCount="indefinite"/></rect>
-<rect x="869" y="225" width="3" height="46" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="11;46;11" dur="1.32s" repeatCount="indefinite"/></rect>
-<rect x="869" y="225" width="3" height="46" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="260;225;260" dur="1.32s" repeatCount="indefinite"/></rect>
-<rect x="892" y="219" width="3" height="52" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="14;52;14" dur="1.54s" repeatCount="indefinite"/></rect>
-<rect x="892" y="219" width="3" height="52" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="257;219;257" dur="1.54s" repeatCount="indefinite"/></rect>
-<rect x="915" y="213" width="3" height="58" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="17;58;17" dur="1.76s" repeatCount="indefinite"/></rect>
-<rect x="915" y="213" width="3" height="58" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="254;213;254" dur="1.76s" repeatCount="indefinite"/></rect>
-<rect x="938" y="207" width="3" height="64" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="20;64;20" dur="1.98s" repeatCount="indefinite"/></rect>
-<rect x="938" y="207" width="3" height="64" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="251;207;251" dur="1.98s" repeatCount="indefinite"/></rect>
-<rect x="961" y="201" width="3" height="70" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="8;70;8" dur="1.10s" repeatCount="indefinite"/></rect>
-<rect x="961" y="201" width="3" height="70" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="263;201;263" dur="1.10s" repeatCount="indefinite"/></rect>
-<rect x="984" y="237" width="3" height="34" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="11;34;11" dur="1.32s" repeatCount="indefinite"/></rect>
-<rect x="984" y="237" width="3" height="34" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="260;237;260" dur="1.32s" repeatCount="indefinite"/></rect>
-<rect x="1007" y="231" width="3" height="40" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="14;40;14" dur="1.54s" repeatCount="indefinite"/></rect>
-<rect x="1007" y="231" width="3" height="40" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="257;231;257" dur="1.54s" repeatCount="indefinite"/></rect>
-<rect x="1030" y="225" width="3" height="46" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="17;46;17" dur="1.76s" repeatCount="indefinite"/></rect>
-<rect x="1030" y="225" width="3" height="46" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="254;225;254" dur="1.76s" repeatCount="indefinite"/></rect>
-<rect x="1053" y="219" width="3" height="52" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="20;52;20" dur="1.98s" repeatCount="indefinite"/></rect>
-<rect x="1053" y="219" width="3" height="52" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="251;219;251" dur="1.98s" repeatCount="indefinite"/></rect>
-<rect x="1076" y="213" width="3" height="58" fill="#4FD1C5" opacity="0.55"><animate attributeName="height" values="8;58;8" dur="1.10s" repeatCount="indefinite"/></rect>
-<rect x="1076" y="213" width="3" height="58" fill="#4FD1C5" opacity="0.55"><animate attributeName="y" values="263;213;263" dur="1.10s" repeatCount="indefinite"/></rect>
-<rect x="489" y="139" width="70" height="22" fill="#FF8FB0"/>
-<text x="524.2" y="154" fill="#0E1116" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="middle" letter-spacing="0">PLAYING</text>
-<circle cx="579" cy="150" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="2.4s" repeatCount="indefinite"/></circle>
-<rect x="595" y="139" width="56" height="22" fill="#1F2530"/>
-<text x="623.0" y="154" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="middle" letter-spacing="0">AUDIO</text>
-<rect x="667" y="139" width="56" height="22" fill="#1F2530"/>
-<text x="695.0" y="154" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="middle" letter-spacing="0">1080P</text>
-<rect x="739" y="139" width="56" height="22" fill="#1F2530"/>
-<text x="767.0" y="154" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="middle" letter-spacing="0">H.264</text>
-<g><animateTransform attributeName="transform" type="rotate" from="0 1045 217" to="360 1045 217" dur="14s" repeatCount="indefinite"/><circle cx="1045" cy="217" r="46" fill="#12161D" stroke="#ffffff14"/><circle cx="1045" cy="217" r="34" fill="none" stroke="#ffffff14"/><circle cx="1045" cy="217" r="22" fill="none" stroke="#ffffff14"/><circle cx="1045" cy="217" r="14" fill="#1F2530" stroke="#FF8FB0" stroke-opacity="0.55"/><circle cx="1045" cy="217" r="3" fill="#FF8FB0"/></g>
-<rect x="471" y="335" width="658" height="1" fill="#ffffff14"/>
-<text x="496" y="366" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" font-weight="500" text-anchor="start" letter-spacing="0">00:42</text>
-<text x="1104" y="366" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" font-weight="500" text-anchor="end" letter-spacing="0">04:18</text>
-<rect x="566" y="358" width="468" height="3" fill="#1F2530"/>
-<rect x="566" y="358" width="76.3" height="3" fill="#FF8FB0"/>
-<rect x="566" y="355" width="2" height="9" fill="#FF8FB0"><animate attributeName="x" values="566;1032;566" dur="9s" repeatCount="indefinite"/></rect>
-<circle cx="770" cy="420" r="20" fill="#1F2530"/>
-<polygon points="765,411 765,429 780,420" fill="#E8ECF2"/>
-<text x="850" y="424" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="500" text-anchor="start" letter-spacing="0.5">QUEUE</text>
-<text x="928" y="424" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="500" text-anchor="start" letter-spacing="0.5">LYRICS</text>
-<text x="1006" y="424" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="500" text-anchor="start" letter-spacing="0.5">VINYL</text>
-<text x="1084" y="424" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="500" text-anchor="start" letter-spacing="0.5">SETTINGS</text>
-<rect x="471" y="456" width="658" height="1" fill="#ffffff14"/>
-<text x="496" y="484" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">MediaSession · background playback</text>
-<circle cx="1100" cy="480" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="2.4s" repeatCount="indefinite"/></circle>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 760" width="1600" height="760" role="img" aria-labelledby="ttl dsc">
+<title id="ttl">BiliV3 — a third-party Bilibili Android client</title>
+<desc id="dsc">Hero. Left: the BiliV3 wordmark with its four pillars — video playback, audio experience, content management and plugin extension — and version 1.4.1, versionCode 32. Right: a refined player view with a 16:10 video surface, a play button, a thin waveform, a vinyl record, and the 00:42 of 24:51 timeline. Status reads PLAYING, AUDIO, 1080P, H.264.</desc>
+<defs><radialGradient id="amb" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#FF8FB0" stop-opacity="0.085"/><stop offset="1" stop-color="#FF8FB0" stop-opacity="0"/></radialGradient><linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0.05"/><stop offset="0.6" stop-color="#ffffff" stop-opacity="0"/></linearGradient></defs>
+<rect width="1600" height="760" fill="#0E1116"/>
+<ellipse cx="1120" cy="380" rx="470" ry="310" fill="url(#amb)"/>
+<text x="80" y="262" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="96" font-weight="700" text-anchor="start" letter-spacing="-2.5">BiliV3</text>
+<rect x="80" y="300" width="88" height="2" fill="#FF8FB0"/>
+<text x="80" y="358" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">A third-party Bilibili Android client.</text>
+<text x="80" y="432" fill="#66707F" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">Video playback.</text>
+<text x="80" y="476" fill="#66707F" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">Audio experience.</text>
+<text x="80" y="520" fill="#66707F" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">Content management.</text>
+<text x="80" y="564" fill="#66707F" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">Plugin extension.</text>
+<text x="80" y="704" fill="#4FD1C5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="start" letter-spacing="0">v1.4.1</text>
+<text x="160" y="704" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">·</text>
+<text x="184" y="704" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">versionCode 32</text>
+<rect x="660" y="112" width="115" height="30" fill="#FF8FB0"/>
+<text x="717.5" y="133" fill="#0E1116" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="middle" letter-spacing="0">PLAYING</text>
+<rect x="792" y="112" width="89" height="30" fill="#1F2530"/>
+<text x="836.5" y="133" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="middle" letter-spacing="0">AUDIO</text>
+<rect x="924" y="112" width="89" height="30" fill="#1F2530"/>
+<text x="968.5" y="133" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="middle" letter-spacing="0">1080P</text>
+<rect x="1056" y="112" width="89" height="30" fill="#1F2530"/>
+<text x="1100.5" y="133" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="middle" letter-spacing="0">H.264</text>
+<rect x="660" y="184" width="500" height="312" fill="#171B22"/>
+<rect x="660" y="184" width="500" height="312" fill="url(#sheen)"/>
+<rect x="660" y="184" width="500" height="312" fill="none" stroke="#ffffff14"/>
+<rect x="692.0" y="416.5" width="2" height="40.0" fill="#4FD1C5" opacity="0.42"/>
+<rect x="706.5" y="433.3" width="2" height="23.2" fill="#4FD1C5" opacity="0.42"/>
+<rect x="721.1" y="433.3" width="2" height="23.2" fill="#4FD1C5" opacity="0.42"/>
+<rect x="735.6" y="416.5" width="2" height="40.0" fill="#4FD1C5" opacity="0.42"/>
+<rect x="750.1" y="438.9" width="2" height="17.6" fill="#4FD1C5" opacity="0.42"/>
+<rect x="764.7" y="427.7" width="2" height="28.8" fill="#4FD1C5" opacity="0.42"/>
+<rect x="779.2" y="422.1" width="2" height="34.4" fill="#4FD1C5" opacity="0.42"/>
+<rect x="793.7" y="444.5" width="2" height="12.0" fill="#4FD1C5" opacity="0.42"/>
+<rect x="808.3" y="422.1" width="2" height="34.4" fill="#4FD1C5" opacity="0.42"/>
+<rect x="822.8" y="427.7" width="2" height="28.8" fill="#4FD1C5" opacity="0.42"/>
+<rect x="837.3" y="438.9" width="2" height="17.6" fill="#4FD1C5" opacity="0.42"/>
+<rect x="851.9" y="416.5" width="2" height="40.0" fill="#4FD1C5" opacity="0.42"/>
+<rect x="866.4" y="433.3" width="2" height="23.2" fill="#4FD1C5" opacity="0.42"/>
+<rect x="880.9" y="433.3" width="2" height="23.2" fill="#4FD1C5" opacity="0.42"/>
+<rect x="895.5" y="416.5" width="2" height="40.0" fill="#4FD1C5" opacity="0.42"/>
+<rect x="910.0" y="438.9" width="2" height="17.6" fill="#4FD1C5" opacity="0.42"/>
+<rect x="924.5" y="427.7" width="2" height="28.8" fill="#4FD1C5" opacity="0.42"/>
+<rect x="939.1" y="422.1" width="2" height="34.4" fill="#4FD1C5" opacity="0.42"/>
+<rect x="953.6" y="444.5" width="2" height="12.0" fill="#4FD1C5" opacity="0.42"/>
+<rect x="968.1" y="422.1" width="2" height="34.4" fill="#4FD1C5" opacity="0.42"/>
+<rect x="982.7" y="427.7" width="2" height="28.8" fill="#4FD1C5" opacity="0.42"/>
+<rect x="997.2" y="438.9" width="2" height="17.6" fill="#4FD1C5" opacity="0.42"/>
+<rect x="1011.7" y="416.5" width="2" height="40.0" fill="#4FD1C5" opacity="0.42"/>
+<rect x="1026.3" y="433.3" width="2" height="23.2" fill="#4FD1C5" opacity="0.42"/>
+<rect x="1040.8" y="433.3" width="2" height="23.2" fill="#4FD1C5" opacity="0.42"/>
+<rect x="1055.3" y="416.5" width="2" height="40.0" fill="#4FD1C5" opacity="0.42"/>
+<rect x="1069.9" y="438.9" width="2" height="17.6" fill="#4FD1C5" opacity="0.42"/>
+<rect x="1084.4" y="427.7" width="2" height="28.8" fill="#4FD1C5" opacity="0.42"/>
+<rect x="1098.9" y="422.1" width="2" height="34.4" fill="#4FD1C5" opacity="0.42"/>
+<rect x="1113.5" y="444.5" width="2" height="12.0" fill="#4FD1C5" opacity="0.42"/>
+<circle cx="910.0" cy="332.25" r="40" fill="#1F2530"/>
+<circle cx="910.0" cy="332.25" r="40" fill="none" stroke="#ffffff14"/>
+<path d="M905.2 320.2 L905.2 344.2 L926.0 332.2 Z" fill="#FF8FB0"/>
+<circle cx="1362" cy="348" r="148" fill="#101419"/>
+<circle cx="1362" cy="348" r="147.5" fill="none" stroke="#ffffff2b" opacity="0.9"/>
+<circle cx="1362" cy="348" r="144.0" fill="none" stroke="#ffffff2b" opacity="0.45"/>
+<circle cx="1362" cy="348" r="139.0" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="136.6" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="134.2" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="131.8" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="129.5" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="127.1" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="124.7" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="122.3" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="119.9" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="117.5" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="115.1" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="112.7" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="110.4" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="108.0" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="105.6" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="103.2" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="100.8" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="98.4" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="96.0" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="93.6" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="91.3" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="88.9" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="86.5" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="84.1" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="81.7" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="79.3" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="76.9" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="74.5" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="72.2" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="69.8" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="67.4" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<circle cx="1362" cy="348" r="65.0" fill="none" stroke="#ffffff2b" opacity="0.34"/>
+<path d="M1273.2 229.6 A147.3 147.3 0 0 1 1379.8 201.5" fill="none" stroke="#A0A9B8" stroke-opacity="0.26" stroke-width="2"/>
+<circle cx="1362" cy="348" r="57.8" fill="#1F2530"/>
+<circle cx="1362" cy="348" r="54.8" fill="#232A35"/>
+<circle cx="1362" cy="348" r="54.8" fill="none" stroke="#ffffff2b" opacity="0.6"/>
+<path d="M1340.1 357.9 A24.1 24.1 0 0 1 1383.9 343.6" fill="none" stroke="#FF8FB0" stroke-opacity="0.5" stroke-width="2"/>
+<circle cx="1362" cy="348" r="3.5" fill="#0E1116"/>
+<text x="660" y="636" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="30" font-weight="500" text-anchor="start" letter-spacing="0">00:42</text>
+<text x="1520" y="636" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="26" font-weight="500" text-anchor="end" letter-spacing="0">24:51</text>
+<rect x="660" y="652" width="860" height="3" fill="#ffffff14"/>
+<rect x="660" y="652" width="140.18" height="3" fill="#FF8FB0"/>
+<rect x="798.7" y="644" width="3" height="19" fill="#FF8FB0"/>
+<text x="660" y="716" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="start" letter-spacing="1.5">MERGING MEDIA SOURCE</text>
+<text x="1520" y="716" fill="#4FD1C5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="end" letter-spacing="1.5">MEDIA SESSION</text>
 </svg>

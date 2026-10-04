@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="assets/hero.svg" alt="BiliV3 — 第三方 B 站 Android 客户端。播放器、播放队列、黑胶唱片模式与媒体会话" width="100%">
+  <img src="assets/hero.svg" alt="BiliV3 — 第三方 B 站 Android 客户端。左侧为字标与四条主张；右侧为精炼播放器视图：16:10 视频面、播放键、细波形、黑胶唱片，以及 00:42 / 24:51 时间轴，状态为 PLAYING · AUDIO · 1080P · H.264" width="100%">
 
 <br>
 
@@ -52,7 +52,7 @@ BiliV3 走第三条路 —— **冷调深色底 + 明度分层 + 发丝线 + B �
 
 ### 02 ── PLAYER
 
-  <img src="assets/player.svg" alt="统一播放核心：DASH 音视频分离经 MergingMediaSource 合轨，由 PlaybackController 单一写入状态，输出到队列、媒体会话、进度存储与播放器持有者" width="100%">
+  <img src="assets/player.svg" alt="统一播放核心：VIDEO STREAM 与 AUDIO STREAM 两条 DASH 流汇聚进 Playback Core（MergingMediaSource · Media3），再输出到 MediaSession、队列与进度" width="100%">
 
 </div>
 
@@ -87,7 +87,7 @@ Service 侧用自定义 `MediaSource.Factory` 还原。
 
 ### 03 ── LISTEN MODE
 
-  <img src="assets/listen.svg" alt="听视频模式：不装配视频轨，因此不创建视频解码器；启用后台播放、锁屏控制与耳机按键" width="100%">
+  <img src="assets/listen.svg" alt="听视频模式：VIDEO 转为 AUDIO —— 不装配视频轨，因此不创建视频解码器；右侧列出 VIDEO TRACK OFF / AUDIO TRACK ACTIVE / BACKGROUND ON / MEDIA SESSION ON" width="100%">
 
 </div>
 
@@ -110,7 +110,7 @@ Service 侧用自定义 `MediaSource.Factory` 还原。
 
 ### 04 ── PLAYBACK MEMORY
 
-  <img src="assets/memory.svg" alt="播放记忆：按 bvid 与 cid 记录进度，多 P 独立，完成度达到 90% 视为看完" width="100%">
+  <img src="assets/memory.svg" alt="播放记忆：12:34 / 24:51 时间轴与断点；下方为多 P 的独立进度条，以及 bvid·cid / independent / local+server / ≥90% 四项参数" width="100%">
 
 </div>
 
@@ -131,7 +131,7 @@ Service 侧用自定义 `MediaSource.Factory` 还原。
 
 ### 05 ── FAVORITES / ORGANIZE
 
-  <img src="assets/organize.svg" alt="收藏批量整理：多选、全选反选、批量移动与取消收藏；规则插件筛出候选后由人工确认" width="100%">
+  <img src="assets/organize.svg" alt="收藏整理流程：FAVORITES 124 → FILTER 规则 → CANDIDATES 42 → REVIEW 由人决定；规则只缩小范围，未经确认不会删除" width="100%">
 
 </div>
 
@@ -165,7 +165,7 @@ Service 侧用自定义 `MediaSource.Factory` 还原。
 
 ### 06 ── QUEUE
 
-  <img src="assets/queue.svg" alt="播放队列：独立于播放器，支持随机播放、列表循环、单曲循环与拖拽排序" width="100%">
+  <img src="assets/queue.svg" alt="播放队列：五行曲目，02 为当前项（粉色标记条 + 局部进度），底部标注 SHUFFLE OFF · REPEAT ALL · DRAG TO REORDER" width="100%">
 
 </div>
 
@@ -182,7 +182,7 @@ Service 侧用自定义 `MediaSource.Factory` 还原。
 
 ### 07 ── LYRICS
 
-  <img src="assets/lyrics.svg" alt="歌词：可插拔 LyricsProvider 链式回退，字幕优先、第三方兜底；没有歌词与加载失败是两种状态" width="100%">
+  <img src="assets/lyrics.svg" alt="歌词视图：当前行「此水几时休」居中并加亮，上下相邻行淡出；底部标注 SUBTITLE FIRST · PROVIDER CHAIN · LRC OFFSET 与 NO LYRICS ≠ FAILED" width="100%">
 
 </div>
 
@@ -210,7 +210,7 @@ Service 侧用自定义 `MediaSource.Factory` 还原。
 
 ### 08 ── VINYL
 
-  <img src="assets/vinyl.svg" alt="黑胶唱片模式：播放时旋转，暂停时冻结角度而不是归零" width="100%">
+  <img src="assets/vinyl.svg" alt="黑胶唱片模式：大尺寸唱片（细密沟槽与中心标签）配当前曲目与 00:42 / 04:18 时间轴，标注 ROTATION ON PLAY 与 DEVICE TIER AWARE" width="100%">
 
 </div>
 
@@ -225,7 +225,7 @@ Service 侧用自定义 `MediaSource.Factory` 还原。
 
 ### 09 ── PLUGIN SYSTEM
 
-  <img src="assets/plugin.svg" alt="插件系统：内置、JSON 规则、原生、外部包四种类型；权限经 PluginContext 收敛，Cookie 永不进入插件" width="100%">
+  <img src="assets/plugin.svg" alt="插件系统：BUILT-IN / JSON RULE / NATIVE / EXTERNAL 四类插件汇入单一 PluginContext，右侧为 PERMISSION / SANDBOX / PREVIEW / ISOLATION 四项约束" width="100%">
 
 </div>
 
@@ -271,7 +271,7 @@ Service 侧用自定义 `MediaSource.Factory` 还原。
 
 ### 10 ── ARCHITECTURE
 
-  <img src="assets/arch.svg" alt="架构：UI 到 ApiClient 的主干，周围挂载播放、队列、进度、歌词与插件运行时；右侧列出刻意的架构取舍" width="100%">
+  <img src="assets/arch.svg" alt="架构：主干 UI → ViewModel → Repository → BiliApi，经一条汇流线挂载 Media3 / MediaSession / PlaybackController / PlaybackQueue / PlaybackProgress / Lyrics / Plugin Runtime；右侧列出刻意的架构取舍" width="100%">
 
 </div>
 
