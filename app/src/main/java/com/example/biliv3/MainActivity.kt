@@ -325,8 +325,14 @@ class MainActivity : ComponentActivity() {
 
         // 只有真正在播、且前台持有播放器时才值得弹小窗。
         // 交给 Service（听视频）时不弹：那是纯音频场景，弹画面无意义。
+        //
+        // ⚠️ 用 `player == null` 判空即可，**不要读 `player.isReleased`** ——
+        // 那是 Media3 的 `@UnstableApi`，在 MainActivity 里引用会让 lint
+        // 多报一条 `UnsafeOptInUsageError`（本文件没有类级 @OptIn）。
+        // 拿不到实例（holder 已释放 / 从未创建）时 `player` 本身就是 null，
+        // 语义足够。
         val player = container.playerHolder.player
-        if (player == null || player.isReleased) return
+        if (player == null) return
 
         runCatching { enterPip() }
     }
