@@ -215,6 +215,21 @@ class VideoDetailViewModel(
     private val _commentHasMore = MutableStateFlow(true)
     val commentHasMore: StateFlow<Boolean> = _commentHasMore.asStateFlow()
 
+    /**
+     * 评论**首屏**加载失败的原因（null = 没有失败）。
+     *
+     * ## 为什么必须有这个状态
+     *
+     * 没有它时，"加载失败"与"真的没有评论"在 UI 上完全同形 ——
+     * 都会走到 `comments.isEmpty()` 分支并显示「还没有评论」。
+     * 那是一句假的事实断言（v1.4.2 修）。
+     *
+     * 只表示**首屏**失败：翻页失败仍走 [_commentHasMore]，
+     * 已有评论不会被错误态顶掉。
+     */
+    private val _commentError = MutableStateFlow<String?>(null)
+    val commentError: StateFlow<String?> = _commentError.asStateFlow()
+
     /** 评论分页游标。 */
     private var commentCursor = 0L
 
@@ -414,7 +429,22 @@ class VideoDetailViewModel(
     /**
      * 拉首屏评论。
      *
-     * 在详情加载完成后调用（评论是增强模块，失败静默）。
+     * ## 🔴 失败必须进入错误态，不能显示成"还没有评论"（v1.4.2 修）
+     *
+     * 首版这里是 `.onFailure { /* 静默：评论是增强模块 */ }` ——
+     * 一个**空块**，既不写状态也不打日志。于是网络失败 / 风控 `-352` 时：
+     *
+     * ```
+     * _comments 保持空 + _commentLoading 置 false
+     *   → UI 走 `comments.isEmpty()` 分支
+     *   → 显示「还没有评论，来说两句吧」
+     * ```
+     *
+     * 这是**一句假的事实断言**：视频有 8000 条评论时，用户会以为
+     * 评论被清空了。评论确实是增强模块（不该阻断详情页），
+     * 但"不阻断"不等于"把失败说成空" —— 两者必须分开。
+     *
+     * 现在失败写入 [_commentError]，UI 据此显示"加载失败 + 重试"。
      */
     fun loadComments() {
         val cr = commentRepo ?: return
@@ -423,6 +453,7 @@ class VideoDetailViewModel(
 
         viewModelScope.launch {
             _commentLoading.value = true
+            _commentError.value = null
             commentCursor = 0L
             runCatching {
                 cr.comments(
@@ -437,7 +468,11 @@ class VideoDetailViewModel(
                     commentCursor = page.nextCursor
                     _commentHasMore.value = !page.isEnd
                 }
-                .onFailure { /* 静默：评论是增强模块 */ }
+                .onFailure { e ->
+                    // 保留真实原因：UI 显示可读文案，日志留原始异常便于排查
+                    _commentError.value = userMessageFor(e)
+                    android.util.Log.w(TAG, "loadComments failed", e)
+                }
             _commentLoading.value = false
         }
     }
@@ -1243,6 +1278,15 @@ const val MAX_FOCUS_PAGES = 10
  * 且容易和 `endSeconds` 的浮点误差打架形成抖动。
  */
 const val SKIP_TAIL_MARGIN_SECONDS = 0.5
+
+/**
+ * 日志标签。
+ *
+ * 用于「失败被静默」的地方 —— 用户看到的可以是友好文案，
+ * 但**原始异常必须留下痕迹**，否则线上问题无法定位。
+ * 与其它 Repository 的 `Bili*` 前缀保持一致。
+ */
+private const val TAG = "BiliVideoDetail"
 
 /**
  * 刚跳过一个片段（驱动"已跳过"提示条）。

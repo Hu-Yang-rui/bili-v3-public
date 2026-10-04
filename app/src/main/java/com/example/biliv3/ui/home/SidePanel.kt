@@ -77,6 +77,19 @@ fun SidePanel(
     modifier: Modifier = Modifier,
     onVideoClick: (String) -> Unit = {},
     onSeeRanking: (() -> Unit)? = null,
+    /**
+     * 点「正在直播」条目。
+     *
+     * ## ⚠️ 这个回调必须由调用方传入（v1.4.2 修）
+     *
+     * 默认值 `{}` 曾导致一个**真实的死入口**：
+     * `HomeRepository` 早先把 `lives` 硬编码成空列表，所以整块不渲染，
+     * 缺回调看不出问题。后来接上了真实数据源（`api.live.bilibili.com`），
+     * 条目开始出现 —— 但 `HomeScreen` 的两个调用点都没传这个回调，
+     * 于是「正在直播」的行**有 hover 反馈、点击完全无反应**。
+     *
+     * 直播条目现在与顶栏「直播」入口行为一致（都进直播列表页）。
+     */
     onLiveClick: (LiveItem) -> Unit = {},
     onTopicClick: (TopicItem) -> Unit = {},
 ) {

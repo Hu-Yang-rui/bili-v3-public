@@ -191,10 +191,15 @@ private fun TabItem(
         )
         Spacer(Modifier.height(Space.micro))
         // 下划线：选中时才显示（高度固定，避免切换时行高跳动）
+        //
+        // ⚠️ 用 `Space.tabIndicator`(3dp) 而不是 `trackHeight`(2dp)（v1.4.2 修）。
+        // 两者语义不同：`tabIndicator` 专指 Tab 下划线，`trackHeight` 是进度条。
+        // 同项目里其它 Tab 都用 tabIndicator，这里用 2dp 会让切 Tab 时
+        // 下划线粗细与相邻页面不一致。
         Box(
             modifier = Modifier
                 .width(TAB_UNDERLINE)
-                .height(Space.trackHeight)
+                .height(Space.tabIndicator)
                 .background(
                     if (selected) colors.brandPrimary else androidx.compose.ui.graphics.Color.Transparent,
                 ),

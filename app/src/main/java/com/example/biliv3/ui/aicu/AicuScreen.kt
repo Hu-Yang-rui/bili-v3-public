@@ -535,10 +535,11 @@ private fun TabRow(
                 )
                 Spacer(Modifier.height(Space.micro))
                 // 下划线固定高度，切换时不抖
+                // 高度用 `Space.tabIndicator`(3dp) —— 与其它页 Tab 一致（v1.4.2）
                 Box(
                     modifier = Modifier
                         .width(20.dp)
-                        .height(Space.trackHeight)
+                        .height(Space.tabIndicator)
                         .background(
                             if (isSelected) colors.brandPrimary
                             else androidx.compose.ui.graphics.Color.Transparent,

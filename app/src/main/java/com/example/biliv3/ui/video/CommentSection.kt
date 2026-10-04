@@ -64,6 +64,7 @@ import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.ui.component.ErrorState
 
 /**
  * 评论区（独立滚动版）。
@@ -102,6 +103,21 @@ fun CommentSection(
     hasMore: Boolean,
     isLoggedIn: Boolean,
     onLoadMore: () -> Unit,
+    /**
+     * 首屏加载失败的原因（null = 没失败）。
+     *
+     * ## 为什么必须传进来（v1.4.2 修）
+     *
+     * 没有它时"加载失败"与"真的没有评论"在 UI 上完全同形 ——
+     * 都会走 `comments.isEmpty()` 并显示「还没有评论，来说两句吧」。
+     * 那是一句**假的事实断言**：8000 条评论的视频在风控 `-352` 时
+     * 会让用户以为评论被清空了。
+     *
+     * 非空时优先显示错误态 + 重试，而不是空态。
+     */
+    error: String? = null,
+    /** 错误态下的重试。 */
+    onRetry: () -> Unit = {},
     onLike: (CommentItem) -> Unit = {},
     onDelete: (CommentItem) -> Unit = {},
     onReply: (CommentItem) -> Unit = {},
@@ -244,6 +260,19 @@ fun CommentSection(
         }
 
         when {
+            // 🔴 错误态必须排在空态**之前**（v1.4.2 修）。
+            //
+            // 顺序错了就会把"加载失败"显示成「还没有评论」——
+            // 那是一句假的事实断言（视频有 8000 条评论时会误导用户）。
+            // `error != null && comments.isEmpty()`：只有**首屏**失败才走这里，
+            // 已有评论时刷新失败不该把列表顶掉。
+            error != null && comments.isEmpty() -> ErrorState(
+                title = "评论加载失败",
+                description = error,
+                onRetry = onRetry,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             loading && comments.isEmpty() -> Box(
                 modifier = Modifier
                     .fillMaxWidth()

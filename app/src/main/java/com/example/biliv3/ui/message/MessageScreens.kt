@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -307,9 +308,59 @@ fun ChatScreen(
         }
     }
 
-    // 错误用 snackbar 太重，这里直接清掉并靠 toast 通路提示
+    /**
+     * 错误提示（v1.4.2 修）。
+     *
+     * ## 首版这里把 error 读出来就扔了
+     *
+     * 原代码是：
+     * ```kotlin
+     * // 错误用 snackbar 太重，这里直接清掉并靠 toast 通路提示
+     * LaunchedEffect(state.error) {
+     *     state.error?.let { viewModel.consumeError() }
+     * }
+     * ```
+     * 注释声称"靠 toast 通路提示"，但**本文件乃至整个 ui/message 目录
+     * 都没有任何 Toast / Snackbar / Log**（grep 可验证）。也就是说：
+     * `ChatViewModel` 认真把 `userMessageFor(e)` 写进了 `state.error`，
+     * 这里读出来直接丢弃 —— 生产端有，消费端扔掉。
+     *
+     * 后果是**发消息失败时用户的消息凭空消失且毫无解释**，
+     * 用户只会以为"卡了"然后反复重发。私信是写操作，不能这么处理。
+     *
+     * ## 为什么用 Toast 而不是 Snackbar
+     *
+     * 聊天页底部是输入框 + 键盘，Snackbar 会顶在输入框上方并遮挡最后
+     * 几条消息；而且它需要宿主布局。Toast 是系统级、不占布局、
+     * 与其它页面的失败提示（`viewModel.toast` 通路）行为一致。
+     */
+    val toastHost = LocalContext.current
     LaunchedEffect(state.error) {
-        state.error?.let { viewModel.consumeError() }
+        state.error?.let { msg ->
+            android.widget.Toast
+                .makeText(toastHost, msg, android.widget.Toast.LENGTH_SHORT)
+                .show()
+            viewModel.consumeError()
+        }
+    }
+
+    /**
+     * 发送成功后清空输入框（v1.4.2）。
+     *
+     * ## 为什么用"监听 sending 落回"而不是在按钮里清
+     *
+     * 按钮里清 = 请求还没发出去就把用户的字删了，失败即丢失。
+     * 这里改成监听事实：`sending` 从 true 落回 false 且**没有 error**，
+     * 才认为这次发送成功，此时清空才安全。
+     *
+     * 失败时 `draft` 保持原样，用户可以直接再点发送（内容还在）。
+     */
+    var wasSending by remember { mutableStateOf(false) }
+    LaunchedEffect(state.sending, state.error) {
+        if (wasSending && !state.sending && state.error == null) {
+            draft = ""
+        }
+        wasSending = state.sending
     }
 
     Column(
@@ -439,25 +490,48 @@ fun ChatScreen(
                     )
                 }
                 Spacer(Modifier.width(Space.x2))
+                // 发送按钮：发送中禁用 + 显示进度（v1.4.2 修）。
+                //
+                // 首版完全没有用 `state.sending` —— ViewModel 一直在维护它
+                // （MessageViewModel 里 4 处赋值），UI 一次都没读过。
+                // 结果是发送期间按钮仍可点、没有转圈，用户以为没发出去而重复点。
+                val canSend = draft.isNotBlank() && !state.sending
                 Box(
                     modifier = Modifier
                         .size(Sizes.iconXl + Space.x2)
                         .clip(CircleShape)
                         .background(
-                            if (draft.isNotBlank()) colors.brandPrimary else colors.bgHover,
+                            if (canSend) colors.brandPrimary else colors.bgHover,
                         )
-                        .clickable(enabled = draft.isNotBlank()) {
+                        .clickable(enabled = canSend) {
+                            // ⚠️ 不再在这里清空 draft（v1.4.2 修）。
+                            //
+                            // 首版是 `viewModel.send(draft.trim()); draft = ""` ——
+                            // 输入框在**请求发出前**就被清空了。发送失败时
+                            // ViewModel 会把乐观插入的消息移除，而用户刚打的字
+                            // 已经没了 → **内容彻底丢失**，只能重打一遍。
+                            //
+                            // 现在清空交给"发送成功"这个事实来决定：
+                            // `LaunchedEffect(state.sending)` 在 sending 由
+                            // true → false 且无 error 时才清空。
                             viewModel.send(draft.trim())
-                            draft = ""
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "发送",
-                        tint = if (draft.isNotBlank()) colors.textOnBrand else colors.textTertiary,
-                        modifier = Modifier.size(Sizes.iconLg),
-                    )
+                    if (state.sending) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = colors.textOnBrand,
+                            strokeWidth = Space.trackHeight,
+                            modifier = Modifier.size(Sizes.iconLg),
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "发送",
+                            tint = if (canSend) colors.textOnBrand else colors.textTertiary,
+                            modifier = Modifier.size(Sizes.iconLg),
+                        )
+                    }
                 }
             }
         }

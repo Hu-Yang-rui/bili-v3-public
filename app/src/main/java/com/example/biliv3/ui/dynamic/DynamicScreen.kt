@@ -108,7 +108,17 @@ fun DynamicScreen(
                     .fillMaxWidth()
                     .ruleBottom(color = Rule.color)
                     .windowInsetsPadding(WindowInsets.statusBars)
-                    .height(Sizes.topBarMobile),
+                    .height(Sizes.topBarMobile)
+                    // ⚠️ 必须补这层横向 padding（v1.4.2 修）。
+                    //
+                    // 其它 20 个二级页的顶栏都是
+                    // `.height(Sizes.topBarMobile).padding(horizontal = Space.x2)`，
+                    // 本页漏了，只给标题单独 `padding(start = Space.x4)` ——
+                    // 结果标题比全站其它页**左移 36dp**（16dp 里再扣掉 8dp 内边距
+                    // 与返回键占位）。页面间来回切换时标题会横向跳动。
+                    //
+                    // 现在与标准顶栏结构一致；标题不再单独加 padding。
+                    .padding(horizontal = Space.x2),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 Text(
@@ -118,7 +128,6 @@ fun DynamicScreen(
                         fontWeight = FontWeight.SemiBold,
                         color = colors.textPrimary,
                     ),
-                    modifier = Modifier.padding(start = Space.x4),
                 )
             }
 

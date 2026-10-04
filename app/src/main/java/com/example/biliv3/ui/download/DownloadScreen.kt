@@ -251,7 +251,11 @@ private fun RunningRow(task: DownloadTask, onCancel: () -> Unit) {
             trackColor = colors.bgHover,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(Space.x1)
+                // ⚠️ 用 `Space.trackHeight`(2dp) 而不是 `Space.x1`(4dp)（v1.4.2 修）。
+                // `trackHeight` 的令牌文档明写它是"进度条/细轨道视觉高度"，
+                // 全站其它进度条（黑胶/播放器/竖屏）都用它。
+                // 这里写 x1 会让下载进度条粗细是别处的两倍 —— 同屏可见的差异。
+                .height(Space.trackHeight)
                 .clip(RoundedCornerShape(2.dp)),
         )
         Spacer(Modifier.height(Space.x2))

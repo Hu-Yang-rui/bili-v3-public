@@ -272,6 +272,8 @@ fun VideoDetailScreen(
     val commentLoading by viewModel.commentLoading.collectAsStateWithLifecycle()
     val commentLoadingMore by viewModel.commentLoadingMore.collectAsStateWithLifecycle()
     val commentHasMore by viewModel.commentHasMore.collectAsStateWithLifecycle()
+    // 首屏评论失败原因（null = 没失败）。UI 据此区分「加载失败」与「还没有评论」。
+    val commentError by viewModel.commentError.collectAsStateWithLifecycle()
     val commentSort by viewModel.commentSort.collectAsStateWithLifecycle()
     val colors = BiliTheme.colors
     val context = LocalContext.current
@@ -710,6 +712,7 @@ fun VideoDetailScreen(
                     commentLoading = commentLoading,
                     commentLoadingMore = commentLoadingMore,
                     commentHasMore = commentHasMore,
+                    commentError = commentError,
                     onLoadMoreComments = viewModel::loadMoreComments,
                     onLikeComment = viewModel::likeComment,
                     onDeleteComment = viewModel::deleteComment,
@@ -1344,6 +1347,8 @@ private fun DetailContent(
     commentLoading: Boolean,
     commentLoadingMore: Boolean,
     commentHasMore: Boolean,
+    /** 首屏评论加载失败原因（null = 没失败）。用于区分错误态与空态。 */
+    commentError: String?,
     onLoadMoreComments: () -> Unit,
     /** 评论点赞 / 删除 / 回复。 */
     onLikeComment: (com.example.biliv3.data.model.CommentItem) -> Unit,
@@ -1567,6 +1572,9 @@ private fun DetailContent(
                 loadingMore = commentLoadingMore,
                 hasMore = commentHasMore,
                 isLoggedIn = isLoggedIn,
+                // 错误态优先于空态：失败不能显示成「还没有评论」
+                error = commentError,
+                onRetry = onLoadMoreComments,
                 onLoadMore = onLoadMoreComments,
                 onLike = onLikeComment,
                 onDelete = onDeleteComment,
@@ -1968,12 +1976,19 @@ private fun DetailContent(
                             // 分P 与上方内容语义不同（"这个视频有哪些分P"），
                             // 需要一条硬边界；但不需要一个盒子。
                             .ruleTop(color = Rule.color)
-                            // 间距只给上边（见 Rhythm 的配套规则：只由下方区块提供）
+                            // ⚠️ 间距**只给上边**（v1.4.2 修）。
+                            //
+                            // 首版同时给了 top 与 bottom，注释却写着"只给上边" ——
+                            // 注释与代码不一致，且实际效果是与下一个区块的
+                            // `top = Rhythm.between` 叠成 **56dp** 空白带
+                            // （28 + 28），比全站任何区块间距都大一倍。
+                            //
+                            // 规则见 `Surface.kt` 的 Rhythm 文档：
+                            // 「间距只由下方区块的 top 提供，bottom 一律不加」。
                             .padding(
                                 start = Space.x4,
                                 end = Space.x4,
                                 top = Rhythm.between,
-                                bottom = Rhythm.between,
                             ),
                     ) {
                         Text(

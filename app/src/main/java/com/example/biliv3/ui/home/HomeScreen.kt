@@ -101,6 +101,16 @@ fun HomeScreen(
     onSearchClick: () -> Unit = {},
     onCategoryClick: (CategoryEntry) -> Unit = {},
     onSeeRanking: () -> Unit = {},
+    /**
+     * 侧栏「正在直播」条目点击。
+     *
+     * ⚠️ 此前**没有这个参数** —— `SidePanel` 的 `onLiveClick` 默认空实现，
+     * 而 `lives` 曾经恒为空（仓库里硬编码 `emptyList()`）所以看不出来。
+     * 接上真实数据源后条目开始出现，于是成了**死入口**：
+     * 有 hover 反馈、点击完全没反应。v1.4.2 补上，
+     * 与顶栏「直播」入口行为一致（都进直播列表页）。
+     */
+    onLiveClick: () -> Unit = {},
     /** 顶栏铃铛 → 消息页。 */
     onMessageClick: () -> Unit = {},
     /** 顶栏头像 → 我的页。 */
@@ -210,6 +220,7 @@ fun HomeScreen(
                         selectedCategory = selectedCategory,
                         onCategoryClick = handleCategoryClick,
                         onSeeRanking = onSeeRanking,
+                        onLiveClick = onLiveClick,
                         onOpenLink = onOpenLink,
                     )
                 } else {
@@ -225,6 +236,7 @@ fun HomeScreen(
                         selectedCategory = selectedCategory,
                         onCategoryClick = handleCategoryClick,
                         onSeeRanking = onSeeRanking,
+                        onLiveClick = onLiveClick,
                         onOpenLink = onOpenLink,
                     )
                 }
@@ -249,6 +261,7 @@ private fun DesktopLayout(
     selectedCategory: String,
     onCategoryClick: (CategoryEntry) -> Unit,
     onSeeRanking: () -> Unit,
+    onLiveClick: () -> Unit,
     onOpenLink: (String) -> Unit,
 ) {
     val gridState = rememberLazyGridState()
@@ -281,6 +294,7 @@ private fun DesktopLayout(
                 selectedCategory = selectedCategory,
                 onCategoryClick = onCategoryClick,
                 onSeeRanking = onSeeRanking,
+                onLiveClick = onLiveClick,
                 onOpenLink = onOpenLink,
             )
         }
@@ -302,6 +316,8 @@ private fun DesktopLayout(
                 notices = data.notices,
                 onVideoClick = onVideoClick,
                 onSeeRanking = onSeeRanking,
+                // 直播条目 → 直播列表页（v1.4.2 修死入口）
+                onLiveClick = { onLiveClick() },
             )
         }
     }
@@ -323,6 +339,7 @@ private fun StackedLayout(
     selectedCategory: String,
     onCategoryClick: (CategoryEntry) -> Unit,
     onSeeRanking: () -> Unit,
+    onLiveClick: () -> Unit,
     onOpenLink: (String) -> Unit,
 ) {
     val gridState = rememberLazyGridState()
@@ -355,6 +372,7 @@ private fun StackedLayout(
             selectedCategory = selectedCategory,
             onCategoryClick = onCategoryClick,
             onSeeRanking = onSeeRanking,
+            onLiveClick = onLiveClick,
             onOpenLink = onOpenLink,
         )
     }
@@ -379,6 +397,7 @@ private fun androidx.compose.foundation.lazy.grid.LazyGridScope.MainColumnItems(
     selectedCategory: String,
     onCategoryClick: (CategoryEntry) -> Unit,
     onSeeRanking: () -> Unit,
+    onLiveClick: () -> Unit,
     onOpenLink: (String) -> Unit,
 ) {
     val sectionSpacing = sectionSpacingFor(windowSize)
@@ -441,6 +460,8 @@ private fun androidx.compose.foundation.lazy.grid.LazyGridScope.MainColumnItems(
                     notices = data.notices,
                     onVideoClick = onVideoClick,
                     onSeeRanking = onSeeRanking,
+                    // 直播条目 → 直播列表页（v1.4.2 修死入口）
+                    onLiveClick = { onLiveClick() },
                 )
             }
         }

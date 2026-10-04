@@ -295,6 +295,9 @@ fun MainShell(
                     },
                     onSearchClick = { navController.navigate(Routes.SEARCH) },
                     onSeeRanking = { navController.navigate(Routes.RANKING) },
+                    // 侧栏「正在直播」条目 → 直播列表页（v1.4.2 修死入口）。
+                    // 与顶栏「直播」入口走同一路由，两处行为一致。
+                    onLiveClick = { navController.navigate(Routes.LIVE) },
                     onMessageClick = { navController.navigate(Routes.MESSAGES) },
                     onProfileClick = {
                         // ⚠️ 必须与底部导航用**同一套 tab 语义**（popUpTo +

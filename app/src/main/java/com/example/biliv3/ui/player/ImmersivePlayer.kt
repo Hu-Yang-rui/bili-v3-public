@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,8 +24,10 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -54,6 +57,8 @@ import com.example.biliv3.data.lyrics.LyricsUiState
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Motion
+import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.player.PlaybackMode
 import com.example.biliv3.player.QueueItem
@@ -468,7 +473,7 @@ private fun ImmersiveProgressBar(
     }
 }
 
-/** 听视频模式的主舞台：封面 + 提示"正在听音频"。 */
+/** 听视频模式的主舞台：封面 + 明确的"音频模式"状态指示。 */
 @Composable
 private fun AudioStage(item: QueueItem?, positionMs: Long, durationMs: Long) {
     val colors = BiliTheme.colors
@@ -479,6 +484,47 @@ private fun AudioStage(item: QueueItem?, positionMs: Long, durationMs: Long) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        // 🔴 顶部状态徽章：**一眼可见**的"当前是音频模式"（v1.4.2 修 #8）。
+        //
+        // 首版只在封面下方写一行小字「正在听音频（不消耗视频解码）」，
+        // 位置低、字重轻，用户第一眼看到的仍是"一个封面"，
+        // 容易以为是画面加载失败。用户明确反馈"没有明显感觉是否生效"。
+        //
+        // 现在把状态提到**视觉最高处**（封面之上），并且：
+        // - 用填充图标（Headphones）而非线性，与"激活态"的语言一致
+        // - 用品牌粉 + 描边，与页面其它"已启用"状态同一套表达
+        // - 文字直接写结论「听视频 · 已启用」，而不是解释原理
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(Radius.pill))
+                .background(colors.surfaceElevated)
+                .border(
+                    width = 1.dp,
+                    color = colors.brandPrimary,
+                    shape = RoundedCornerShape(Radius.pill),
+                )
+                .padding(horizontal = Space.x4, vertical = Space.x2),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Space.x2),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Headphones,
+                contentDescription = null,
+                tint = colors.brandPrimary,
+                modifier = Modifier.size(Sizes.iconMd),
+            )
+            Text(
+                text = "听视频 · 已启用",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = FontSize.label,
+                    color = colors.brandPrimary,
+                    fontWeight = FontWeight.Medium,
+                ),
+            )
+        }
+
+        Spacer(Modifier.height(Space.x6))
+
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.55f)
@@ -514,9 +560,10 @@ private fun AudioStage(item: QueueItem?, positionMs: Long, durationMs: Long) {
             )
         }
         Spacer(Modifier.height(Space.x5))
-        // 明确告诉用户当前是"只听不看" —— 否则会以为画面坏了
+        // 补一句原理说明（不是主指示，主指示已在上方徽章）——
+        // 让好奇的用户知道"为什么没画面"，而不是以为坏了。
         Text(
-            text = "正在听音频（不消耗视频解码）",
+            text = "视频轨未装配，不占用视频解码器",
             style = MaterialTheme.typography.labelMedium.copy(
                 fontSize = FontSize.label,
                 color = colors.textTertiary,
