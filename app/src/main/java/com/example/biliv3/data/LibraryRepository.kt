@@ -79,39 +79,15 @@ class LibraryRepository(
         )
     }
 
-    private fun parseHistory(o: JSONObject): HistoryEntry? {
-        val bvid = o.optString("bvid")
-        val history = o.optJSONObject("history") ?: return null
-        val cid = history.optLong("cid", 0L)
-        if (cid <= 0L) return null
-
-        // 历史记录里有 progress（上次看到哪），这是"继续播放"的关键
-        val progress = history.optLong("progress", 0L)
-        val duration = history.optLong("duration", 0L)
-
-        val video = VideoItem(
-            bvid = bvid,
-            title = o.optString("title"),
-            cover = o.optString("cover"),
-            authorName = o.optString("author_name"),
-            authorFace = o.optString("author_face"),
-            playCount = 0,
-            danmakuCount = 0,
-            durationSeconds = duration.toInt(),
-            publishedAt = o.optLong("pubdate", 0L).takeIf { it > 0 },
-        )
-
-        return HistoryEntry(
-            video = video,
-            cid = cid,
-            /** 上次播放位置（秒）。0 表示没看过。 */
-            progressSeconds = (progress / 1000).toInt(),
-            /** 观看时刻（Unix 秒）。 */
-            viewAt = o.optLong("view_at", 0L),
-            /** 是否看完。 */
-            isFinished = o.optInt("progress", -1) == -1,
-        )
-    }
+    /**
+     * 解析一条历史记录（委托给 [HistoryParser]）。
+     *
+     * ⚠️ 解析逻辑**不在这里** —— 它在 [HistoryParser]（纯 Kotlin，无 Android 依赖），
+     * 这样才能在本地 JVM 单测里直接跑。
+     * `LibraryRepository` 构造需要 `BiliApi` + `AuthStore`（要 `Context`），
+     * 把解析写在这里就等于**测不了** —— 而这条 bug 恰恰是解析写错了。
+     */
+    private fun parseHistory(o: JSONObject): HistoryEntry? = HistoryParser.parse(o)
 
     // ---------------- 稍后再看 ----------------
 
@@ -658,6 +634,10 @@ data class HistoryEntry(
             return (progressSeconds.toFloat() / total).coerceIn(0f, 1f)
         }
 }
+
+// ⚠️ 解析逻辑在 `HistoryParser`（纯 Kotlin），不在本类 —— 见那里的 KDoc。
+// 本类构造需要 Context，解析写在这里就**测不了**，而 v1.5.1 那条
+// 「历史视频点开播不了」的 bug 恰恰是解析读错了字段层级。
 
 /** 历史分页。 */
 data class HistoryPage(
