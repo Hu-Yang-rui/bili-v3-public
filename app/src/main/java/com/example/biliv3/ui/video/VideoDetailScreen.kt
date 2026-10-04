@@ -204,6 +204,24 @@ fun VideoDetailScreen(
     onRegisterInQueue: (String, Long, String, String, String) -> Unit =
         { _, _, _, _, _ -> },
     /**
+     * 🔴 取流成功后把 [PlayInfo] 回填给 `PlaybackController`（v1.4.2 修）。
+     *
+     * ## 为什么必须有这个回调
+     *
+     * `onRegisterInQueue` 只登记**队列项**（bvid/cid/标题…），不含 URL；
+     * 而 `PlaybackController.setMode()` 重建 MediaSource 时读的是它内部的
+     * `currentPlayInfo`（含 URL）。两者此前是**断开的**。
+     *
+     * 后果（装机实测）：详情页播到 `00:08` → 点黑胶 →
+     * 黑胶页显示 **`00:00 / 00:00`**、进度条消失；返回后变成「点击播放」。
+     * 根因是 `setMode` 里 `if (info != null)` 判空失败，
+     * **跳过了「记位置 → 重建 → seek 回去」**，播放器被释放且没重建。
+     *
+     * 参数：PlayInfo（含 videoUrl / audioUrl）+ 当前 aid。
+     */
+    onPlayInfoReady: (com.example.biliv3.data.model.PlayInfo, Long) -> Unit =
+        { _, _ -> },
+    /**
      * 播放器弹层里改弹幕档位时回调，用于**写回全局设置**。
      *
      * 参数顺序：启用 / 不透明度 / 字号 / 显示区域。
@@ -802,6 +820,10 @@ fun VideoDetailScreen(
                             d.coverUrl(),
                         )
                     },
+                    // 🔴 取流成功后把 PlayInfo 回填给 controller（v1.4.2 修）。
+                    // 不传的话 `setMode()` 会因 `info == null` 跳过重建，
+                    // 表现为「进黑胶后时间归零、返回变点击播放」。
+                    onPlayInfoReady = onPlayInfoReady,
                 )
             }
         }
@@ -1415,8 +1437,31 @@ private fun DetailContent(
      * 读不到 `currentItem`，会显示「暂无播放」。
      */
     onRegisterInQueue: (com.example.biliv3.data.model.VideoDetail) -> Unit = {},
+    /**
+     * 取流成功后回填 PlayInfo（v1.4.2 修）。
+     *
+     * 与 [onRegisterInQueue] 是**两件事**：那个登记"播的是什么"（队列项），
+     * 这个缓存"怎么播"（URL）。`setMode()` 重建 MediaSource 只认后者。
+     */
+    onPlayInfoReady: (com.example.biliv3.data.model.PlayInfo, Long) -> Unit =
+        { _, _ -> },
 ) {
     val colors = BiliTheme.colors
+
+    // 🔴 取流成功 → 把 PlayInfo 回填给 controller（v1.4.2 修）。
+    //
+    // 必须在这里做：`setMode()` 重建 MediaSource 时读的是 controller 里
+    // 缓存的 PlayInfo；详情页不回填，controller 就永远是 null，
+    // 于是切黑胶时 `if (info != null)` 判空失败 → 跳过重建 →
+    // 播放器被释放且没重建（实测：进黑胶时间归零、返回变「点击播放」）。
+    //
+    // key 用 `playState`：分 P 切换 / 清晰度切换都会产生新的 PlayState.Ready，
+    // 每次都要把最新的 URL 告诉 controller。
+    androidx.compose.runtime.LaunchedEffect(playState) {
+        if (playState is PlayState.Ready) {
+            onPlayInfoReady(playState.info, detail.aid)
+        }
+    }
 
     // v1.3.0：把当前视频登记进播放队列。
     //

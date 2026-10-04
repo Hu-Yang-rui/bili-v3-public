@@ -523,9 +523,43 @@ fun MainShell(
                  * 又不会因为值变化而重建 effect。
                  */
                 val latestInPip by androidx.compose.runtime.rememberUpdatedState(isInPip)
+                /**
+                 * 🔴 切到应用内播放页（黑胶 / 听视频）时**也不能释放**
+                 * （v1.4.2 修的真实 bug）。
+                 *
+                 * ## 现象（装机实测）
+                 *
+                 * 详情页播到 `00:08` → 点黑胶 →
+                 * - 黑胶页显示 **`00:00 / 00:00`**（位置与时长全丢）
+                 * - 返回详情页变成「点击播放」（播放已停）
+                 * - logcat：`ExoPlayerImpl: Release 9b8af3f`
+                 *
+                 * ## 根因
+                 *
+                 * `Routes.PLAYER` 是**独立路由**。导航过去时详情页离开组合
+                 * → 这个 `onDispose` 无条件 `release()`。而黑胶页
+                 * （`ImmersivePlayer`）**不挂 `VideoPlayerSurface`**
+                 * —— 它的三种模式（VIDEO/AUDIO/VINYL）都只有视觉层，
+                 * 注释写"画面由外层提供"，但黑胶页外层并没有那个组件。
+                 * 于是没有任何东西负责重新 `bindMedia`，
+                 * 播放器就永久停在已释放状态。
+                 *
+                 * ## 修法
+                 *
+                 * 与 `isInPip` 同理：**"离开详情页" ≠ "该释放播放器"**。
+                 * 判断依据用**返回栈里还有没有 PLAYER 路由** ——
+                 * `navigate()` 会**同步**更新返回栈，之后才触发重组与
+                 * dispose，所以 onDispose 时读到的已是新栈。
+                 * 真正的释放仍由「回到非播放页」兜底。
+                 */
+                val latestPlayerPageOpen by androidx.compose.runtime.rememberUpdatedState(
+                    navController.currentBackStack.value.any {
+                        it.destination.route == Routes.PLAYER
+                    },
+                )
                 androidx.compose.runtime.DisposableEffect(backStackEntry) {
                     onDispose {
-                        if (!latestInPip) {
+                        if (!latestInPip && !latestPlayerPageOpen) {
                             container.playerHolder.release()
                         }
                     }
@@ -646,6 +680,26 @@ fun MainShell(
                                 author = author,
                                 cover = cover,
                             )
+                        },
+                        // 🔴 取流成功后把 PlayInfo 回填给 controller（v1.4.2 修）。
+                        //
+                        // 与 onRegisterInQueue 是**两件事**：那个登记"播的是什么"
+                        // （队列项，无 URL），这个缓存"怎么播"（含 URL）。
+                        //
+                        // ## 修的是什么（装机实测）
+                        //
+                        // `PlaybackController.attachPlayInfo` 的 KDoc 自称
+                        // "**最常走**的路径：页面拉详情 → 取流 → 调这里"，
+                        // 但实测**零调用点** —— 是个死方法。于是 controller 的
+                        // `currentPlayInfo` 永远是 null，`setMode()` 里
+                        // `if (info != null)` 判空失败 → **跳过重建**：
+                        //   详情页播到 00:08 → 点黑胶 → 黑胶页 00:00 / 00:00
+                        //   返回详情页 → 变「点击播放」
+                        //
+                        // `bindMedia` 幂等（URL 相同则复用），所以这里回填
+                        // 不会重复装配、不会丢掉已缓冲的进度。
+                        onPlayInfoReady = { info, aid ->
+                            container.playbackController.attachPlayInfo(info, aid)
                         },
                         // ---- 新增接线（补齐缺失功能）----
                         onOwnerClick = { mid -> navController.navigate(Routes.space(mid)) },

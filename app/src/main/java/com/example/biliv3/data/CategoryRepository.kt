@@ -37,18 +37,20 @@ class CategoryRepository(
 
         val json = try {
             api.getRaw(
-                path = Endpoints.REGION_DYNAMIC,
+                path = Endpoints.REGION_LATEST,
                 query = mapOf(
                     "rid" to rid.toString(),
                     "pn" to page.toString(),
                     "ps" to pageSize.toString(),
+                    // ⚠️ `newlist` 需要 `type`：0 = 全部投稿类型。
+                    // 见 Endpoints.REGION_LATEST 的说明（换源原因）。
+                    "type" to "0",
                 ),
                 signed = false,
             )
         } catch (e: Exception) {
             // ⚠️ 失败必须抛（v1.2.4）：返回空列表会让"接口报错"
             // 与"这个分区没有内容"在 UI 上完全一样（§7.8-44 同类错误）。
-            // 实测 `dynamic/region` 会返回 `code=-404`。
             throw e
         }
         val code = json.optInt("code", -1)

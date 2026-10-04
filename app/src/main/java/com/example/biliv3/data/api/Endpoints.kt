@@ -153,18 +153,39 @@ object Endpoints {
     // ---- 分区 / 排行榜 ----
 
     /**
-     * 分区最新/热门视频。
+     * 分区最新视频。
      *
-     * `x/web-interface/dynamic/region` 返回该分区**最新**投稿，
-     * 无需签名、风控宽松 —— 适合做分区页主内容源。
+     * ## 🔴 2026-10 实测：`dynamic/region` 已下线（v1.4.2 换源）
+     *
+     * 原值 `x/web-interface/dynamic/region` 现在**恒定返回 `code=-404`**
+     * （message「啥都木有」）—— 不是风控、不是参数错，是接口没了。
+     * 后果：分区页「最新」**永久失败**，点重试也没用，
+     * 用户看到「内容已被删除或不可见」（§11.1 已记录该缺口）。
+     *
+     * 实测对比（同一 rid=1）：
+     * ```
+     * x/web-interface/dynamic/region    -> code=-404   ❌ 已下线
+     * x/web-interface/region/feed/rcmd  -> code=-400   ❌ 需签名
+     * x/web-interface/newlist           -> code=0, 20 条  ✅ 采用
+     * ```
+     *
+     * 换到 `newlist` 的依据（实测确认，不是猜的）：
+     * - 返回结构**完全兼容**：`data.archives[]`，字段名与原来一致
+     *   （`aid` / `bvid` / `title` / `pic` / `pubdate` / `stat.view` / `owner.*`）
+     * - `duration` 是 **Int 秒数**（与 `dynamic/region` 同），
+     *   不是 `space/arc/search` 那种 `"12:34"` 字符串 —— 不需要额外解析
+     * - 无需签名、`rid` 语义相同
+     *
+     * ⚠️ 多一个参数：`newlist` 需要 `type=0`（0 = 全部投稿类型）。
+     * 少了它也能通，但显式传更稳。
      */
-    const val REGION_DYNAMIC = "x/web-interface/dynamic/region"
+    const val REGION_LATEST = "x/web-interface/newlist"
 
     /**
      * 分区「热门」列表。
      *
-     * 与 [REGION_DYNAMIC] 互补：一个按最新、一个按热度。
-     * 分区页顶部提供切换。
+     * 与 [REGION_LATEST] 互补：一个按最新、一个按热度。
+     * 分区页顶部提供切换。实测 `ranking/region` 正常（code=0）。
      */
     const val REGION_HOT = "x/web-interface/ranking/region"
 
