@@ -76,6 +76,23 @@ class SearchViewModel(
     private val _state = MutableStateFlow<SearchUiState>(SearchUiState.Idle)
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
 
+    /**
+     * 「进入本页时自动聚焦搜索框」是否已经用过。
+     *
+     * ## 为什么放在 ViewModel 而不是 `remember`（v1.4.2 修）
+     *
+     * 「搜索 → 点视频 → 返回」时，搜索页会被 NavHost 重新组合 ——
+     * 组合内的 `remember` 会一起重建，挡不住"再次自动聚焦"，
+     * 表现就是**返回搜索页时键盘自动弹回来**。
+     *
+     * ViewModel 跨返回栈存活，才记得住"用户已经见过这个页面"。
+     * 语义上也对：这是**页面级**状态（本页是否已初始化过），
+     * 不是某一次组合的状态。
+     *
+     * 用普通 `var` 而不是 `StateFlow`：它不驱动 UI，只被读一次。
+     */
+    var autoFocusConsumed: Boolean = false
+
     /** 输入框内容。与 [_state] 分开：输入框要即时回显，不等防抖。 */
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()

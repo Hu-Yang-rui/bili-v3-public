@@ -801,26 +801,8 @@ class VideoDetailViewModel(
         list: List<com.example.biliv3.data.model.CommentItem>,
         rpid: Long,
         transform: (com.example.biliv3.data.model.CommentItem) -> com.example.biliv3.data.model.CommentItem,
-    ): List<com.example.biliv3.data.model.CommentItem> {
-        // 先看顶层是否命中：命中就只改这一条，不必进入子树
-        if (list.any { it.rpid == rpid }) {
-            return list.map { if (it.rpid == rpid) transform(it) else it }
-        }
-        // 顶层没有 → 在各自的 replies 里找
-        var changed = false
-        val next = list.map { c ->
-            if (c.replies.isEmpty()) return@map c
-            val updated = c.replies.map { r -> if (r.rpid == rpid) transform(r) else r }
-            if (updated != c.replies) {
-                changed = true
-                c.copy(replies = updated)
-            } else {
-                c
-            }
-        }
-        // 没找到就返回原引用，避免无意义的重组
-        return if (changed) next else list
-    }
+    ): List<com.example.biliv3.data.model.CommentItem> =
+        updateCommentInTree(list, rpid, transform)
 
     /**
      * 删除自己的评论（乐观移除 + 失败回滚到原位）。
@@ -1198,3 +1180,48 @@ data class JustSkipped(
     val segment: com.example.biliv3.data.SkipSegment,
     val fromSeconds: Double,
 )
+
+/**
+ * 在评论树里按 `rpid` 定位并替换，找不到就**原样返回同一引用**。
+ *
+ * ## 为什么抽成顶层函数
+ *
+ * 它是「回复点赞」正确性的全部逻辑，且**不依赖 Android** ——
+ * 抽出来就能被普通 JVM 单测覆盖（见 `CommentLikeTest`）。
+ * 留在 ViewModel 里会变成私有方法，只能靠人工点测；
+ * 而这类 bug 恰恰是"人工点测容易漏"的（图标不动很容易被当成没点准）。
+ *
+ * ## 为什么要进 `replies`
+ *
+ * 二级回复存在 [CommentItem.replies] 里，**不在顶层列表**。
+ * 首版只 map 顶层，导致回复点赞找不到匹配 → 静默无操作 →
+ * API 成功但 UI 永远不变（v1.4.2 修）。
+ *
+ * ## 为什么找不到时返回原引用
+ *
+ * 返回"内容相同的新列表"会让 Compose 认为数据变了而多余重组；
+ * 返回同一引用则天然跳过。
+ */
+internal fun updateCommentInTree(
+    list: List<CommentItem>,
+    rpid: Long,
+    transform: (CommentItem) -> CommentItem,
+): List<CommentItem> {
+    // 顶层命中：只改这一条，不必进入子树
+    if (list.any { it.rpid == rpid }) {
+        return list.map { if (it.rpid == rpid) transform(it) else it }
+    }
+    // 顶层没有 → 在各自的 replies 里找
+    var changed = false
+    val next = list.map { c ->
+        if (c.replies.isEmpty()) return@map c
+        val updated = c.replies.map { r -> if (r.rpid == rpid) transform(r) else r }
+        if (updated != c.replies) {
+            changed = true
+            c.copy(replies = updated)
+        } else {
+            c
+        }
+    }
+    return if (changed) next else list
+}

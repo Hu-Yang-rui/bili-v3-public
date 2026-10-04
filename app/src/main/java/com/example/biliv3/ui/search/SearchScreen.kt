@@ -132,8 +132,31 @@ fun SearchScreen(
     // 页面离开组合时也收一次，保证不残留。
     HideKeyboardOnDispose()
 
+    /**
+     * 自动聚焦输入框 —— **只在首次进入时做一次**（v1.4.2 修）。
+     *
+     * ## 根因：`LaunchedEffect(Unit)` 会在每次回到本页时重跑
+     *
+     * 首版是 `LaunchedEffect(Unit) { focusRequester.requestFocus() }`。
+     * `Unit` 作 key 只在**本 Composable 首次进入组合**时执行一次 ——
+     * 但「搜索 → 点视频 → 返回」时，搜索页会被 NavHost **重新组合**
+     * （返回栈里它仍在，但组合被销毁重建），于是这段又跑了一遍，
+     * 键盘**自动弹回来**。用户的感受是「返回搜索页莫名弹出键盘」。
+     *
+     * ## 为什么用 ViewModel 存标记而不是 `remember`
+     *
+     * `remember` 与组合同生命周期 —— 组合被重建时它一起没了，
+     * 挡不住这个问题。标记必须活在**比组合更长**的地方，
+     * 也就是 ViewModel（它跨返回栈存活）。
+     *
+     * 语义上这也是对的：**"用户已经见过这个页面了"是页面级状态，
+     * 不是某一次组合的状态**。
+     */
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        if (!viewModel.autoFocusConsumed) {
+            viewModel.autoFocusConsumed = true
+            focusRequester.requestFocus()
+        }
     }
 
     Column(
@@ -223,7 +246,19 @@ fun SearchScreen(
 
             is SearchUiState.Results -> ResultList(
                 state = s,
-                onVideoClick = onVideoClick,
+                // ⚠️ 跳转前先收键盘（v1.4.2 修）。
+                //
+                // 搜索框通常仍有焦点，此时点视频 → 进详情页。
+                // 若不收键盘：IME 会在详情页短暂残留，返回搜索页时
+                // 由于焦点仍在，键盘会**立刻重新弹出** ——
+                // 用户看到的是「返回搜索页莫名弹出键盘」。
+                //
+                // 这里在导航**之前**清焦点 + 收 IME，
+                // 让"离开搜索页"这个动作顺带把输入态也结束掉。
+                onVideoClick = { bvid ->
+                    dismissKeyboard()
+                    onVideoClick(bvid)
+                },
                 onLoadMore = viewModel::loadMore,
             )
         }
