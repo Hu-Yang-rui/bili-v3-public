@@ -60,7 +60,6 @@ import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
@@ -978,7 +977,7 @@ private const val MAX_INLINE_REPLIES = 3
 
 /** 举报面板的把手尺寸（视觉暗示"可下拉关闭的薄面板"）。 */
 private val GRABBER_WIDTH = 32.dp
-private val GRABBER_HEIGHT = 4.dp
+private val GRABBER_HEIGHT = Space.x1
 
 /**
  * 举报面板理由列表的最大高度。

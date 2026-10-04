@@ -604,7 +604,7 @@ private fun SettingRow(
                 modifier = Modifier
                     .clip(RoundedCornerShape(Radius.badge))
                     .background(colors.brandPrimary)
-                    .padding(horizontal = Space.compactHorizontal, vertical = 1.dp),
+                    .padding(horizontal = Space.compactHorizontal, vertical = Space.tagVertical),
             )
         }
         Spacer(Modifier.weight(1f))

@@ -290,7 +290,7 @@ fun VerticalScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "返回",
-                            tint = Color.White,
+                            tint = colors.onOverlay,
                             modifier = Modifier.size(Sizes.iconXl),
                         )
                     }
@@ -371,7 +371,7 @@ private fun VerticalPage(
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(
-                    color = Color.White,
+                    color = colors.onOverlay,
                     strokeWidth = Space.trackHeight,
                     modifier = Modifier.size(Sizes.iconXl * 1.5f),
                 )
@@ -425,35 +425,35 @@ private fun RightActionBar(
     ) {
         ActionItem(
             icon = if (inter.liked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-            tint = if (inter.liked) colors.brandPrimary else Color.White,
+            tint = if (inter.liked) colors.brandPrimary else colors.onOverlay,
             label = count(detail?.likeCount),
             contentDescription = "点赞",
             onClick = onLike,
         )
         ActionItem(
             icon = if (inter.coined) Icons.Filled.MonetizationOn else Icons.Outlined.MonetizationOn,
-            tint = if (inter.coined) colors.accentCoin else Color.White,
+            tint = if (inter.coined) colors.accentCoin else colors.onOverlay,
             label = count(detail?.coinCount),
             contentDescription = "投币",
             onClick = onCoin,
         )
         ActionItem(
             icon = if (inter.favored) Icons.Filled.Star else Icons.Outlined.StarBorder,
-            tint = if (inter.favored) colors.accentFavorite else Color.White,
+            tint = if (inter.favored) colors.accentFavorite else colors.onOverlay,
             label = count(detail?.favoriteCount),
             contentDescription = "收藏",
             onClick = onFavorite,
         )
         ActionItem(
             icon = Icons.Filled.Share,
-            tint = Color.White,
+            tint = colors.onOverlay,
             label = count(detail?.shareCount),
             contentDescription = "分享",
             onClick = onShare,
         )
         ActionItem(
             icon = Icons.Filled.PersonAdd,
-            tint = if (state.following) colors.brandPrimary else Color.White,
+            tint = if (state.following) colors.brandPrimary else colors.onOverlay,
             label = if (state.following) "已关注" else "关注",
             contentDescription = "关注",
             onClick = onFollow,
@@ -470,6 +470,7 @@ private fun ActionItem(
     contentDescription: String,
     onClick: () -> Unit,
 ) {
+    val colors = BiliTheme.colors
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -490,7 +491,7 @@ private fun ActionItem(
         // 竖屏互动栏是纵向排列的多个读数，抖动尤其明显。
         MonoReadout(
             text = label,
-            color = Color.White,
+            color = colors.onOverlay,
             fontSize = FontSize.badge,
             weight = FontWeight.Medium,
         )
@@ -532,6 +533,7 @@ private fun BottomInfo(
     holder: PlayerHolder,
     modifier: Modifier = Modifier,
 ) {
+    val colors = BiliTheme.colors
     val detail = state.detail
 
     // 底部信息区：走统一的 `biliCard()` 玻璃原语。
@@ -561,7 +563,7 @@ private fun BottomInfo(
                 // 15sp（原 12sp）：底部信息区是竖屏唯一的文字区，
                 // 12sp 在 6 寸屏上明显偏小，与"大图标"的视觉重量不匹配。
                 fontSize = FontSize.titleMd,
-                color = Color.White,
+                color = colors.onOverlay,
                 fontWeight = FontWeight.SemiBold,
             ),
             maxLines = 1,
@@ -573,7 +575,7 @@ private fun BottomInfo(
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontSize = FontSize.body,
                 lineHeight = FontSize.bodyLine,
-                color = Color.White,
+                color = colors.onOverlay,
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

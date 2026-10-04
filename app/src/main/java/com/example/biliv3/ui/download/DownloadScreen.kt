@@ -251,7 +251,7 @@ private fun RunningRow(task: DownloadTask, onCancel: () -> Unit) {
             trackColor = colors.bgHover,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(4.dp)
+                .height(Space.x1)
                 .clip(RoundedCornerShape(2.dp)),
         )
         Spacer(Modifier.height(Space.x2))

@@ -1,6 +1,7 @@
 package com.example.biliv3.data
 
 import com.example.biliv3.data.api.BiliApi
+import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.api.Endpoints
 import com.example.biliv3.data.model.VideoItem
 import org.json.JSONObject
@@ -44,12 +45,19 @@ class CategoryRepository(
                 ),
                 signed = false,
             )
-        } catch (_: Exception) {
-            return emptyList()
+        } catch (e: Exception) {
+            // ⚠️ 失败必须抛（v1.2.4）：返回空列表会让"接口报错"
+            // 与"这个分区没有内容"在 UI 上完全一样（§7.8-44 同类错误）。
+            // 实测 `dynamic/region` 会返回 `code=-404`。
+            throw e
         }
-        if (json.optInt("code", -1) != 0) return emptyList()
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            throw BiliException(code, json.optString("message", "分区内容加载失败"))
+        }
 
-        val arr = json.optJSONObject("data")?.optJSONArray("archives") ?: return emptyList()
+        val arr = json.optJSONObject("data")?.optJSONArray("archives")
+            ?: throw BiliException(-1, "分区响应缺少 archives")
         val out = ArrayList<VideoItem>(arr.length())
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
@@ -73,12 +81,16 @@ class CategoryRepository(
                 query = mapOf("rid" to rid.toString(), "ps" to pageSize.toString()),
                 signed = false,
             )
-        } catch (_: Exception) {
-            return emptyList()
+        } catch (e: Exception) {
+            throw e
         }
-        if (json.optInt("code", -1) != 0) return emptyList()
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            throw BiliException(code, json.optString("message", "分区热门加载失败"))
+        }
 
-        val arr = json.optJSONArray("data") ?: return emptyList()
+        val arr = json.optJSONArray("data")
+            ?: throw BiliException(-1, "分区热门响应缺少 data")
         val out = ArrayList<VideoItem>(arr.length())
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue

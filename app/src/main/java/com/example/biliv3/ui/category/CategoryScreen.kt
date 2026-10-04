@@ -50,6 +50,7 @@ import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
+import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.component.VideoCard
 import com.example.biliv3.ui.home.gridGutterFor
 import com.example.biliv3.ui.home.gridRowSpacingFor
@@ -90,6 +91,7 @@ fun CategoryScreen(
     val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
     val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
     val sortLatest by viewModel.sortLatest.collectAsStateWithLifecycle()
+    val loadError by viewModel.error.collectAsStateWithLifecycle()
 
     val gridState = rememberLazyGridState()
 
@@ -174,6 +176,13 @@ fun CategoryScreen(
                     text = "正在加载分区…",
                 )
             }
+
+            loadError != null -> ErrorState(
+                title = "分区内容加载失败",
+                description = loadError,
+                onRetry = { viewModel.retry() },
+                modifier = Modifier.fillMaxSize(),
+            )
 
             videos.isEmpty() -> EmptyState(
                 title = "这个分区暂时没有内容",

@@ -27,6 +27,20 @@ class AuthRepository(
 ) {
 
     /**
+     * 本地是否**存有登录凭据**（cookie 非空）。
+     *
+     * ⚠️ 这是**纯本地判断，不发请求** —— 只回答"这台设备上曾经登录过"，
+     * 不代表 cookie 在服务端仍有效。
+     *
+     * 用途：把 [fetchUserInfo] 的 null 拆成两种情况 ——
+     * | 本地凭据 | fetchUserInfo | 结论 |
+     * |---|---|---|
+     * | 有 | null | **网络/服务端故障**（不是登出） |
+     * | 无 | null | 真的未登录 |
+     */
+    fun hasLocalCredential(): Boolean = store.isLoggedIn
+
+    /**
      * 生成二维码。
      *
      * @return 二维码内容（一个 URL，需自行渲染成图）+ 轮询用的 key
@@ -230,6 +244,18 @@ class AuthRepository(
      * 查询当前登录态并补齐用户信息。
      *
      * 未登录时返回 null（`nav` 会返回 `code=-101`）。
+     *
+     * ## ⚠️ null 有两种含义，调用方需自行区分
+     *
+     * 返回 null 可能是「**确实没登录**」，也可能是「**网络挂了**」——
+     * 本方法把两者都折叠成 null（第 241 行的 catch 与第 246 行的 `!isLogin`）。
+     *
+     * 对「我的」页这是致命的：断网时已登录用户会看到**「未登录」+ 登录按钮**，
+     * 等于凭空"被登出"。
+     *
+     * 需要区分时用 [hasLocalCredential]：本地有 cookie + 这里返回 null
+     * = 网络/服务端问题；本地无 cookie = 真的没登录。
+     * （见 [com.example.biliv3.ui.profile.ProfileViewModel.refresh]）
      */
     suspend fun fetchUserInfo(): UserInfo? {
         val json = try {

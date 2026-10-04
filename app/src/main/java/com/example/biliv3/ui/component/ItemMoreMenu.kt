@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.biliv3.design.BiliTheme
+import com.example.biliv3.design.tokens.DarkColors
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
@@ -217,12 +218,19 @@ private data class ShareChannel(
  * ⚠️ 不使用微信 / QQ 的官方 Logo —— 那些是注册商标，
  * 本项目「不使用 B 站及第三方专有素材」的合规边界要求自绘/通用图标。
  * 用通用图形 + 渠道名文字表达，功能等价且不侵权。
+ *
+ * ## 颜色来自令牌（v1.2.4）
+ *
+ * 这 4 个色值原先写死在本文件，`AGENTS.md` §11.1 记为待办：
+ * 「可论证豁免，但需在代码里写明豁免理由」。
+ * 现已上移到 `ColorTokens` 并附完整豁免说明 —— 它们是他方品牌真值，
+ * 不随我们的主题变化，但仍集中定义以免散落。
  */
 private val SHARE_CHANNELS = listOf(
-    ShareChannel("微信", Icons.Outlined.FavoriteBorder, Color(0xFF4CAF50)),
-    ShareChannel("朋友圈", Icons.Outlined.QrCode, Color(0xFF66BB6A)),
-    ShareChannel("下载分享", Icons.Outlined.Download, Color(0xFF7E57C2)),
-    ShareChannel("复制链接", Icons.Outlined.Share, Color(0xFF42A5F5)),
+    ShareChannel("微信", Icons.Outlined.FavoriteBorder, DarkColors.channelWechat),
+    ShareChannel("朋友圈", Icons.Outlined.QrCode, DarkColors.channelMoments),
+    ShareChannel("下载分享", Icons.Outlined.Download, DarkColors.channelDownload),
+    ShareChannel("复制链接", Icons.Outlined.Share, DarkColors.channelCopyLink),
 )
 
 @Composable

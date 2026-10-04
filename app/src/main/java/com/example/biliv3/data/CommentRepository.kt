@@ -1,6 +1,7 @@
 package com.example.biliv3.data
 
 import com.example.biliv3.data.api.BiliApi
+import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.model.CommentItem
 import com.example.biliv3.data.model.CommentPage
 import org.json.JSONObject
@@ -249,12 +250,20 @@ class CommentRepository(
                 ),
                 signed = true,
             )
-        } catch (_: Exception) {
-            return CommentPage(emptyList(), 0, 0, true)
+        } catch (e: Exception) {
+            // ⚠️ 不再返回空页（v1.2.4）：那会让"请求失败"与
+            // "这条评论没有回复"在 UI 上完全一样（§7.8-44 同类错误）。
+            // 抛出去，由 ViewModel 置 Failed 并给重试入口。
+            throw e
+        }
+
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            throw BiliException(code, json.optString("message", "回复加载失败"))
         }
 
         val data = json.optJSONObject("data")
-            ?: return CommentPage(emptyList(), 0, 0, true)
+            ?: throw BiliException(-1, "回复响应缺少 data")
 
         val pageObj = data.optJSONObject("page")
         val total = pageObj?.optInt("count", 0) ?: 0

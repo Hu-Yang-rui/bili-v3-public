@@ -6,6 +6,7 @@ import com.example.biliv3.data.auth.AccountSwitcher
 import com.example.biliv3.data.auth.AccountSync
 import com.example.biliv3.data.auth.AuthRepository
 import com.example.biliv3.data.auth.UserInfo
+import com.example.biliv3.ui.component.userMessageFor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,19 +15,31 @@ import kotlinx.coroutines.launch
 /**
  * 「我的」页状态。
  *
- * ## 三态
+ * ## 四态
  *
  * - [Loading]：启动时查一次登录态
  * - [Guest]：未登录 → 显示登录引导
  * - [LoggedIn]：已登录 → 显示用户信息 + 功能入口
+ * - [Failed]：**本地有凭据但查询失败**（断网 / 服务端故障）
  *
- * 「未登录」是**正常状态**而不是错误，所以单独一个分支，
- * 不塞进 Error。
+ * ## ⚠️ 为什么必须有 [Failed]
+ *
+ * `AuthRepository.fetchUserInfo()` 把「没登录」和「网络挂了」
+ * **都折叠成 null**。上一版直接 `getOrNull() → Guest`，于是：
+ *
+ * - 断网时，**已登录用户看到「未登录」+ 登录按钮** —— 凭空被登出
+ * - 且**没有重试入口**，用户只能杀掉 App 重开
+ *
+ * 判据：本地有 cookie（`hasLocalCredential`）却查不到用户信息
+ * = 这是故障，不是登出。
  */
 sealed interface ProfileUiState {
     data object Loading : ProfileUiState
     data object Guest : ProfileUiState
     data class LoggedIn(val user: UserInfo) : ProfileUiState
+
+    /** 本地有凭据但查询失败 —— 网络/服务端故障，**不是登出**。 */
+    data class Failed(val reason: String) : ProfileUiState
 }
 
 /**
@@ -67,12 +80,28 @@ class ProfileViewModel(
     fun refresh() {
         viewModelScope.launch {
             _state.value = ProfileUiState.Loading
-            val user = runCatching { repo.fetchUserInfo() }.getOrNull()
-            _state.value = if (user != null) {
-                ProfileUiState.LoggedIn(user)
-            } else {
-                ProfileUiState.Guest
-            }
+            val result = runCatching { repo.fetchUserInfo() }
+
+            _state.value = result.fold(
+                onSuccess = { user ->
+                    if (user != null) {
+                        ProfileUiState.LoggedIn(user)
+                    } else if (repo.hasLocalCredential()) {
+                        // ⚠️ 本地有 cookie 却查不到 → 是故障，不是登出。
+                        // 置 Guest 会让已登录用户看到"未登录"+登录按钮。
+                        ProfileUiState.Failed("无法连接服务器，请检查网络后重试")
+                    } else {
+                        ProfileUiState.Guest
+                    }
+                },
+                onFailure = {
+                    if (repo.hasLocalCredential()) {
+                        ProfileUiState.Failed(userMessageFor(it))
+                    } else {
+                        ProfileUiState.Guest
+                    }
+                },
+            )
         }
     }
 

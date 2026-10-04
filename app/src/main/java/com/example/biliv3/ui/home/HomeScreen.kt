@@ -508,7 +508,7 @@ private fun ShuffleAction(onClick: () -> Unit) {
             imageVector = Icons.Filled.Refresh,
             contentDescription = null,
             tint = colors.textTertiary,
-            modifier = Modifier.size(14.dp),
+            modifier = Modifier.size(Sizes.iconSm),
         )
         Spacer(Modifier.width(Space.x1))
         Text(

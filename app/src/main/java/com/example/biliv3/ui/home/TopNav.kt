@@ -41,7 +41,6 @@ import com.example.biliv3.design.rule
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
-import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
@@ -428,8 +427,8 @@ private fun NavIconButton(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = 6.dp, end = 6.dp)
-                        .size(8.dp)
+                        .padding(top = Space.compactHorizontal, end = Space.compactHorizontal)
+                        .size(Sizes.dotLg)
                         .clip(CircleShape)
                         .background(colors.stateError),
                 )

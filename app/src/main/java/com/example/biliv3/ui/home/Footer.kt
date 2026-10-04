@@ -37,7 +37,6 @@ import com.example.biliv3.design.rule
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
-import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Sizes

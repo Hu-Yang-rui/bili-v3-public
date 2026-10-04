@@ -212,7 +212,7 @@ private fun CategoryTab(
         Box(
             modifier = Modifier
                 .width(20.dp)
-                .height(3.dp)
+                .height(Space.tabIndicator)
                 .clip(RoundedCornerShape(Radius.badge))
                 .background(if (selected) colors.brandPrimary else Color.Transparent),
         )

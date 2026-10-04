@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.biliv3.data.auth.SavedAccount
 import com.example.biliv3.design.BiliTheme
+import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
@@ -116,9 +117,13 @@ fun AccountsScreen(
         ) {
             // ---- 顶栏 ----
             // 通栏：不再是卡片，内容直接排。
+            // ⚠️ 底线不可省（v1.2.4 补）：§7.4-32 要求「二级页标题栏一律
+            // ruleBottom(color = Rule.color)」。此处原先完全没有线，
+            // 标题"浮"在账号列表上（其余 15 个二级页都有）。
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .ruleBottom(color = Rule.color)
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .height(Sizes.topBarMobile)
                     .padding(horizontal = Space.x2),
@@ -340,7 +345,7 @@ private fun ConfirmPanel(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .width(32.dp)
-                    .height(4.dp)
+                    .height(Space.x1)
                     .clip(RoundedCornerShape(Radius.pill))
                     .background(colors.borderStrong),
             )

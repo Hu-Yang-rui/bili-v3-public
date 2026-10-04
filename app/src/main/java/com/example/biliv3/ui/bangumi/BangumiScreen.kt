@@ -43,8 +43,12 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.biliv3.data.BangumiItem
 import com.example.biliv3.design.BiliTheme
+import com.example.biliv3.design.band
+import com.example.biliv3.design.BandLevel
+import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
@@ -95,9 +99,13 @@ fun BangumiScreen(
     ) {
         // ---- 顶栏 ----
         // 通栏顶栏：不再是卡片，内容直接排。
+        // ⚠️ 底线不可省（v1.2.4 补）：`AGENTS.md` §7.4-32 要求
+        // 「二级页标题栏一律 ruleBottom」。此处原先漏了，标题会"浮"在
+        // 下方 Tab 条上 —— 与 RankingScreen 的同一结构不一致。
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),
@@ -129,10 +137,12 @@ fun BangumiScreen(
         }
 
         // ---- 类型 Tab ----
+        // ⚠️ 用 `band()` 而不是 `.background(colors.bgCard)`（v1.2.4 统一）。
+        // 与 RankingScreen 的同一结构保持一致 —— 这是全宽直角的分区带。
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(colors.bgCard),
+                .band(BandLevel.Raised),
             contentPadding = PaddingValues(horizontal = Space.x4),
             horizontalArrangement = Arrangement.spacedBy(Space.x5),
         ) {
@@ -156,7 +166,7 @@ fun BangumiScreen(
                     Box(
                         modifier = Modifier
                             .width(20.dp)
-                            .height(3.dp)
+                            .height(Space.tabIndicator)
                             .clip(RoundedCornerShape(Radius.badge))
                             .background(if (selected) colors.brandPrimary else Color.Transparent),
                     )

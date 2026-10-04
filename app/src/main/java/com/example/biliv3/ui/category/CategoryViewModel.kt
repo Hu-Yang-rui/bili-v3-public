@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.biliv3.data.CategoryRepository
 import com.example.biliv3.data.model.VideoItem
+import com.example.biliv3.ui.component.userMessageFor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,6 +47,17 @@ class CategoryViewModel(
     private val _hasMore = MutableStateFlow(true)
     val hasMore: StateFlow<Boolean> = _hasMore.asStateFlow()
 
+    /**
+     * 加载失败原因。null = 没失败。
+     *
+     * ⚠️ 上一版是 `runCatching { }.getOrDefault(emptyList())` ——
+     * 失败与"分区确实没有内容"都得到空列表，页面统一显示
+     * 「这个分区暂时没有内容」。断网时用户会以为**这个分区被清空了**。
+     * 见 `AGENTS.md` §1 自检第 7 项（三态齐全）。
+     */
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
     /** 当前档位：true = 最新，false = 热门。 */
     private val _sortLatest = MutableStateFlow(true)
     val sortLatest: StateFlow<Boolean> = _sortLatest.asStateFlow()
@@ -59,17 +71,27 @@ class CategoryViewModel(
     fun load() {
         viewModelScope.launch {
             _loading.value = true
+            _error.value = null
             page = 1
 
-            val list = if (_sortLatest.value) {
-                runCatching { repo.latest(rid, page = 1) }.getOrDefault(emptyList())
+            val result = if (_sortLatest.value) {
+                runCatching { repo.latest(rid, page = 1) }
             } else {
-                runCatching { repo.hot(rid) }.getOrDefault(emptyList())
+                runCatching { repo.hot(rid) }
             }
 
-            _videos.value = list
-            // 热门档位只有一页，明确标记没有更多
-            _hasMore.value = _sortLatest.value && list.isNotEmpty()
+            result.fold(
+                onSuccess = { list ->
+                    _videos.value = list
+                    // 热门档位只有一页，明确标记没有更多
+                    _hasMore.value = _sortLatest.value && list.isNotEmpty()
+                },
+                onFailure = {
+                    _videos.value = emptyList()
+                    _hasMore.value = false
+                    _error.value = userMessageFor(it)
+                },
+            )
             _loading.value = false
         }
     }
@@ -95,16 +117,24 @@ class CategoryViewModel(
         viewModelScope.launch {
             _loadingMore.value = true
             val next = page + 1
-            val list = runCatching { repo.latest(rid, page = next) }.getOrDefault(emptyList())
+            val result = runCatching { repo.latest(rid, page = next) }
 
-            if (list.isEmpty()) {
-                _hasMore.value = false
-            } else {
-                val seen = _videos.value.mapTo(HashSet()) { it.bvid }
-                _videos.value = _videos.value + list.filter { it.bvid !in seen }
-                page = next
-                _hasMore.value = list.isNotEmpty()
-            }
+            result.fold(
+                onSuccess = { list ->
+                    if (list.isEmpty()) {
+                        _hasMore.value = false
+                    } else {
+                        val seen = _videos.value.mapTo(HashSet()) { it.bvid }
+                        _videos.value = _videos.value + list.filter { it.bvid !in seen }
+                        page = next
+                        _hasMore.value = true
+                    }
+                },
+                onFailure = {
+                    // ⚠️ 翻页失败不置 hasMore=false：网络抖动不该
+                    // 把列表永久截断（同 LiveViewModel.loadMore）。
+                },
+            )
             _loadingMore.value = false
         }
     }

@@ -75,8 +75,31 @@ class AuthStore(context: Context) : AuthState {
             prefs.edit().putString(KEY_FACE, value).apply()
         }
 
-    /** 是否已登录。 */
-    val isLoggedIn: Boolean get() = cookie.isNotEmpty()
+    /**
+     * 是否已登录。
+     *
+     * ## ⚠️ 判据是 `SESSDATA`，不是"cookie 非空"
+     *
+     * 首版写的是 `cookie.isNotEmpty()` —— **这是错的**。
+     * `AuthCookieJar.saveFromResponse` 会把**任何**响应的 cookie 都存下来
+     * （包括未登录时 B 站下发的 `buvid3` / `buvid4` / `b_nut` 等设备标识），
+     * 所以**一个从未登录过的用户，cookie 也是非空的**。
+     *
+     * 后果：`hasLocalCredential()` 对游客返回 true →
+     * 「我的」页断网时会显示「无法获取账号信息」而不是「未登录」，
+     * 把游客当成"被登出的已登录用户"。
+     *
+     * **只有 `SESSDATA` 是登录凭据**（服务端用它认身份）。
+     * 判据与 `biliJct` 同源（都从 cookie 串现取），避免两处不同步。
+     */
+    val isLoggedIn: Boolean
+        get() = cookie
+            .split(';')
+            .any { part ->
+                val idx = part.indexOf('=')
+                idx > 0 && part.substring(0, idx).trim() == "SESSDATA" &&
+                    part.substring(idx + 1).trim().isNotEmpty()
+            }
 
     /**
      * CSRF token（cookie 里的 `bili_jct`）。

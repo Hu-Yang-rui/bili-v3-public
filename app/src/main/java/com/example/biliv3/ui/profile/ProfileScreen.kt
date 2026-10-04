@@ -54,6 +54,7 @@ import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
 import com.example.biliv3.ui.component.BrandButtonVariant
+import com.example.biliv3.ui.component.ErrorState
 
 /**
  * 「我的」页。
@@ -105,6 +106,15 @@ fun ProfileScreen(
                 user = s.user,
                 onLogout = viewModel::logout,
                 onNavigate = onNavigate,
+            )
+
+            // ⚠️ 本地有凭据但查询失败 —— **不能显示 Guest**，
+            // 那会让已登录用户以为被登出（见 ProfileUiState.Failed 的说明）。
+            is ProfileUiState.Failed -> ErrorState(
+                title = "无法获取账号信息",
+                description = s.reason,
+                onRetry = { viewModel.refresh() },
+                modifier = Modifier.fillMaxSize(),
             )
         }
     }

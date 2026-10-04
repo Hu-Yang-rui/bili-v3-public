@@ -1,6 +1,7 @@
 package com.example.biliv3.data
 
 import com.example.biliv3.data.api.BiliApi
+import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.api.Endpoints
 import org.json.JSONObject
 
@@ -46,20 +47,33 @@ class LiveRepository(
             "page_size" to pageSize.toString(),
         )
 
-        val json = try {
-            api.getRaw(
-                path = Endpoints.LIVE_LIST,
-                query = query,
-                signed = false,
-                host = Endpoints.LIVE_LIST_HOST,
-            )
-        } catch (_: Exception) {
-            return LivePage(emptyList(), false)
-        }
-        if (json.optInt("code", -1) != 0) return LivePage(emptyList(), false)
+        // ⚠️ 失败一律**抛异常**，不返回空列表（v1.2.4 修）。
+        //
+        // 上一版这里有 5 个 `return LivePage(emptyList(), false)` 的静默出口
+        // （异常 / `code != 0` / 缺 `data` / 缺 `list`）—— 于是**接口报错
+        // 与"真的没有直播"长得一模一样**，页面显示「当前没有正在直播的房间」。
+        //
+        // 实测证据：本机 `getList` 返回 `code = -352`（风控），
+        // 而 UI 平静地显示"没人直播"。这与 §7.8-44 是同一类错误 ——
+        // **把失败伪装成空**，只是这次来源是**错误码**而不是异常。
+        //
+        // 空列表只能由"成功响应 + list 为空"产生。
+        val json = api.getRaw(
+            path = Endpoints.LIVE_LIST,
+            query = query,
+            signed = false,
+            host = Endpoints.LIVE_LIST_HOST,
+        )
 
-        val data = json.optJSONObject("data") ?: return LivePage(emptyList(), false)
-        val arr = data.optJSONArray("list") ?: return LivePage(emptyList(), false)
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            throw BiliException(code, json.optString("message", "直播列表加载失败"))
+        }
+
+        val data = json.optJSONObject("data")
+            ?: throw BiliException(-1, "直播响应缺少 data")
+        val arr = data.optJSONArray("list")
+            ?: throw BiliException(-1, "直播响应缺少 list")
 
         val out = ArrayList<LiveRoom>(arr.length())
         for (i in 0 until arr.length()) {

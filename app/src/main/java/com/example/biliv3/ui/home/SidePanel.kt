@@ -46,7 +46,6 @@ import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
@@ -300,7 +299,7 @@ private fun LivePanel(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(5.dp)
+                                    .size(Sizes.dotSm)
                                     .clip(CircleShape)
                                     .background(colors.onOverlay),
                             )

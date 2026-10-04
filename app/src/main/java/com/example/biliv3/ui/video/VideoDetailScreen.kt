@@ -2484,7 +2484,7 @@ private fun DetailSkeleton() {
             Spacer(Modifier.height(Space.x2))
             SkeletonBox(Modifier.fillMaxWidth(0.7f), height = 16.dp)
             Spacer(Modifier.height(Space.x3))
-            SkeletonBox(Modifier.fillMaxWidth(0.4f), height = 12.dp)
+            SkeletonBox(Modifier.fillMaxWidth(0.4f), height = Space.x3)
         }
     }
 }

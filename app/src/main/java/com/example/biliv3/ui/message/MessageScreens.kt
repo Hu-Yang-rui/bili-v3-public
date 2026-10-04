@@ -54,6 +54,8 @@ import com.example.biliv3.data.model.PmMessage
 import com.example.biliv3.data.model.PmSession
 import com.example.biliv3.data.model.formatRelativeTime
 import com.example.biliv3.design.BiliTheme
+import com.example.biliv3.design.band
+import com.example.biliv3.design.BandLevel
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
@@ -134,7 +136,7 @@ fun MessageListScreen(
                     modifier = Modifier
                         .clip(RoundedCornerShape(Radius.badge))
                         .background(colors.brandPrimary)
-                        .padding(horizontal = Space.compactHorizontal, vertical = 1.dp),
+                        .padding(horizontal = Space.compactHorizontal, vertical = Space.tagVertical),
                 )
             }
         }
@@ -277,7 +279,7 @@ private fun SessionRow(
                     modifier = Modifier
                         .clip(RoundedCornerShape(Radius.badge))
                         .background(colors.brandPrimary)
-                        .padding(horizontal = Space.compactHorizontal, vertical = 1.dp),
+                        .padding(horizontal = Space.compactHorizontal, vertical = Space.tagVertical),
                 )
             }
         }
@@ -399,7 +401,9 @@ fun ChatScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(colors.bgCard)
+                    // ⚠️ 用 `band()` 而不是 `.background(colors.bgCard)`（v1.2.4 统一）。
+                    // 输入条是全宽直角的分区带（与上方消息列表同宽），不是卡片。
+                    .band(BandLevel.Raised)
                     .imePadding()
                     .navigationBarsPadding()
                     .padding(horizontal = Space.x4, vertical = Space.x2),

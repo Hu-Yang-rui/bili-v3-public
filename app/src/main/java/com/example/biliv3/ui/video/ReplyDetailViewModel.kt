@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.biliv3.data.CommentRepository
 import com.example.biliv3.data.model.CommentItem
+import com.example.biliv3.ui.component.userMessageFor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,6 +53,16 @@ class ReplyDetailViewModel(
     private val _toast = MutableStateFlow<String?>(null)
     val toast: StateFlow<String?> = _toast.asStateFlow()
 
+    /**
+     * 加载失败原因。null = 没失败。
+     *
+     * ⚠️ 上一版失败时把 `_replies` 置空、`_hasMore` 置 false，
+     * 页面显示「还没有回复」—— 用户会以为**这条评论真的没人回**，
+     * 实际是请求挂了。见 `AGENTS.md` §1 自检第 7 项。
+     */
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
     val isLoggedIn: Boolean get() = repo.isLoggedIn
 
     private var page = 1
@@ -63,19 +74,24 @@ class ReplyDetailViewModel(
     fun load() {
         viewModelScope.launch {
             _loading.value = true
+            _error.value = null
             page = 1
 
             val result = runCatching {
                 repo.replies(oid = oid, root = root, upMid = upMid, page = 1)
-            }.getOrNull()
-
-            if (result == null) {
-                _replies.value = emptyList()
-                _hasMore.value = false
-            } else {
-                _replies.value = result.comments
-                _hasMore.value = !result.isEnd
             }
+
+            result.fold(
+                onSuccess = { r ->
+                    _replies.value = r.comments
+                    _hasMore.value = !r.isEnd
+                },
+                onFailure = {
+                    _replies.value = emptyList()
+                    _hasMore.value = false
+                    _error.value = userMessageFor(it)
+                },
+            )
             _loading.value = false
         }
     }
@@ -88,17 +104,24 @@ class ReplyDetailViewModel(
             val next = page + 1
             val result = runCatching {
                 repo.replies(oid = oid, root = root, upMid = upMid, page = next)
-            }.getOrNull()
-
-            if (result == null || result.comments.isEmpty()) {
-                _hasMore.value = false
-            } else {
-                // 按 rpid 去重（翻页期间可能有新回复插入）
-                val seen = _replies.value.mapTo(HashSet()) { it.rpid }
-                _replies.value = _replies.value + result.comments.filter { it.rpid !in seen }
-                page = next
-                _hasMore.value = !result.isEnd
             }
+
+            result.fold(
+                onSuccess = { r ->
+                    if (r.comments.isEmpty()) {
+                        _hasMore.value = false
+                    } else {
+                        // 按 rpid 去重（翻页期间可能有新回复插入）
+                        val seen = _replies.value.mapTo(HashSet()) { it.rpid }
+                        _replies.value = _replies.value + r.comments.filter { it.rpid !in seen }
+                        page = next
+                        _hasMore.value = !r.isEnd
+                    }
+                },
+                onFailure = {
+                    // ⚠️ 翻页失败不置 hasMore=false（同 Live/Category）。
+                },
+            )
             _loadingMore.value = false
         }
     }

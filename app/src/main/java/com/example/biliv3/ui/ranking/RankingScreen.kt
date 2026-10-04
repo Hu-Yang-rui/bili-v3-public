@@ -42,6 +42,8 @@ import com.example.biliv3.data.RankingTab
 import com.example.biliv3.data.model.VideoItem
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.design.BiliTheme
+import com.example.biliv3.design.band
+import com.example.biliv3.design.BandLevel
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.FontSize
@@ -130,10 +132,14 @@ fun RankingScreen(
         }
 
         // ---- 分区 Tab ----
+        // ⚠️ 用 `band()` 而不是 `.background(colors.bgCard)`（v1.2.4 统一）。
+        // 这是**全宽、直角**的分区带 —— 正是 `Band` 的语义；
+        // 而 `bgCard` 是"卡片"的色，拿它铺带子是把两个概念混用了
+        // （§5.1 明确：分组靠明度带，不靠卡片）。
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(colors.bgCard),
+                .band(BandLevel.Raised),
             contentPadding = PaddingValues(horizontal = Space.x4),
             horizontalArrangement = Arrangement.spacedBy(Space.x5),
         ) {
@@ -157,7 +163,7 @@ fun RankingScreen(
                     Box(
                         modifier = Modifier
                             .width(20.dp)
-                            .height(3.dp)
+                            .height(Space.tabIndicator)
                             .clip(RoundedCornerShape(Radius.badge))
                             .background(
                                 if (selected) colors.brandPrimary else androidx.compose.ui.graphics.Color.Transparent,

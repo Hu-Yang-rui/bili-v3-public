@@ -57,6 +57,7 @@ import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
+import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.home.gridGutterFor
 import com.example.biliv3.ui.home.gridRowSpacingFor
 import com.example.biliv3.ui.home.pagePaddingFor
@@ -91,6 +92,7 @@ fun LiveScreen(
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
     val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
+    val loadError by viewModel.error.collectAsStateWithLifecycle()
 
     val gridState = rememberLazyGridState()
 
@@ -163,6 +165,13 @@ fun LiveScreen(
                     text = "正在加载直播…",
                 )
             }
+
+            loadError != null -> ErrorState(
+                title = "直播列表加载失败",
+                description = loadError,
+                onRetry = { viewModel.retry() },
+                modifier = Modifier.fillMaxSize(),
+            )
 
             rooms.isEmpty() -> EmptyState(
                 title = "当前没有正在直播的房间",
@@ -246,7 +255,12 @@ private fun LiveCard(room: LiveRoom, onClick: () -> Unit) {
                     .padding(Space.compactHorizontal)
                     .clip(RoundedCornerShape(Radius.badge))
                     .background(colors.stateLive)
-                    .padding(horizontal = 5.dp, vertical = 1.dp),
+                    // ⚠️ 用令牌而不是 `5.dp` / `1.dp`（v1.2.4）：
+                    // 同一种「直播中」角标在 `SidePanel` 用的是
+                    // `tagHorizontal`(4) + `tagVertical`(1)，这里却是 5+1 ——
+                    // 两处差 1dp，肉眼看不出来但属于**同一语义两套值**。
+                    // 统一到令牌，右侧是唯一定义处。
+                    .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(

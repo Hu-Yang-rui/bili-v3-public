@@ -50,12 +50,12 @@ import com.example.biliv3.data.model.formatRelativeTime
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
+import com.example.biliv3.ui.component.ErrorState
 
 /**
  * 楼中楼详情页（某条评论的全部回复）。
@@ -93,6 +93,7 @@ fun ReplyDetailScreen(
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
     val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
+    val loadError by viewModel.error.collectAsStateWithLifecycle()
 
     val listState = rememberLazyListState()
 
@@ -189,6 +190,15 @@ fun ReplyDetailScreen(
                             modifier = Modifier.size(Sizes.iconXl),
                         )
                     }
+                }
+
+                loadError != null -> item(key = "error") {
+                    ErrorState(
+                        title = "回复加载失败",
+                        description = loadError,
+                        onRetry = { viewModel.retry() },
+                        compact = true,
+                    )
                 }
 
                 replies.isEmpty() -> item(key = "empty") {

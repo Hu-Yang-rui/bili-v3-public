@@ -33,7 +33,6 @@ import com.example.biliv3.data.api.InteractionState
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.ui.component.MonoReadout
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes

@@ -165,6 +165,29 @@ data class BiliColors(
     // ---------------- 分区 ----------------
     val categoryAccent: Color,
     val categorySurface: Color,
+
+    // ---------------- 第三方渠道品牌色（明确豁免）----------------
+    //
+    // ## ⚠️ 为什么这 4 个值**允许**写死（§5.2「页面内零硬编码」的豁免）
+    //
+    // 它们**不是本项目的设计决策，而是别人的品牌真值** ——
+    // 微信绿 / 朋友圈绿 / 下载紫 / 复制蓝。这类颜色：
+    //
+    // 1. **不能随我们的主题变**：改了就不是微信的绿了。
+    //    分享面板里图标形状是通用轮廓（规避商标），**颜色才是识别位**
+    // 2. **不在我们的调色体系内**：与品牌粉 / 极客青无任何关系，
+    //    若混进上面那些角色位，会误导成"这是我们的一个语义色"
+    //
+    // 所以集中定义在此（而不是散在页面里）：既"值可查、一处可改"，
+    // 又诚实标注它们是**外来值**。
+    //
+    // 📌 历史：这 4 个值原先直接写在 `ItemMoreMenu.SHARE_CHANNELS` 里。
+    // `AGENTS.md` §11.1 记为待办 ——「可论证豁免，但需在代码里写明豁免理由，
+    // 否则与『忘了改』无法区分」。v1.2.4 补上理由并上移到令牌层。
+    val channelWechat: Color,
+    val channelMoments: Color,
+    val channelDownload: Color,
+    val channelCopyLink: Color,
 )
 
 /**
@@ -254,6 +277,12 @@ val DarkColors = BiliColors(
     // 分区
     categoryAccent = Color(0xFF8B95A5),
     categorySurface = Color(0xFF1B212A),
+
+    // 第三方渠道品牌色 —— 他方品牌真值，豁免说明见 `BiliColors` 的字段声明处。
+    channelWechat = Color(0xFF4CAF50),
+    channelMoments = Color(0xFF66BB6A),
+    channelDownload = Color(0xFF7E57C2),
+    channelCopyLink = Color(0xFF42A5F5),
 )
 
 

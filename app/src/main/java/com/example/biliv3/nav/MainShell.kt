@@ -47,7 +47,6 @@ import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
 import com.example.biliv3.design.tokens.Motion
 import com.example.biliv3.design.tokens.Space
-import com.example.biliv3.ui.component.PlaceholderScreen
 import com.example.biliv3.ui.aicu.AicuScreen
 import com.example.biliv3.ui.bangumi.BangumiScreen
 import com.example.biliv3.ui.bangumi.BangumiViewModel

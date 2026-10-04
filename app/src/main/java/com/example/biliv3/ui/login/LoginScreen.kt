@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.biliv3.data.auth.QrCode
 import com.example.biliv3.design.BiliTheme
+import com.example.biliv3.design.band
+import com.example.biliv3.design.BandLevel
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
@@ -242,7 +244,9 @@ private fun ModeTabs(current: LoginMode, onSelect: (LoginMode) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.bgCard),
+            // ⚠️ 用 `band()` 而不是 `.background(colors.bgCard)`（v1.2.4 统一）。
+            // 登录方式切换是全宽直角的分区带，不是卡片。
+            .band(BandLevel.Raised),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         items.forEach { (m, label) ->
@@ -267,7 +271,7 @@ private fun ModeTabs(current: LoginMode, onSelect: (LoginMode) -> Unit) {
                 Box(
                     modifier = Modifier
                         .width(24.dp)
-                        .height(3.dp)
+                        .height(Space.tabIndicator)
                         .clip(RoundedCornerShape(Radius.badge))
                         .background(if (selected) colors.brandPrimary else Color.Transparent),
                 )

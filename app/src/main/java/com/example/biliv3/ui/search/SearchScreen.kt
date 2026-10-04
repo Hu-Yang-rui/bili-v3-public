@@ -55,8 +55,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.biliv3.design.BiliTheme
+import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
@@ -243,9 +245,26 @@ private fun SearchField(
     Row(
         modifier = modifier
             .height(Sizes.searchHeight)
-            .clip(RoundedCornerShape(Radius.pill))
-            .background(colors.bgHover)
-            .padding(horizontal = Space.x3),
+            // 🔴 与首页 `TopNav` 的搜索框**必须同构**（v1.2.4 统一）。
+            //
+            // 上一版这里是 `clip(pill) + background(bgHover)` —— 一个完整的
+            // 圆角胶囊盒子。而首页 `TopNav.SearchBox` 在无卡片重构里已经改成
+            // **底线输入框**（无底色 / 无圆角 / 无四边框，只有一条底边线）。
+            //
+            // 于是同一个 App 里出现两种搜索框：首页是底线，点进来变胶囊。
+            // **这正是「重构漏改」的典型**：改了一处，忘了另一处。
+            //
+            // 实测证据（Pixel 7 / 1080px）：
+            // | | 首页 TopNav | 本页（改前） |
+            // |---|---|---|
+            // | 形态 | 1dp 底线，y=254..256 | 实心块，y=152..256（高 105px = 40dp） |
+            // | 取色 | maxV 37..46（细线） | medianV **48** = `bgHover #1F2530` 精确吻合 |
+            //
+            // 改法：抄 `TopNav` 的写法 —— `ruleBottom` 承担边界，
+            // 去掉 `clip` / `background`。⚠️ 注意搜索页没有 hover 态
+            // （移动端无指针），所以用 `Rule.color` 固定值。
+            .ruleBottom(color = Rule.color)
+            .padding(horizontal = Space.x1),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(

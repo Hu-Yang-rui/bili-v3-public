@@ -42,6 +42,7 @@ import coil.compose.AsyncImage
 import com.example.biliv3.data.BangumiEpisode
 import com.example.biliv3.data.model.CoverUrls
 import com.example.biliv3.design.BiliTheme
+import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Rhythm
@@ -96,9 +97,13 @@ fun BangumiDetailScreen(
             .background(colors.bgBase),
     ) {
         // 通栏顶栏：不再是卡片，内容直接排。
+        // ⚠️ 底线不可省（v1.2.4 补）：§7.4-32 要求「二级页标题栏一律
+        // ruleBottom(color = Rule.color)」。此处原先漏了 ——
+        // 番剧详情是长页面，标题"浮"在滚动内容上尤其明显。
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(Sizes.topBarMobile)
                 .padding(horizontal = Space.x2),

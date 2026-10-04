@@ -141,6 +141,26 @@ object Space {
 
     /** 进度条 / 细轨道的视觉高度。 */
     val trackHeight = 2.dp
+
+    /**
+     * **Tab 选中下划线的高度（3dp）**。
+     *
+     * ## 为什么立这一档（原来是 4 处 `3.dp`）
+     *
+     * 分区 Tab / 番剧类型 Tab / 登录方式 Tab / 排行榜分区 Tab
+     * **四个地方**都手写了 `.height(3.dp)`，且上下文完全相同：
+     *
+     * ```
+     * Box(Modifier.width(20.dp).height(3.dp)
+     *     .clip(RoundedCornerShape(Radius.badge))
+     *     .background(if (selected) colors.brandPrimary else Color.Transparent))
+     * ```
+     *
+     * 与 [trackHeight] 的区别是**语义**：track 是"轨道"（进度条底），
+     * 本值是"**选中标记**"（Tab 下划线）。两者数值不同（2 vs 3），
+     * 将来要调下划线粗细时，不该把进度条也一起改。
+     */
+    val tabIndicator = 3.dp
 }
 
 /**
@@ -259,6 +279,21 @@ object Sizes {
     val iconMd = 18.dp
     val iconLg = 20.dp
     val iconXl = 24.dp
+
+    /**
+     * **状态圆点** —— 「直播中」角标里的呼吸点、未读红点。
+     *
+     * ## 为什么立这一档（原来是 `5.dp` / `8.dp` 手写）
+     *
+     * 这类点是**状态指示**，不是图标也不是装饰：
+     * - [dotSm] 5dp —— 角标**内部**的点（旁边有文字，点只做"活着"的暗示）
+     * - [dotLg] 8dp —— 独立压在图上的点（未读红点，没有文字可依，要够显眼）
+     *
+     * 与 [iconSm] 的区别：图标有笔画细节、需要 14dp 才看得清；
+     * 实心点只需"能被看见"，5~8dp 就够 —— 用图标档位会过大。
+     */
+    val dotSm = 5.dp
+    val dotLg = 8.dp
 }
 
 /**

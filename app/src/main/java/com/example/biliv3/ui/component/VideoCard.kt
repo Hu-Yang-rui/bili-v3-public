@@ -163,7 +163,12 @@ fun VideoCard(
                     imageVector = Icons.Filled.PlayArrow,
                     contentDescription = "播放",
                     tint = colors.onOverlay,
-                    modifier = Modifier.size(13.dp),
+                    // ⚠️ 13dp → `Sizes.iconSm`(14dp)（v1.2.4）。
+                    // §5.2 规定图标只有 **14 / 18 / 20 / 24 四档**，
+                    // 13dp 不在档位上 —— 它夹在 `FontSize.label`(10sp) 的
+                    // 计数读数旁边，当初是为对齐文字而手调的。
+                    // 归到 iconSm 后视觉几乎无差别，但值可查、可统一调整。
+                    modifier = Modifier.size(Sizes.iconSm),
                 )
                 Spacer(Modifier.width(Space.micro))
                 MonoReadout(
