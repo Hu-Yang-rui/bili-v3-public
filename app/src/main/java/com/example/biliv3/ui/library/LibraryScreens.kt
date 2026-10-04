@@ -60,6 +60,13 @@ import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.model.formatRelativeTime
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.ruleBottom
+// ---- v1.3.0 批量整理新增 ----
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
@@ -467,38 +474,147 @@ fun FavoriteFolderScreen(
     onLoginRequired: () -> Unit,
     onShare: (FavoriteEntry) -> Unit,
     modifier: Modifier = Modifier,
+    // ---- v1.3.0 批量整理 ----
+    /** 其他收藏夹（批量移动的目标，不含当前夹）。 */
+    otherFolders: List<FavFolder> = emptyList(),
+    selection: BatchSelection = remember { BatchSelection() },
+    batchRunning: Boolean = false,
+    batchProgress: Pair<Int, Int>? = null,
+    onToggleSelect: (String) -> Unit = {},
+    onSelectAll: () -> Unit = {},
+    onClearSelection: () -> Unit = {},
+    onInvertSelection: () -> Unit = {},
+    onSelectPage: () -> Unit = {},
+    onBatchMove: (Long) -> Unit = {},
+    onBatchRemove: () -> Unit = {},
+    onBatchAddToView: () -> Unit = {},
+    onBatchAddToQueue: () -> Unit = {},
+    /** v1.3.0：进入快速整理页（规则筛候选）。 */
+    onOrganize: () -> Unit = {},
 ) {
     // 当前打开 ⋮ 菜单的条目（null = 未打开）
     var menuEntry by remember { mutableStateOf<FavoriteEntry?>(null) }
 
+    // 多选模式（进入后顶栏与行行为都变）
+    var selectMode by rememberSaveable { mutableStateOf(false) }
+
+    // 批量移动：选择目标收藏夹的浮层
+    var movePicker by remember { mutableStateOf(false) }
+
+    // 破坏性操作确认框
+    var confirmRemove by remember { mutableStateOf(false) }
+
+    // 退出多选时清空选择（否则下次进入会带着上次的勾选）
+    LaunchedEffect(selectMode) {
+        if (!selectMode) onClearSelection()
+    }
+
+    // 返回键：多选模式下先退出多选（而不是直接退页面）
+    BackHandler(enabled = selectMode) { selectMode = false }
+
     LibraryScaffold(
-        title = folder.title,
-        onBack = onBack,
+        title = if (selectMode) "已选 ${selection.count}" else folder.title,
+        onBack = { if (selectMode) selectMode = false else onBack() },
         modifier = modifier,
+        // 非多选模式显示「整理」+「选择」入口
+        actions = {
+            if (!selectMode && isLoggedIn && entries.isNotEmpty()) {
+                // 快速整理：规则筛出候选 → 人工确认
+                TextButton(onClick = onOrganize) {
+                    Text("整理", color = BiliTheme.colors.textSecondary)
+                }
+                TextButton(onClick = { selectMode = true }) {
+                    Text("选择", color = BiliTheme.colors.textPrimary)
+                }
+            }
+        },
     ) {
-        when {
-            !isLoggedIn -> LoginRequiredPanel(onLoginRequired)
-            loading && entries.isEmpty() -> LoadingPanel()
-            entries.isEmpty() -> EmptyState(
-                title = "这个收藏夹是空的",
-                      terminalStyle = true,
-                description = "在视频页点「收藏」加入",
-                modifier = Modifier.fillMaxSize(),
-            )
-            else -> LoadMoreList(
-                items = entries,
-                keyOf = { it.favItemId.toString() },
-                loadingMore = loadingMore,
-                hasMore = hasMore,
-                onLoadMore = onLoadMore,
-            ) { e ->
-                FavoriteRow(
-                    entry = e,
-                    onClick = { onVideoClick(e.video.bvid) },
-                    onMore = { menuEntry = e },
+        Column(Modifier.fillMaxSize()) {
+            // ---- 批量操作条（多选模式）----
+            if (selectMode) {
+                BatchActionBar(
+                    selection = selection,
+                    batchRunning = batchRunning,
+                    progress = batchProgress,
+                    onSelectAll = onSelectAll,
+                    onClear = onClearSelection,
+                    onInvert = onInvertSelection,
+                    onSelectPage = onSelectPage,
+                )
+            }
+
+            when {
+                !isLoggedIn -> LoginRequiredPanel(onLoginRequired)
+                loading && entries.isEmpty() -> LoadingPanel()
+                entries.isEmpty() -> EmptyState(
+                    title = "这个收藏夹是空的",
+                    terminalStyle = true,
+                    description = "在视频页点「收藏」加入",
+                    modifier = Modifier.fillMaxSize(),
+                )
+                else -> LoadMoreList(
+                    items = entries,
+                    keyOf = { it.favItemId.toString() },
+                    loadingMore = loadingMore,
+                    hasMore = hasMore,
+                    onLoadMore = onLoadMore,
+                ) { e ->
+                    val key = e.favItemId.toString()
+                    FavoriteRow(
+                        entry = e,
+                        onClick = { onVideoClick(e.video.bvid) },
+                        onMore = { menuEntry = e },
+                        selectMode = selectMode,
+                        selected = selection.contains(key),
+                        onToggleSelect = { onToggleSelect(key) },
+                    )
+                }
+            }
+
+            // ---- 底部操作条（多选模式 + 有选中）----
+            if (selectMode && selection.isNotEmpty) {
+                BatchBottomBar(
+                    count = selection.count,
+                    running = batchRunning,
+                    hasOtherFolders = otherFolders.isNotEmpty(),
+                    onMove = { movePicker = true },
+                    onRemove = { confirmRemove = true },
+                    onAddToView = onBatchAddToView,
+                    onAddToQueue = onBatchAddToQueue,
                 )
             }
         }
+    }
+
+    // ---- 批量移动：选目标收藏夹 ----
+    if (movePicker) {
+        BatchMovePicker(
+            folders = otherFolders,
+            count = selection.count,
+            onDismiss = { movePicker = false },
+            onPick = { id ->
+                movePicker = false
+                onBatchMove(id)
+            },
+        )
+    }
+
+    // ---- 破坏性操作确认 ----
+    //
+    // ⚠️ 取消收藏**必须确认**：批量操作一次可能影响几十条，
+    // 且服务端没有"撤销"。文案里带上数量，让用户知道影响面。
+    if (confirmRemove) {
+        ConfirmDialog(
+            title = "取消收藏 ${selection.count} 个视频？",
+            message = "这些视频会从「${folder.title}」移除，无法批量撤销。",
+            confirmText = "取消收藏",
+            destructive = true,
+            onDismiss = { confirmRemove = false },
+            onConfirm = {
+                confirmRemove = false
+                onBatchRemove()
+            },
+        )
     }
 
     // ---- ⋮ 更多菜单 ----
@@ -562,6 +678,15 @@ private fun FavoriteRow(
     entry: FavoriteEntry,
     onClick: () -> Unit,
     onMore: () -> Unit,
+    /**
+     * v1.3.0：多选模式。
+     *
+     * `selectMode = false` 时完全不渲染复选框（连占位都不留）——
+     * 否则正常浏览时每行左边会空出一块，看起来像排版错误。
+     */
+    selectMode: Boolean = false,
+    selected: Boolean = false,
+    onToggleSelect: () -> Unit = {},
 ) {
     val colors = BiliTheme.colors
     val v = entry.video
@@ -577,7 +702,13 @@ private fun FavoriteRow(
             // 现在：行与行靠留白分隔。**列表用留白分组，不用卡片分组。**
             //
             // 失效视频没有可跳转的详情页，禁用点击而不是跳过去报错
-            .clickable(enabled = !entry.isInvalid, onClick = onClick)
+            //
+            // ⚠️ 多选模式下**整行点击 = 勾选**（不是进详情）——
+            // 这是列表多选的通用肌肉记忆，也避免误进详情页丢选择。
+            .clickable(
+                enabled = selectMode || !entry.isInvalid,
+                onClick = { if (selectMode) onToggleSelect() else onClick() },
+            )
             .padding(horizontal = Space.x4, vertical = Space.x2),
         // ⚠️ Bottom：⋮ 要贴**右下角**，不是垂直居中。
         //
@@ -586,6 +717,29 @@ private fun FavoriteRow(
         // 视觉上有明确的落点（官方也是右下）。
         verticalAlignment = Alignment.Bottom,
     ) {
+        // v1.3.0：多选复选框。
+        //
+        // ⚠️ 只在 selectMode 时渲染 —— 正常浏览时留空位会让整列右移，
+        // 看起来像排版错位。
+        //
+        // 用 Material 的 Checkbox 而不是自绘：它自带无障碍语义
+        // （TalkBack 会读"已选中/未选中"），自绘要额外补一堆语义。
+        if (selectMode) {
+            Checkbox(
+                checked = selected,
+                onCheckedChange = { onToggleSelect() },
+                colors = CheckboxDefaults.colors(
+                    checkedColor = colors.brandPrimary,
+                    uncheckedColor = colors.textTertiary,
+                    checkmarkColor = colors.textOnBrand,
+                ),
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .size(Sizes.iconXl),
+            )
+            Spacer(Modifier.width(Space.x2))
+        }
+
         Box(
             modifier = Modifier
                 .width(HISTORY_THUMB_WIDTH)
@@ -704,6 +858,13 @@ private fun LibraryScaffold(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * v1.3.0：顶栏右侧动作区（收藏夹的「选择」入口）。
+     *
+     * 默认空实现 —— 其余 4 个用本 scaffold 的页面（历史/稍后再看/下载/收藏总览）
+     * 不需要右侧动作，加参数而不是各写一遍顶栏。
+     */
+    actions: @Composable RowScope.() -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val colors = BiliTheme.colors
@@ -746,7 +907,11 @@ private fun LibraryScaffold(
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                // ⚠️ weight(1f)：让标题占满剩余宽度，把 actions 推到最右。
+                // 不加的话标题短时 actions 会紧贴标题（而不是贴右边）。
+                modifier = Modifier.weight(1f),
             )
+            actions()
         }
         content()
     }

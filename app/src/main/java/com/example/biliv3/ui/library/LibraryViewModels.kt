@@ -290,4 +290,237 @@ class FavoriteFolderViewModel(
     }
 
     fun retry() = load()
+
+    // ---------------- v1.3.0 批量整理 ----------------
+
+    /**
+     * 多选状态。
+     *
+     * ⚠️ 每次列表变化都要 `updateKeys`（见 `_items` 的 setter 注释），
+     * 否则"全选"会基于过期列表计算。
+     */
+    private val _selection = MutableStateFlow(BatchSelection())
+    val selection: StateFlow<BatchSelection> = _selection.asStateFlow()
+
+    /** 批量操作进行中（禁用按钮 + 显示进度）。 */
+    private val _batchRunning = MutableStateFlow(false)
+    val batchRunning: StateFlow<Boolean> = _batchRunning.asStateFlow()
+
+    private val _batchProgress = MutableStateFlow<Pair<Int, Int>?>(null)
+    val batchProgress: StateFlow<Pair<Int, Int>?> = _batchProgress.asStateFlow()
+
+    /** 当前收藏夹里全部已加载项的 key（顺序 = 列表顺序）。 */
+    private fun loadedKeys(): List<String> = _items.value.map { it.favItemId.toString() }
+
+    /** 同步选择集（列表变了就调）。 */
+    private fun syncSelection() {
+        _selection.value = _selection.value.updateKeys(loadedKeys())
+    }
+
+    fun toggleSelect(key: String) {
+        _selection.value.toggle(key)
+        // ⚠️ 必须重新赋值触发 StateFlow 通知 —— BatchSelection 是可变对象，
+        // 原地修改不会发通知（这也是它为什么提供 updateKeys 返回新实例）。
+        _selection.value = _selection.value.updateKeys(loadedKeys())
+    }
+
+    fun selectAll() {
+        _selection.value.selectAll()
+        _selection.value = _selection.value.updateKeys(loadedKeys())
+    }
+
+    fun clearSelection() {
+        _selection.value.clear()
+        _selection.value = _selection.value.updateKeys(loadedKeys())
+    }
+
+    fun invertSelection() {
+        _selection.value.invert()
+        _selection.value = _selection.value.updateKeys(loadedKeys())
+    }
+
+    fun selectCurrentPage() {
+        _selection.value.selectPage(loadedKeys())
+        _selection.value = _selection.value.updateKeys(loadedKeys())
+    }
+
+    /** 把选中的 favItemId 映射回条目（顺序 = 列表顺序，不是选择顺序）。 */
+    private fun selectedEntries(): List<FavoriteEntry> {
+        val sel = _selection.value
+        if (sel.isEmpty) return emptyList()
+        return _items.value.filter { it.favItemId.toString() in sel.keys() }
+    }
+
+    // ⚠️ `FavRef` 是 `LibraryRepository` 的**嵌套类**（不是顶层），
+    // 所以必须写全限定名 —— 直接 import 会报 Unresolved reference。
+    private fun refsOf(entries: List<FavoriteEntry>): List<LibraryRepository.FavRef> =
+        entries.map {
+            LibraryRepository.FavRef(
+                bvid = it.video.bvid,
+                aid = it.aid,
+                favItemId = it.favItemId,
+                folderId = folderId,
+            )
+        }
+
+    /**
+     * 批量移动到另一个收藏夹。
+     *
+     * ⚠️ 与单条 `removeFavorite` 不同，这里**不做乐观移除**：
+     * 移动成功后条目会从当前夹消失，但如果部分失败，
+     * 乐观更新会让"哪些成功了"变得无法判断。所以批量操作
+     * **等结果回来再刷新**，宁可慢一点也不能显示错。
+     */
+    fun batchMoveTo(targetFolderId: Long) {
+        val entries = selectedEntries()
+        if (entries.isEmpty() || _batchRunning.value) return
+
+        viewModelScope.launch {
+            _batchRunning.value = true
+            _batchProgress.value = 0 to entries.size
+            val results = repo.batchMove(refsOf(entries), targetFolderId) { d, t ->
+                _batchProgress.value = d to t
+            }
+            _batchRunning.value = false
+            _batchProgress.value = null
+            _toast.value = repo.summarize(results)
+
+            // 成功的从列表移除（失败的留着，用户能看到哪些没走）
+            val okIds = results.filter { it.ok }.map { it.bvid }.toHashSet()
+            _items.value = _items.value.filterNot { it.video.bvid in okIds }
+            clearSelection()
+            if (results.any { it.ok }) sync?.notifyChanged()
+        }
+    }
+
+    /** 批量取消收藏（**破坏性操作，UI 必须先确认**）。 */
+    fun batchRemove() {
+        val entries = selectedEntries()
+        if (entries.isEmpty() || _batchRunning.value) return
+
+        viewModelScope.launch {
+            _batchRunning.value = true
+            _batchProgress.value = 0 to entries.size
+            val results = repo.batchRemoveFavorite(refsOf(entries)) { d, t ->
+                _batchProgress.value = d to t
+            }
+            _batchRunning.value = false
+            _batchProgress.value = null
+            _toast.value = repo.summarize(results)
+
+            val okIds = results.filter { it.ok }.map { it.bvid }.toHashSet()
+            _items.value = _items.value.filterNot { it.video.bvid in okIds }
+            clearSelection()
+            if (results.any { it.ok }) sync?.notifyChanged()
+        }
+    }
+
+    /** 批量加入稍后再看。 */
+    fun batchAddToView() {
+        val entries = selectedEntries()
+        if (entries.isEmpty() || _batchRunning.value) return
+
+        viewModelScope.launch {
+            _batchRunning.value = true
+            _batchProgress.value = 0 to entries.size
+            val results = repo.batchAddToView(entries.map { it.aid }) { d, t ->
+                _batchProgress.value = d to t
+            }
+            _batchRunning.value = false
+            _batchProgress.value = null
+            // ⚠️ 加入稍后再看**不改收藏夹内容**，所以不移除条目
+            _toast.value = repo.summarize(results)
+            clearSelection()
+        }
+    }
+
+    /**
+     * 批量加入播放队列。
+     *
+     * ⚠️ `cid` 传 0 —— 收藏夹列表**不带 cid**（`VideoItem` 里没有这个字段），
+     * 而 `QueueItem.cid` 的语义正是"0 = 尚未确定（还没拉详情）"。
+     * 真正播放时页面拉到详情再回填，不要在这里瞎猜一个 cid。
+     */
+    fun batchAddToQueue(
+        controller: com.example.biliv3.player.PlaybackController,
+    ) {
+        val entries = selectedEntries()
+        if (entries.isEmpty()) return
+        var added = 0
+        entries.forEach { e ->
+            val ok = controller.queue.ensurePresent(
+                com.example.biliv3.player.QueueItem(
+                    bvid = e.video.bvid,
+                    cid = 0L,
+                    title = e.video.title,
+                    author = e.video.authorName,
+                    cover = e.video.cover,
+                    durationSeconds = e.video.durationSeconds,
+                ),
+            )
+            if (ok) added++
+        }
+        _toast.value = if (added == 0) {
+            "已在队列中"
+        } else {
+            "已加入队列 $added 首"
+        }
+        clearSelection()
+    }
+
+    // ---------------- 批量移动：目标收藏夹 ----------------
+
+    /**
+     * 可移动到的其他收藏夹（**不含当前夹**）。
+     *
+     * ⚠️ 懒加载：只在用户点「移动」时才拉。
+     * 收藏夹列表要单独一个请求，进页面就拉属于白费流量。
+     */
+    private val _otherFolders = MutableStateFlow<List<FavFolder>>(emptyList())
+    val otherFolders: StateFlow<List<FavFolder>> = _otherFolders.asStateFlow()
+
+    private var foldersLoaded = false
+
+    /**
+     * 拉取可移动的目标收藏夹。
+     *
+     * ⚠️ mid 从 `repo.currentMid` 取，**不由 UI 传** —— UI 不该知道 mid 从哪来，
+     * 而且传错（比如传 0）的表现是"移动列表永远为空"，很难排查。
+     */
+    fun loadOtherFolders() {
+        val mid = repo.currentMid
+        if (foldersLoaded || mid <= 0L) return
+        viewModelScope.launch {
+            runCatching { repo.favoriteFolders(mid) }
+                .onSuccess { all ->
+                    // 排除当前夹 —— 移到自己没有意义，且服务端会报错
+                    _otherFolders.value = all.filter { it.id != folderId }
+                    foldersLoaded = true
+                }
+                .onFailure {
+                    // ⚠️ 失败**不设** foldersLoaded，下次点「移动」还能重试。
+                    // 设了的话一次网络抖动就永久没有移动入口。
+                    _toast.value = "收藏夹列表加载失败"
+                }
+        }
+    }
 }
+
+/**
+ * 快速整理页**不需要自己的 ViewModel**（v1.3.0）。
+ *
+ * ## 为什么删掉了最初的 `OrganizeViewModel`
+ *
+ * 初版让它继承 `FavoriteFolderViewModel` 复用批量逻辑。问题是 Kotlin 里
+ * `FavoriteFolderViewModel` 是 final，要继承得把 `items` / `load` / `isLoggedIn`
+ * 等**一堆成员全改成 open** —— 为了一个页面的复用去松动整个类的封装，
+ * 代价远大于收益，而且 `open` 会让"谁能改这些状态"变得含糊。
+ *
+ * ## 现在的做法
+ *
+ * 直接复用 `FavoriteFolderViewModel`（它本来就管列表 + 批量操作），
+ * **候选筛选放在 UI 层**（`buildCandidates` 是纯函数，见 `OrganizeScreen.kt`）。
+ * 好处：
+ * - 批量逻辑只有一份（不会出现"整理页能删但收藏夹页删不了"）
+ * - `buildCandidates` 是纯函数，可单测，且不依赖 Android
+ */

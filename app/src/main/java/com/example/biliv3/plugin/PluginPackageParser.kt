@@ -56,6 +56,20 @@ data class PluginPackagePreview(
 
     /** 签名 / 校验状态。 */
     val signature: SignatureStatus = SignatureStatus.NONE,
+
+    /**
+     * manifest 的**原始 JSON 文本**。
+     *
+     * ## 为什么预览要带着原文
+     *
+     * 用户确认安装时，落库的必须是**文件里的原始内容**，
+     * 而不是从 `PluginMetadata` 反序列化出来的对象 ——
+     * 后者会丢掉未知字段（比如插件自定义的配置项）。
+     *
+     * 所以预览不只展示解析结果，也把原文一并带出来，
+     * 安装时直接用它，保证"看到的"和"装进去的"是同一份。
+     */
+    val manifestText: String = "",
 ) {
     /** 综合风险等级（给用户看的提示）。 */
     val riskLevel: RiskLevel
@@ -122,6 +136,44 @@ object PluginPackageParser {
 
     /** 单个条目的大小上限（100 MB）。 */
     const val MAX_ENTRY_BYTES = 100_000_000L
+
+    /**
+     * 解析**裸 JSON** 插件（`.json` 文件，不是 zip 包）。
+     *
+     * ## 为什么需要它
+     *
+     * 用户可以直接导入一个 `.json` 规则文件 —— 那时没有 zip 结构，
+     * 但**仍然要走同一条预览 → 确认 → 安装链路**（否则 `.json` 就成了
+     * 绕过权限预览的后门）。
+     *
+     * 所以这里把 JSON 文本包成与 zip 版**同样的** `PluginPackagePreview`，
+     * 让 UI 只需处理一种预览类型。
+     */
+    fun parseJson(text: String): PluginPackagePreview {
+        if (text.length > MAX_META_BYTES) {
+            return PluginPackagePreview(
+                valid = false,
+                error = "插件文件过大（超过 ${MAX_META_BYTES / 1_000_000} MB）",
+            )
+        }
+        val json = try {
+            JSONObject(text)
+        } catch (e: Exception) {
+            return PluginPackagePreview(
+                valid = false,
+                error = "不是合法 JSON：${e.message}",
+            )
+        }
+        return buildPreview(
+            manifest = json,
+            rules = null,
+            entries = listOf(PackageEntry("plugin.json", text.toByteArray().size.toLong())),
+            hasNative = false,
+            hasAssets = false,
+            signature = SignatureStatus.NONE,
+            manifestText = text,
+        )
+    }
 
     /**
      * 解析插件包。
@@ -265,6 +317,105 @@ object PluginPackageParser {
             SignatureStatus.NONE
         }
 
+        return buildPreview(
+            manifest = manifest,
+            rules = rulesText,
+            entries = entries,
+            hasNative = hasNative,
+            hasAssets = hasAssets,
+            signature = signature,
+            manifestText = manifestText.orEmpty(),
+        )
+    }
+
+    /**
+     * 由 manifest（+ 可选 rules）构造预览。
+     *
+     * ⚠️ **抽出来是为了让 zip 与裸 JSON 走同一条路** ——
+     * 权限解析、类型判定、风险计算只能有一份实现。
+     * 复制一份的后果是"同一个插件从 .json 装和从 .bvplugin 装，
+     * 显示的权限不一样"，属于本项目反复禁止的「同一语义两套值」。
+     */
+    private fun buildPreview(
+        manifest: JSONObject,
+        rules: String?,
+        entries: List<PackageEntry>,
+        hasNative: Boolean,
+        hasAssets: Boolean,
+        signature: SignatureStatus,
+        manifestText: String = "",
+    ): PluginPackagePreview {
+        val id = manifest.optString("id").trim()
+        if (id.isEmpty()) {
+            return PluginPackagePreview(
+                valid = false,
+                entries = entries,
+                error = "manifest.json 缺少 id",
+            )
+        }
+
+        // 权限解析（未知权限名**报错而不是忽略** —— 见 PluginPermission 的说明）
+        val permArr = manifest.optJSONArray("permissions")
+        val perms = HashSet<PluginPermission>()
+        val unknownPerms = ArrayList<String>()
+        if (permArr != null) {
+            for (i in 0 until permArr.length()) {
+                val raw = permArr.optString(i)
+                val p = PluginPermission.from(raw)
+                if (p == null) unknownPerms.add(raw) else perms.add(p)
+            }
+        }
+
+        val declaredType = manifest.optString("type", "rule").lowercase()
+        val type = when {
+            hasNative -> PluginType.EXTERNAL   // 有 .so 就是外部原生包
+            declaredType == "native" -> PluginType.NATIVE
+            else -> PluginType.RULE
+        }
+
+        val meta = PluginMetadata(
+            id = id,
+            name = manifest.optString("name").ifEmpty { id },
+            version = manifest.optString("version").ifEmpty { "0.0.0" },
+            author = manifest.optString("author"),
+            description = manifest.optString("description"),
+            type = type,
+            permissions = perms,
+            compatibleAppVersion = manifest.optString("appVersion"),
+            apiVersion = manifest.optInt("apiVersion", PluginApi.VERSION),
+            hasNativeCode = hasNative,
+            entry = manifest.optString("entry"),
+        )
+
+        // 规则解析（只做静态解析，不执行）
+        var ruleCount = 0
+        var ruleErrors = emptyList<String>()
+        if (rules != null) {
+            try {
+                val rulesJson = JSONObject(rules)
+                val arr = rulesJson.optJSONArray("rules") ?: rulesJson.optJSONArray("items")
+                val parsed = RuleParser.parse(arr)
+                ruleCount = parsed.rules.size
+                ruleErrors = parsed.errors + if (unknownPerms.isEmpty()) {
+                    emptyList()
+                } else {
+                    listOf("含未知权限名：${unknownPerms.joinToString()}")
+                }
+            } catch (e: Exception) {
+                ruleErrors = listOf("rules.json 不是合法 JSON")
+            }
+        } else if (unknownPerms.isNotEmpty()) {
+            // 裸 JSON 没有独立 rules 文件，但未知权限仍要报出来
+            ruleErrors = listOf("含未知权限名：${unknownPerms.joinToString()}")
+        }
+
+        // 签名：manifest 里声明了 hash 就标为"已声明"（当前不校验）
+        val sig = if (manifest.optString("sha256").isNotEmpty()) {
+            SignatureStatus.DECLARED
+        } else {
+            signature
+        }
+
         return PluginPackagePreview(
             valid = true,
             metadata = meta,
@@ -273,7 +424,8 @@ object PluginPackageParser {
             ruleErrors = ruleErrors,
             hasNativeCode = hasNative,
             hasAssets = hasAssets,
-            signature = signature,
+            signature = sig,
+            manifestText = manifestText,
         )
     }
 

@@ -96,6 +96,16 @@ class MainActivity : ComponentActivity() {
         container = AppContainer(this)
         enableEdgeToEdge()
 
+        // v1.3.0：连接 MediaSessionService。
+        //
+        // ⚠️ 必须在 onCreate 里连、**只连一次** —— `MediaController` 是
+        // 跨进程代理，重复 build 会拿到多个 controller，各自持有
+        // 一份状态，通知栏按钮就会出现"点一次动两下"。
+        //
+        // 连不上也不影响前台播放（`handoffToService` 会返回 false），
+        // 所以这里不检查结果、不提示用户。
+        runCatching { container.mediaSessionBridge.connect() }
+
         // 状态栏图标颜色：**全应用恒为浅色图标**（配深色底）。
         //
         // 由 `values/themes.xml` + `values-night/themes.xml` 的
@@ -227,8 +237,19 @@ class MainActivity : ComponentActivity() {
         // `pipRequested` 在**发起**进小窗时立刻置 true，不等回调，
         // 用它挡住这次误暂停。
         if (!isInPip && !pipRequested) {
-            container.playerHolder.player?.let { p ->
-                if (!p.isReleased) p.pause()
+            // v1.3.0：如果播放已交给 Service（听视频模式），
+            // **不要**暂停前台 —— 那会让"后台继续听"失效。
+            //
+            // ⚠️ 交接后前台 holder 已经被 pause 过（见 `handoffToService`），
+            // 所以这里跳过不会漏暂停；而 Service 侧的播放是**故意**要继续的。
+            val serviceOwns = runCatching {
+                container.playbackController.isServicePlaying()
+            }.getOrDefault(false)
+
+            if (!serviceOwns) {
+                container.playerHolder.player?.let { p ->
+                    if (!p.isReleased) p.pause()
+                }
             }
         }
     }

@@ -216,22 +216,36 @@ val pmRepository: PmRepository = PmRepository(api, authStore)
      * `scope` 用 `MainScope()`：控制器与 Activity 同寿命，
      * 定时器轮询不会在 Activity 销毁后继续跑。
      */
+    /**
+     * 系统媒体中心桥（v1.3.0）。
+     *
+     * 连接 [com.example.biliv3.player.PlaybackService] ——
+     * 锁屏 / 通知栏 / 耳机按键通过它控制播放。
+     *
+     * ⚠️ **必须声明在 `playbackController` 之前**：controller 的构造要拿它
+     * （`handoffToService` 用）。Kotlin 属性按声明顺序初始化，
+     * 反过来写会让 controller 拿到 null，表现是"听视频不交接给 Service"。
+     */
+    val mediaSessionBridge: com.example.biliv3.player.MediaSessionBridge =
+        com.example.biliv3.player.MediaSessionBridge(appContext)
+
+    /**
+     * 统一播放控制器（v1.3.0）。
+     *
+     * ⚠️ 它**不创建** ExoPlayer，所有播放都经过 [playerHolder]
+     * （任务书 §22「禁止创建第二套 Player」）。
+     *
+     * `scope` 用 `MainScope()`：控制器与 Activity 同寿命，
+     * 定时器轮询不会在 Activity 销毁后继续跑。
+     */
     val playbackController: com.example.biliv3.player.PlaybackController =
         com.example.biliv3.player.PlaybackController(
             context = appContext,
             holder = playerHolder,
             scope = kotlinx.coroutines.MainScope(),
             lyricsRepository = lyricsRepository,
+            mediaSessionBridge = mediaSessionBridge,
         )
-
-    /**
-     * 系统媒体中心桥（v1.3.0）。
-     *
-     * 连接 [com.example.biliv3.player.PlaybackService] ——
-     * 锁屏 / 通知栏 / 耳机按键通过它控制播放。
-     */
-    val mediaSessionBridge: com.example.biliv3.player.MediaSessionBridge =
-        com.example.biliv3.player.MediaSessionBridge(appContext)
 
     /**
      * 插件管理器（v1.3.0）。

@@ -52,6 +52,13 @@ class PlaybackController(
     private val scope: CoroutineScope,
     /** 歌词仓库（可空：未接线时歌词功能静默不可用，不影响播放）。 */
     private val lyricsRepository: LyricsRepository? = null,
+    /**
+     * MediaSession 桥（v1.3.0 接线）。
+     *
+     * 可空：桥接不可用时（比如用户拒绝了通知权限）**不影响前台播放**，
+     * 只是没有锁屏控件。
+     */
+    private val mediaSessionBridge: MediaSessionBridge? = null,
 ) {
 
     /** 播放队列（独立，可单测）。 */
@@ -324,6 +331,80 @@ class PlaybackController(
         )
         if (changed) publish()
     }
+
+    // ---------------- 后台播放（v1.3.0 接线） ----------------
+
+    /**
+     * 把播放**交给 Service**（进入听视频 / 退到后台时用）。
+     *
+     * ## 为什么必须"先记位置再交"
+     *
+     * `takeOver` 会 `setMediaItems(..., 0, startPositionMs)` —— 传 0
+     * 就等于从头上重播（任务书明确禁止"切模式就从头播"）。
+     *
+     * ## 与 `PlayerHolder` 的关系
+     *
+     * 交接后**前台 holder 必须停掉**，否则两个 ExoPlayer 会同时出声。
+     * 这是"Activity 级 holder + Service"这套折中方案的代价，
+     * 已在 `PlaybackService` 的 KDoc 与 AGENTS §11.1 里说明。
+     *
+     * @return true = 交接成功；false = 条件不满足（调用方应保持前台播放）
+     */
+    fun handoffToService(): Boolean {
+        val bridge = mediaSessionBridge ?: return false
+        if (!bridge.isConnected) return false
+
+        val item = queue.current ?: return false
+        val info = currentPlayInfo ?: return false
+
+        val position = holder.player?.currentPosition?.coerceAtLeast(0L) ?: 0L
+        val wasPlaying = holder.player?.isPlaying == true
+
+        // ⚠️ 先把当前项的位置与 URL 记下来 —— 交出去后 holder 就空了
+        val urls = mapOf(item.key to (info.videoUrl to info.audioUrl))
+
+        val ok = bridge.takeOver(
+            items = queue.items.value,
+            playInfos = urls,
+            audioOnly = _state.value.mode != PlaybackMode.VIDEO,
+            startPositionMs = position,
+        )
+        if (!ok) return false
+
+        // 交接成功 → 停掉前台，避免双份出声
+        runCatching { holder.player?.pause() }
+        if (wasPlaying) {
+            // Service 侧已经 play()，这里只更新状态
+            _state.value = _state.value.copy(isPlaying = true)
+        }
+        return true
+    }
+
+    /**
+     * 从 Service **收回**播放（回到前台）。
+     *
+     * @param info 当前项的取流信息（页面重新拉详情后回填）
+     */
+    fun takeBackFromService(info: PlayInfo, resumePositionMs: Long): Boolean {
+        val bridge = mediaSessionBridge ?: return false
+        if (!bridge.isConnected) return false
+
+        val pos = if (resumePositionMs > 0L) resumePositionMs else bridge.positionMs()
+        bridge.releaseToActivity()
+
+        currentPlayInfo = info
+        holder.bindMedia(
+            info = info,
+            playWhenReady = true,
+            audioOnly = _state.value.mode != PlaybackMode.VIDEO,
+            resumePositionMs = pos,
+        )
+        publish()
+        return true
+    }
+
+    /** Service 是否在播（决定 UI 显示哪一套控制）。 */
+    fun isServicePlaying(): Boolean = mediaSessionBridge?.isPlaying() == true
 
     // ---------------- 歌词 ----------------
 

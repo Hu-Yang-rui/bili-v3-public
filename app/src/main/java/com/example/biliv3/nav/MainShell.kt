@@ -610,6 +610,13 @@ fun MainShell(
                         // MediaSource，所以切换不会从头播。
                         onToggleAudioOnly = {
                             container.playbackController.toggleAudioOnly()
+                            // v1.3.0：听视频是"退到后台继续听"的入口 ——
+                            // 顺手把播放交给 Service（锁屏/耳机按键要用）。
+                            //
+                            // ⚠️ 交接**失败不影响**听视频本身：
+                            // 没有通知权限 / Service 没起来时照旧前台播，
+                            // 只是没有锁屏控件。所以这里不看返回值。
+                            runCatching { container.playbackController.handoffToService() }
                         },
                         onOpenVinyl = {
                             // ⚠️ 必须**同时**切模式再导航。
@@ -1002,27 +1009,57 @@ fun MainShell(
                 // ⚠️ 声明必须在 launcher 之前 —— launcher 的 lambda 里要写它
                 var importError by remember { mutableStateOf<String?>(null) }
 
-                // 文件选择器：选 .bvplugin / .json 后解析预览 → 用户确认 → 安装
+                // 待确认的插件预览（null = 没有待装插件）。
+                // 选了文件后**不立刻装**，先落在这里给用户看权限清单。
+                var pendingPreview by remember {
+                    mutableStateOf<com.example.biliv3.plugin.PluginPackagePreview?>(null)
+                }
+                var pendingPreviewSource by remember { mutableStateOf("") }
+
+                // 文件选择器：选 .bvplugin / .json → **解析预览** → 用户确认 → 安装
+                //
+                // ## 为什么必须"先预览再安装"（v1.3.0 补齐）
+                //
+                // 旧版直接把文件当 JSON 读 → `installRulePlugin`。
+                // 两个问题：
+                // 1. `.bvplugin` 是 **zip 包**，直接 `bufferedReader().readText()`
+                //    读到的是二进制乱码 → 报"文件不是合法 JSON"，功能等于没有
+                // 2. 用户在**看不到权限清单**的情况下就装了插件 ——
+                //    这与"安全识别"的要求（任务书 §13）直接冲突
+                //
+                // 现在：解析成 `PluginPackagePreview` → 展示权限/风险/规则数 →
+                // 用户点「安装」才真正写入。
                 val importLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.OpenDocument(),
                 ) { uri ->
                     uri ?: return@rememberLauncherForActivityResult
-                    val text = runCatching {
-                        context.contentResolver.openInputStream(uri)?.use {
-                            it.bufferedReader().readText()
+                    val name = uri.lastPathSegment ?: "导入的插件"
+                    val preview = runCatching {
+                        context.contentResolver.openInputStream(uri)?.use { ins ->
+                            // ⚠️ 由扩展名决定走 zip 还是 JSON。
+                            // 不靠"先试 zip 再回退" —— 那样失败原因会被吞掉，
+                            // 用户看到的是"无法读取"而不是"zip 损坏在第 N 项"。
+                            val isZip = name.endsWith(".bvplugin", ignoreCase = true)
+                            if (isZip) {
+                                com.example.biliv3.plugin.PluginPackageParser.parse(ins)
+                            } else {
+                                com.example.biliv3.plugin.PluginPackageParser
+                                    .parseJson(ins.readBytes().decodeToString())
+                            }
                         }
-                    }.getOrNull()
-
-                    if (text.isNullOrBlank()) {
+                    }.getOrElse {
+                        // ⚠️ riskLevel / riskReasons 是**计算属性**（由 valid /
+                        // hasNativeCode / 权限推导），不能当构造参数传。
+                        com.example.biliv3.plugin.PluginPackagePreview(
+                            valid = false,
+                            error = "读取失败：${it.message}",
+                        )
+                    }
+                    if (preview == null) {
                         importError = "无法读取文件"
                     } else {
-                        val err = runCatching {
-                            container.pluginManager.installRulePlugin(
-                                json = org.json.JSONObject(text),
-                                source = uri.lastPathSegment ?: "导入的插件",
-                            )
-                        }.getOrElse { "文件不是合法 JSON：${it.message}" }
-                        importError = err ?: "安装成功（默认未启用，请在列表里打开）"
+                        pendingPreview = preview
+                        pendingPreviewSource = name
                     }
                 }
 
@@ -1061,7 +1098,38 @@ fun MainShell(
                     )
                 }
 
-                // 导入结果提示（成功/失败都必须有反馈 —— 不能"点了没反应"）
+                // ---- v1.3.0：插件包预览确认框 ----
+                //
+                // ⚠️ 必须在**用户确认后**才调 installRulePlugin。
+                // 这是任务书 §13「扫描→解析→展示权限→兼容性→用户确认→安装」
+                // 的最后一环 —— 少了它，前面解析出的权限清单就白做了。
+                pendingPreview?.let { pv ->
+                    com.example.biliv3.ui.plugin.PluginPreviewDialog(
+                        preview = pv,
+                        source = pendingPreviewSource,
+                        onDismiss = { pendingPreview = null },
+                        onConfirm = {
+                            val meta = pv.metadata
+                            val err = if (meta == null) {
+                                "插件缺少元数据"
+                            } else {
+                                runCatching {
+                                    // 用 manifest 原文重新构造 —— 预览只是展示，
+                                    // 真正落库的仍是文件内容本身
+                                    container.pluginManager.installRulePlugin(
+                                        json = org.json.JSONObject(
+                                            pv.manifestText.ifEmpty { "{}" },
+                                        ),
+                                        source = pendingPreviewSource,
+                                    )
+                                }.getOrElse { "安装失败：${it.message}" }
+                            }
+                            pendingPreview = null
+                            importError = err ?: "已安装 ${meta?.name ?: ""}（默认未启用）"
+                        },
+                    )
+                }
+
                 importError?.let { msg ->
                     LaunchedEffect(msg) {
                         Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -1287,6 +1355,85 @@ fun MainShell(
                 }
             }
 
+            // ---------- 快速整理（规则筛出候选 → 人工确认）（v1.3.0）----------
+            //
+            // ⚠️ 复用 `FavoriteFolderViewModel` 而不是新建一个：
+            // 批量操作逻辑（取消收藏/加稍后再看/结果汇总）与收藏夹页
+            // **必须是同一份实现**，否则会出现"整理页能删、收藏夹页删不了"
+            // 这类两处不一致。候选筛选是纯函数，放在 UI 层算。
+            composable(
+                route = Routes.ORGANIZE,
+                arguments = listOf(
+                    navArgument(Routes.ORGANIZE_ARG_FOLDER) { type = NavType.LongType },
+                ),
+            ) { backStackEntry ->
+                val folderId = backStackEntry.arguments
+                    ?.getLong(Routes.ORGANIZE_ARG_FOLDER) ?: 0L
+
+                val vm: FavoriteFolderViewModel = viewModel(
+                    factory = LibraryViewModelFactory(
+                        repo = container.libraryRepository,
+                        folderId = folderId,
+                        sync = container.favoritesSync,
+                    ),
+                )
+                val entries by vm.items.collectAsStateWithLifecycle()
+                val loading by vm.loading.collectAsStateWithLifecycle()
+                val selection by vm.selection.collectAsStateWithLifecycle()
+                val batchRunning by vm.batchRunning.collectAsStateWithLifecycle()
+                val batchProgress by vm.batchProgress.collectAsStateWithLifecycle()
+                val toast by vm.toast.collectAsStateWithLifecycle()
+
+                // 跑规则筛候选。key 用 entries.size —— 列表加载完（数量变化）
+                // 才重算，否则会在列表还是空的时候就跑一遍白费
+                val candidates = remember(entries, folderId) {
+                    com.example.biliv3.ui.library.buildCandidates(
+                        entries = entries,
+                        folderTitle = "收藏夹",
+                        evaluate = { subject ->
+                            container.pluginManager
+                                .evaluateRules(subject)
+                                .map { it.second }
+                        },
+                    )
+                }
+
+                val orgSnackbar = remember { SnackbarHostState() }
+                LaunchedEffect(toast) {
+                    toast?.let {
+                        orgSnackbar.showSnackbar(it)
+                        vm.consumeToast()
+                    }
+                }
+
+                Box(Modifier.fillMaxSize()) {
+                    com.example.biliv3.ui.library.OrganizeScreen(
+                        folderTitle = "收藏夹 $folderId",
+                        candidates = candidates,
+                        loading = loading,
+                        error = null,
+                        isLoggedIn = vm.isLoggedIn,
+                        onBack = safeBack,
+                        onRetry = vm::load,
+                        onLoginRequired = { navController.navigate(Routes.LOGIN) },
+                        selection = selection,
+                        batchRunning = batchRunning,
+                        batchProgress = batchProgress,
+                        onToggleSelect = vm::toggleSelect,
+                        onSelectAll = vm::selectAll,
+                        onClearSelection = vm::clearSelection,
+                        onBatchRemove = vm::batchRemove,
+                        onBatchAddToView = vm::batchAddToView,
+                    )
+                    SnackbarHost(
+                        hostState = orgSnackbar,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = Space.x12),
+                    )
+                }
+            }
+
             // ---------- 收藏夹详情（单个夹的完整列表）----------
             composable(
                 route = Routes.FAV_FOLDER,
@@ -1314,6 +1461,11 @@ fun MainShell(
                 val loadingMore by vm.loadingMore.collectAsStateWithLifecycle()
                 val hasMore by vm.hasMore.collectAsStateWithLifecycle()
                 val toast by vm.toast.collectAsStateWithLifecycle()
+                // v1.3.0 批量整理
+                val selection by vm.selection.collectAsStateWithLifecycle()
+                val batchRunning by vm.batchRunning.collectAsStateWithLifecycle()
+                val batchProgress by vm.batchProgress.collectAsStateWithLifecycle()
+                val otherFolders by vm.otherFolders.collectAsStateWithLifecycle()
 
                 val favSnackbar = remember { SnackbarHostState() }
                 LaunchedEffect(toast) {
@@ -1321,6 +1473,11 @@ fun MainShell(
                         favSnackbar.showSnackbar(it)
                         vm.consumeToast()
                     }
+                }
+
+                // 多选模式下已选条目变化 → 提前拉收藏夹列表（移动要用）
+                LaunchedEffect(selection.count) {
+                    if (selection.isNotEmpty) vm.loadOtherFolders()
                 }
 
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -1342,6 +1499,21 @@ fun MainShell(
                         onRemove = vm::removeFavorite,
                         onVideoClick = { bvid -> navController.navigate(Routes.video(bvid)) },
                         onLoginRequired = { navController.navigate(Routes.LOGIN) },
+                        // ---- v1.3.0 批量整理 ----
+                        otherFolders = otherFolders,
+                        selection = selection,
+                        batchRunning = batchRunning,
+                        batchProgress = batchProgress,
+                        onToggleSelect = vm::toggleSelect,
+                        onSelectAll = vm::selectAll,
+                        onClearSelection = vm::clearSelection,
+                        onInvertSelection = vm::invertSelection,
+                        onSelectPage = vm::selectCurrentPage,
+                        onBatchMove = vm::batchMoveTo,
+                        onBatchRemove = vm::batchRemove,
+                        onBatchAddToView = vm::batchAddToView,
+                        onBatchAddToQueue = { vm.batchAddToQueue(container.playbackController) },
+                        onOrganize = { navController.navigate(Routes.organize(folderId)) },
                         // 分享：唤起系统分享面板（与详情页一致的做法）
                         onShare = { entry ->
                             val intent = android.content.Intent(
