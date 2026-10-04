@@ -132,18 +132,23 @@ class MainActivity : ComponentActivity() {
         deviceTier = com.example.biliv3.design.detectDeviceTier(this)
 
         /**
-         * 订阅「退出后自动小窗」设置（v1.4.2）。
+         * 订阅「退出后自动小窗」设置（v1.4.2，v1.5.1 补 PiP 参数同步）。
          *
          * 用 `repeatOnLifecycle(STARTED)` 而不是裸 `launch` 收集 ——
          * 后者在 Activity 进后台时仍在收集，白白占用资源。
          *
          * 缓存到 [autoPipEnabled]：`onUserLeaveHint()` 是同步回调，
          * 来不及等 DataStore（详见该字段的说明）。
+         *
+         * 🔴 v1.5.1：**同时刷新系统侧 PiP 参数** ——
+         * `setAutoEnterEnabled` 是持久状态，不重设的话关掉开关也不生效
+         * （"无论开关怎么设，退出都弹小窗"的根因）。
          */
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 container.settingsStore.settings.collect { s ->
                     autoPipEnabled = s.autoPip
+                    refreshPipParams()
                 }
             }
         }
@@ -202,17 +207,54 @@ class MainActivity : ComponentActivity() {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
 
+    /**
+     * 构建 PiP 参数。
+     *
+     * ## 🔴 `setAutoEnterEnabled` 必须跟设置开关联动（v1.5.1 修的真实 bug）
+     *
+     * 原实现无条件 `setAutoEnterEnabled(true)` —— 这是**系统级**的"上滑/按 Home
+     * 自动进小窗"开关，**完全绕过 `autoPipEnabled`**。
+     *
+     * 后果正是用户报告的：「无论设置开关是否开启，退出 APP 都会出现小窗」。
+     * 因为用户按 Home 时是**系统**主动把小窗弹出来，我们的 `onUserLeaveHint`
+     * 里那层 `if (!autoPipEnabled) return` 根本没机会执行。
+     *
+     * ⚠️ 关键细节：`setAutoEnterEnabled` 是**持久状态** —— 系统记住最后一次
+     * 设置的值，不是"每次进 PiP 才读"。所以关闭开关时必须**显式传 false**
+     * 把它关掉，否则上一次的 true 会一直生效。
+     *
+     * 判据：`autoPipEnabled == true` → 允许系统自动进；
+     * `false` → 明确禁止（用户要的是"退出就停"，不是"退出变小窗"）。
+     */
     private fun buildPipParams(): PictureInPictureParams {
         val builder = PictureInPictureParams.Builder()
             .setAspectRatio(Rational(16, 9))
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Android 12+：上滑 / 按 Home 自动进小窗，无需用户点按钮
-            builder.setAutoEnterEnabled(true)
+            // ⚠️ 跟开关走，不能写死 true —— 见上面的 KDoc
+            builder.setAutoEnterEnabled(autoPipEnabled)
             // 小窗内可用的快捷操作（系统会渲染在 PiP 窗口上）
             builder.setSeamlessResizeEnabled(true)
         }
         return builder.build()
+    }
+
+    /**
+     * 设置开关变化时**同步刷新** PiP 参数。
+     *
+     * ## 为什么必须单独做这件事
+     *
+     * `setAutoEnterEnabled` 只在 `setPictureInPictureParams()` 被调用时
+     * 才写进系统。用户关掉开关后如果只是改了内存里的 `autoPipEnabled`，
+     * **系统那边还是旧值** —— 表现为"关了开关，按 Home 还是弹小窗"。
+     *
+     * 所以订阅到设置变化时立刻重设一次参数（`setPictureInPictureParams`
+     * 不要求 Activity 在前台，后台调用也生效）。
+     */
+    private fun refreshPipParams() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        if (!supportsPip()) return
+        runCatching { setPictureInPictureParams(buildPipParams()) }
     }
 
     /**

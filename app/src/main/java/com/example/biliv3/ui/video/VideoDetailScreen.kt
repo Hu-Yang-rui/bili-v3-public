@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Album
@@ -234,7 +235,11 @@ fun VideoDetailScreen(
     /** 点 UP 头像 / 名字 → 用户主页。 */
     onOwnerClick: (Long) -> Unit = {},
     /** 「查看全部 N 条回复」→ 楼中楼详情页。(oid, root, upMid) */
-    onViewAllReplies: (com.example.biliv3.data.model.CommentItem) -> Unit = {},
+    onLoadMoreReplies: (Long) -> Unit = {},
+    /** 正在加载更多回复的 rpid 集合（显示 loading + 防重复点击）。 */
+    replyLoading: Set<Long> = emptySet(),
+    /** 某条主评论的回复是否已拉到底。 */
+    repliesExhausted: (Long) -> Boolean = { true },
     /** 要定位的评论 rpid（null = 不定位）。AI 查成分「在 APP 内查看」用。 */
     focusCommentRpid: String? = null,
     /** 定位完成（滚动+高亮）后回调，上层清空定位目标。 */
@@ -285,6 +290,8 @@ fun VideoDetailScreen(
     val danmakuFontScale by viewModel.danmakuFontScale.collectAsStateWithLifecycle()
     val danmakuArea by viewModel.danmakuArea.collectAsStateWithLifecycle()
     val comments by viewModel.comments.collectAsStateWithLifecycle()
+    // 楼中楼就地分页（v1.5.1）：正在加载的 rpid 集合 —— 用于显示 loading 与防重复点击
+    val replyLoading by viewModel.replyLoading.collectAsStateWithLifecycle()
     val coinBalance by viewModel.coinBalance.collectAsStateWithLifecycle()
     val commentTotal by viewModel.commentTotal.collectAsStateWithLifecycle()
     val commentLoading by viewModel.commentLoading.collectAsStateWithLifecycle()
@@ -747,10 +754,10 @@ fun VideoDetailScreen(
                     onAvatarClick = { mid ->
                         if (mid > 0) onOwnerClick(mid)
                     },
-                    // 「查看全部 N 条回复」→ 楼中楼详情页
-                    onViewAllReplies = { c ->
-                        onOpenReplyDetail(c.oid, c.rpid, viewModel.ownerMid)
-                    },                    isLoggedIn = viewModel.isLoggedIn,
+                    // 「查看全部 N 条回复」→ **就地加载下一页**（v1.5.1，不再跳独立页）
+                        onLoadMoreReplies = viewModel::loadMoreReplies,
+                        replyLoading = replyLoading,
+                        repliesExhausted = viewModel::repliesExhausted,                    isLoggedIn = viewModel.isLoggedIn,
                     onStartPlay = handleStartPlay,
                     onToggleFullscreen = { isFullscreen = !isFullscreen },
                     onOpenSettings = { showSettings = true },
@@ -1306,7 +1313,24 @@ private fun FloatingBackButton(
             .statusBarsPadding()
             .padding(start = Space.x2, top = Space.x2)
             .size(PLAYER_CHROME_TOUCH)
-            .clickable(onClick = onClick),
+            // 🔴 v1.5.1：**去掉默认指示**（用户反馈"点左上角出现白色方框"）。
+            //
+            // 根因：`Modifier.clickable(onClick)` 默认开 `LocalIndication`
+            // 与 `LocalFocusManager` 的焦点高亮。在播放器这种**全屏深色浮层**
+            // 上，焦点框表现为一个**白色矩形描边**（indication 画的是矩形，
+            // 不是圆形）—— 与圆钮外形不一致，非常突兀。
+            //
+            // 为什么会出现焦点态：电视 / 键鼠 / 部分 ROM 的可访问性导航
+            // 会把焦点落到第一个可点控件上，触摸前就已经"选中"了它。
+            //
+            // ⚠️ 修法是**关掉视觉指示**，不是关掉可点性 ——
+            // `onClick`、无障碍语义（`contentDescription`）全部保留，
+            // 盲人读屏仍能识别并激活这个按钮（§任务书："保留合理的无障碍语义"）。
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Box(
@@ -1386,7 +1410,9 @@ private fun DetailContent(
     /** 点评论者头像 → 用户主页。 */
     onAvatarClick: (Long) -> Unit,
     /** 「查看全部 N 条回复」→ 楼中楼详情页。 */
-    onViewAllReplies: (com.example.biliv3.data.model.CommentItem) -> Unit,
+    onLoadMoreReplies: (Long) -> Unit,
+    replyLoading: Set<Long>,
+    repliesExhausted: (Long) -> Boolean,
     /** 是否已登录（评论/弹幕的写操作需要）。 */
     isLoggedIn: Boolean,
     onStartPlay: () -> Unit,
@@ -1629,7 +1655,9 @@ private fun DetailContent(
                 onReport = onReportComment,
                 reportReasons = reportReasons,
                 onAvatarClick = onAvatarClick,
-                onViewAllReplies = onViewAllReplies,
+                onLoadMoreReplies = onLoadMoreReplies,
+                        replyLoading = replyLoading,
+                        repliesExhausted = repliesExhausted,
                 // 定位到指定评论（AI 查成分「在 APP 内查看」）
                 focusRpid = focusCommentRpid,
                 onFocusHandled = onFocusCommentHandled,
@@ -1942,8 +1970,19 @@ private fun DetailContent(
                                 text = timeLabel,
                             )
                         }
-                        // 在看人数
-                        if (detail.viewers > 0) {
+                        // 在看人数。
+                        //
+                        // 🔴 v1.5.1：**只在 ≥2 人时才显示**。
+                        //
+                        // 实测（真实账号，脚本直连）：`x/player/v2` 的
+                        // `online_count` 对冷门视频**恒返回 1** —— 那 1 个人
+                        // 就是当前观看者自己。原实现 `> 0` 就把"1 人在看"
+                        // 显示出来，用户看到的是一条**永远不变的无意义数字**，
+                        // 观感上等同"数据坏了"。
+                        //
+                        // 判据：这个数字只有在**能说明"还有别人在看"**时才有信息量。
+                        // 1 = 只有自己 → 不显示；≥2 → 显示。
+                        if (detail.viewers > 1) {
                             MetaItem(
                                 icon = Icons.Outlined.RemoveRedEye,
                                 text = "${formatCount(detail.viewers)} 人在看",
@@ -2451,39 +2490,31 @@ private fun PlayerArea(
                     ),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // 右上角按钮组：**深色实体工具面板**（v1.4.1 去玻璃）。
+                // 右上角按钮组：**无面板的幽灵图标**（v1.5.1 简化）。
                 //
-                // ## 为什么不再是玻璃（§6 / §30）
+                // ## 历史（两次收窄，方向一致）
                 //
-                // 这里是**工具层**（小窗 / 听视频 / 黑胶 / 全屏 / 齿轮），
-                // 不是"需要与画面融合的展示浮层"。任务书明确：
-                // **工具层不要用玻璃制造高级感** ——
-                // 玻璃会糊掉按钮边缘、降低图标对比度，用户反而更难快速点中。
+                // 1. 最初走 `biliCard()` 玻璃 → v1.4.1 发现玻璃糊边缘、降对比度，
+                //    改成 `surfaceElevated` 实体面板 + 发丝描边
+                // 2. v1.5.1 用户仍反馈"占用空间不合理、像大块半透明面板" ——
+                //    **根因是那个面板本身**：5 个按钮 + 描边 + 内边距，
+                //    在视频画面右上角形成一大块不透明深色区域
                 //
-                // 现在用 `surfaceElevated`（弹层档，比页面底亮一档）+
-                // 发丝描边。深色不透明 → 图标对比度稳定 → 扫读快。
+                // ## 现在（判据：让画面成为主体）
                 //
-                // 保留 `Radius.pill`：它是**交互控件的外形**（圆钮组），
-                // 不是"内容容器圆角"，符合 §5.1 硬规则 2。
+                // - **去掉面板底与描边**：不再有"一块面板"，只剩 5 个独立图标
+                // - 图标自带半透明圆底（`overlayControl`，仅够辨认轮廓），
+                //   在亮画面/暗画面上都能看清，但**不形成连续色块**
+                // - 听视频 / 黑胶**合并为一个入口**：两者都是"换一种播放形态"，
+                //   原本并排两个图标在视觉上是多余的重复
+                //   （点开后在设置面板里二选一 —— 那里本来就是模式的归属地）
+                //
+                // 触摸热区仍保证 48dp（见 `PlayerChromeButton`）。
                 Row(
                     modifier = Modifier
                         .statusBarsPadding()
-                        .padding(Space.x2)
-                        .clip(
-                            androidx.compose.foundation.shape.RoundedCornerShape(
-                                com.example.biliv3.design.tokens.Radius.pill,
-                            ),
-                        )
-                        .background(colors.surfaceElevated)
-                        .border(
-                            width = 1.dp,
-                            color = colors.borderHairline,
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                                com.example.biliv3.design.tokens.Radius.pill,
-                            ),
-                        )
-                        .padding(horizontal = Space.x1, vertical = Space.x1),
-                    horizontalArrangement = Arrangement.spacedBy(Space.x1),
+                        .padding(Space.x2),
+                    horizontalArrangement = Arrangement.spacedBy(Space.x2),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                         // 小窗入口：只在可播放时显示（没画面时进 PiP 没意义）
@@ -2494,19 +2525,11 @@ private fun PlayerArea(
                                 onClick = { onEnterPip() },
                             )
 
-                            // ---- v1.3.0：听视频 / 黑胶模式 ----
-                            //
-                            // ⚠️ 与"小窗"同条件显示：没有可播放的流时切模式
-                            // 只会得到一块黑，属于"看着能点但没反应"（§1 自检 6）。
+                            // 听视频 / 黑胶：**一个入口**（点击进播放设置面板）
                             PlayerChromeButton(
                                 icon = Icons.Filled.Headphones,
-                                contentDescription = "听视频（只听不看）",
-                                onClick = onToggleAudioOnly,
-                            )
-                            PlayerChromeButton(
-                                icon = Icons.Filled.Album,
-                                contentDescription = "黑胶唱片模式",
-                                onClick = onOpenVinyl,
+                                contentDescription = "播放模式（听视频 / 黑胶）",
+                                onClick = onOpenSettings,
                             )
                         }
 
@@ -2557,25 +2580,39 @@ private fun PlayerChromeButton(
     Box(
         modifier = Modifier
             .size(PLAYER_CHROME_TOUCH)
-            .clip(CircleShape)
-            .clickable(onClick = onClick),
+            // 同上：去掉默认指示（白色矩形焦点框 / 涟漪），保留可点性
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
         contentAlignment = Alignment.Center,
     ) {
-        // ⚠️ 按钮**自己不再画底**（v1.4.1）。
+        // ⚠️ v1.5.1：按钮**自己画一层轻量圆底**（因为外层面板已去掉）。
         //
-        // 外层已改成**深色实体面板**（`surfaceElevated`），
-        // 每颗按钮再套一层半透明圆会让面板变成"深色板上三个更深的圆" ——
-        // 多余的层级，且圆点边缘与面板描边打架。
+        // 层级演变：
+        // - v1.4.1 之前：外层玻璃面板 + 按钮不画底
+        // - v1.4.1：外层实体面板 + 按钮不画底（怕"板上加更深的圆"）
+        // - **v1.5.1：外层无面板 + 按钮自画半透明圆底**
         //
-        // 现在：面板负责底，按钮只画图标。
-        // 图标用 `onOverlay`（白）—— 面板已是不透明深色，
-        // 白图标对比度稳定（不再依赖"玻璃把画面压暗"）。
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = colors.onOverlay,
-            modifier = Modifier.size(Sizes.iconLg),
-        )
+        // 为什么现在反过来：去掉面板后若按钮完全透明，图标在**亮画面**
+        // （雪景 / 白底封面）上会看不清。给每颗按钮一层
+        // `overlayControl`（约 50% 黑）刚好够辨认轮廓，
+        // 又不会像面板那样连成一大块色块 —— 这正是"轻量克制"的判据。
+        Box(
+            modifier = Modifier
+                .size(PLAYER_CHROME_BUTTON)
+                .clip(CircleShape)
+                .background(colors.overlayControl),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = colors.onOverlay,
+                modifier = Modifier.size(Sizes.iconMd),
+            )
+        }
     }
 }
 
@@ -2741,7 +2778,15 @@ private val PLAY_BUTTON = 56.dp
  * 右上角那组用 36dp —— 同一层浮层里两种圆钮大小，
  * 左上角明显比右上角大一圈，用户反馈"退出键过大、太抢眼"。
  */
-private val PLAYER_CHROME_BUTTON = 32.dp
+/**
+ * 播放器浮层圆钮的**视觉尺寸**（v1.5.1：36 → 28dp）。
+ *
+ * 演变：48 → 36（v1.4.1）→ **28**（v1.5.1）。
+ * 用户两次反馈"按钮过大、抢画面"，所以继续收：
+ * 28dp 圆 + 14dp 图标，在 1080p 画面上是"小而精"的量级，
+ * 触摸热区仍由 [PLAYER_CHROME_TOUCH] 保证 48dp。
+ */
+private val PLAYER_CHROME_BUTTON = 28.dp
 
 /**
  * 播放器浮层按钮的**触摸目标**尺寸（≥48dp，满足无障碍最小点击区）。

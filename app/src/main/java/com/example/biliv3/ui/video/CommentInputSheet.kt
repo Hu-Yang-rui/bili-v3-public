@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -305,10 +306,22 @@ fun DanmakuInputSheet(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    // 🔴 v1.5.1：输入框加高（56 → 72dp）并让**文本区真正拿到高度**。
+                    //
+                    // 原写法把 `.height(56dp)` 放在 `.padding(vertical = 8dp)` **之前** ——
+                    // 于是 56dp 里再扣掉上下各 8dp，文本实际只有 40dp，
+                    // 加上 `BasicTextField` 默认单行居中，视觉上像"一条细缝"。
+                    //
+                    // 现在：先给足外层高度（72dp），文本区用 `weight`/`fillMaxHeight`
+                    // 撑满扣除内边距后的空间，输入时不再局促。
+                    //
+                    // ⚠️ 不加 `imePadding`（键盘避让由调用方的根 Box 负责，
+                    // 见本文件顶部关于"为什么不用 Dialog"的说明）。
                     .height(INPUT_HEIGHT)
                     .clip(RoundedCornerShape(Radius.interactive))
                     .background(colors.bgHover)
                     .padding(horizontal = Space.x3, vertical = Space.x2),
+                contentAlignment = Alignment.CenterStart,
             ) {
                 if (text.isEmpty()) {
                     Text(
@@ -329,6 +342,8 @@ fun DanmakuInputSheet(
                     cursorBrush = SolidColor(colors.brandPrimary),
                     modifier = Modifier
                         .fillMaxWidth()
+                        // 撑满扣除内边距后的高度 —— 点输入框任意位置都能落光标
+                        .fillMaxHeight()
                         .focusRequester(focus),
                 )
             }
@@ -448,7 +463,7 @@ fun DanmakuInputSheet(
  * 56dp（≈ 2 行）足够写短评论，也给按钮留出确定位置。
  * 长评论靠输入框内部滚动（`BasicTextField` 默认行为）。
  */
-private val INPUT_HEIGHT = 56.dp
+private val INPUT_HEIGHT = 72.dp
 
 /** 可选弹幕颜色（十进制 RGB，与接口 `color` 字段一致）。 */
 private val DANMAKU_COLORS = listOf(

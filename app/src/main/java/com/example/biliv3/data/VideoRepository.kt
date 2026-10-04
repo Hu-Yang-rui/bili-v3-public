@@ -189,6 +189,8 @@ class VideoRepository(
             }
 
             return PlayInfo(
+                // 🔴 v1.5.1：带上 cid —— 判断"要不要换流"不能只比 URL（见 PlayInfo.cid）
+                cid = cid,
                 acceptQuality = acceptQuality,
                 acceptDescription = acceptDesc,
                 currentQuality = currentQuality,
@@ -211,6 +213,7 @@ class VideoRepository(
             throw BiliException(-1, "既无 DASH 也无 durl，无法播放")
         }
         return PlayInfo(
+            cid = cid,
             acceptQuality = acceptQuality,
             acceptDescription = acceptDesc,
             currentQuality = currentQuality,

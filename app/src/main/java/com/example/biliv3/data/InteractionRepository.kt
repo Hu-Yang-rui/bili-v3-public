@@ -51,8 +51,25 @@ class InteractionRepository(
      *
      * ⚠️ 收藏夹接口的 `up_mid` 是**必填**（实测传空返回 `-400`），
      * 所以必须先拿到当前用户的 mid，否则收藏必定失败。
+     *
+     * ## 🔴 为什么要传 `aid` 而不是 `bvid`（v1.5.1 修的真实 bug）
+     *
+     * `fav/resource/deal` 的 `rid` 参数要的是**数字 aid**。
+     * 原实现把 bvid 字符串传进去 → 服务端不认 → **收藏从未真正生效**，
+     * 但本地图标已经乐观更新了 —— 这就是用户报告的「收藏失效」。
+     *
+     * 实测（真实账号）：
+     * ```
+     * rid=<aid>       -> code=0，收藏确实生效（用 fav/resource/ids 复核过）
+     * rid=BVxxxxxxx   -> 失败
+     * ```
+     *
+     * ⚠️ 调用方必须传 `VideoDetail.aid`，**不要**传 `bvid`。
+     * 这与读接口 `fav/resource/ids`（接受 bvid）不同 —— B 站读写接口
+     * 在这点上不一致，别想当然。
      */
-    suspend fun favorite(bvid: String, add: Boolean): Result<Unit> {
+    suspend fun favorite(aid: Long, add: Boolean): Result<Unit> {
+        if (aid <= 0L) return Result.failure(IllegalStateException("视频 aid 无效"))
         if (!isLoggedIn) return Result.failure(NotLoggedInException())
         val csrf = store.biliJct
         if (csrf.isEmpty()) return Result.failure(NotLoggedInException())
@@ -64,7 +81,7 @@ class InteractionRepository(
             ?: return Result.failure(IllegalStateException("没有可用的收藏夹"))
 
         return runCatching {
-            if (!api.favorite(bvid, add, csrf, listOf(folderId))) {
+            if (!api.favorite(aid, add, csrf, listOf(folderId))) {
                 throw IllegalStateException(if (add) "收藏失败" else "取消收藏失败")
             }
         }

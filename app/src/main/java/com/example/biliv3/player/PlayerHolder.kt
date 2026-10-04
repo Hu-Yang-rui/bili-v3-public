@@ -211,8 +211,19 @@ class PlayerHolder(private val context: Context) {
         //
         // ⚠️ audioOnly 也必须参与比较：同一条流在"看/听"之间切换时
         // 视频轨的有无不同，必须重建（否则听视频时画面还在解码）。
+        //
+        // 🔴 v1.5.1：**`cid` 必须参与比较**（用户反馈"选 P2/P3 还是播 P1"）。
+        //
+        // 只比 URL 是不够的 —— 切分P 时两个 P 有可能拿到**完全相同的 URL**
+        // （同清晰度 + CDN 复用，实测会出现）。那时 `same` 为 true →
+        // 返回 `Reused` → **播放器完全不换流，仍播上一个 P**。
+        //
+        // `cid` 是分P 的唯一标识，比 URL 可靠得多。两者都要比：
+        // - 比 cid：保证"换 P 一定换流"
+        // - 比 URL：保证"同 P 内重复调用不重装"（保住缓冲）
         val same = currentPlayInfo?.let {
-            it.videoUrl == info.videoUrl && it.audioUrl == info.audioUrl &&
+            it.cid == info.cid &&
+                it.videoUrl == info.videoUrl && it.audioUrl == info.audioUrl &&
                 it.currentQuality == info.currentQuality
         } == true && currentAudioOnly == audioOnly
         if (same) return BindResult.Reused

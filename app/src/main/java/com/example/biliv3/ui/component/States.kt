@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.NotLoggedInException
@@ -236,16 +237,43 @@ private fun TerminalEmptyState(
             ),
         verticalArrangement = Arrangement.Center,
     ) {
-        PromptLine(
-            text = title,
-            symbol = "$",
-            textColor = colors.textSecondarySafe,
-        )
+        // 🔴 v1.5.1：去掉 `$` 提示符（用户反馈"多条文字前面出现不该有的 $ 符号"）。
+        //
+        // 原来这里调 `PromptLine(symbol = "$")`，12 个页面（收藏 / 历史 /
+        // 稍后再看 / 下载 / 番剧 / 分区 / 搜索 / 整理 / 查成分 …）的空态
+        // 都渲染成 `$ 这里还没有内容`。
+        //
+        // AGENTS.md §5.1 曾把 `$` 列为"允许的极客点缀"，但**用户判断优先** ——
+        // 它出现在**每个空列表**上，频率太高，读起来像数据损坏而非设计。
+        // 空态已由 `terminalStyle` 的等宽小字表达"系统在说话"，不需要符号。
+        //
+        // 现在改用**左侧竖线**：保留终端输出的视觉语言，
+        // 但不插入任何可能被误读为内容的字符。
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .height(14.dp)
+                    .background(colors.accentTerminal),
+            )
+            Spacer(Modifier.width(Space.x2))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontFamily = FontFamilies.mono,
+                    fontSize = FontSize.label,
+                    lineHeight = FontSize.labelLine,
+                    color = colors.textSecondarySafe,
+                ),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         if (description != null) {
             Spacer(Modifier.height(Space.x2))
-            // 说明行缩进对齐提示符之后的文字（不重复画 $）
+            // 说明行与标题左对齐（标题已无符号，缩进随之取消）
             Row {
-                Spacer(Modifier.width(Space.x4 + Space.x2))
+                Spacer(Modifier.width(Space.x2 + 2.dp))
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall.copy(
@@ -302,12 +330,31 @@ fun TerminalLoadingState(
             ),
         contentAlignment = if (compact) Alignment.CenterStart else Alignment.Center,
     ) {
-        StatusLine(
-            text = text,
-            symbol = "$",
-            showCursor = true,
-            textColor = colors.textSecondarySafe,
-        )
+        // 🔴 v1.5.1：与空态一致，去掉 `$`（用户反馈"文字前面不该有 $ 符号"）。
+        // 加载态改用**竖线 + 闪烁光标** —— 保留"进行中"的语义，
+        // 但不再用会被误读成内容的符号。
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .height(14.dp)
+                    .background(colors.accentTerminal),
+            )
+            Spacer(Modifier.width(Space.x2))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontFamily = FontFamilies.mono,
+                    fontSize = FontSize.label,
+                    lineHeight = FontSize.labelLine,
+                    color = colors.textSecondarySafe,
+                ),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.width(Space.x1))
+            BlockCursor(color = colors.accentTerminal)
+        }
     }
 }
 

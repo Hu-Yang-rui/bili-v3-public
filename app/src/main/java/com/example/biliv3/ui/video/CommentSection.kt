@@ -138,13 +138,24 @@ fun CommentSection(
      */
     onAvatarClick: (Long) -> Unit = {},
     /**
-     * 「查看全部 N 条回复」→ 楼中楼详情页。
+     * 「查看全部 N 条回复」→ **就地加载更多**（v1.5.1 改）。
      *
-     * ⚠️ 此前这里只是**就地展开已加载的 3 条**（接口每条评论最多内嵌 3 条），
-     * 而按钮写着"全部 N 条" —— 属于信息不实。现在真正跳转独立页，
-     * 由 `x/v2/reply/reply` 分页拉全量。
+     * ## 🔴 为什么不再跳独立页（用户报告 #12）
+     *
+     * 用户原话："当前点击『查看回复』后，只能查看有限数量的回复，
+     * 继续点击却跳转到另一个页面。我需要的是在**当前评论区域持续查看**回复"。
+     *
+     * 所以这里改成：点一次加载**下一页**，一直留在原列表里。
+     * 分页状态在 ViewModel（`loadMoreReplies` / `replyPages`），
+     * 每条主评论**各自独立分页**，不会互相串页。
+     *
+     * 独立页 `ReplyDetailScreen` 仍保留 —— 但从这里不再跳它。
      */
-    onViewAllReplies: (CommentItem) -> Unit = {},
+    onLoadMoreReplies: (Long) -> Unit = {},
+    /** 正在加载更多回复的 rpid 集合（显示 loading + 防重复点击）。 */
+    replyLoading: Set<Long> = emptySet(),
+    /** 判断某条主评论的回复是否已拉到底。 */
+    repliesExhausted: (Long) -> Boolean = { true },
     listState: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState(),
     /**
      * 要定位并高亮的评论 rpid（null = 不定位）。
@@ -318,12 +329,24 @@ fun CommentSection(
                                 expandedReplies + c.rpid
                             }
                         },
-                        // 「查看全部 N 条回复」：进独立页真正拉全量。
+                        // 「查看全部 N 条回复」：**就地加载下一页**（v1.5.1）。
+                        // 不再跳独立页 —— 用户要求留在当前评论区。
                         //
-                        // ⚠️ 首版这里是"就地展开已加载的回复"——
-                        // 接口每条评论最多内嵌 3 条，所以点了还是 3 条，
-                        // 而按钮写着"全部 N 条"（信息不实）。
-                        onExpandAll = { onViewAllReplies(c) },
+                        // 🔴 必须**同时**把该评论加入 `expandedReplies`：
+                        // 只调 `onLoadMoreReplies` 的话数据拉回来了，
+                        // 但渲染层仍按"折叠态"处理（回复区不展开）→
+                        // 用户看到"点了没反应"。这是就地分页特有的坑：
+                        // 跳独立页时不需要展开态，就地加载则两者必须一起做。
+                        onExpandAll = {
+                            expandedReplies = expandedReplies + c.rpid
+                            // ⚠️ 同时解除内嵌截断（`MAX_INLINE_REPLIES`）——
+                            // 就地分页拉到 20 条后，若仍按"最多显示 3 条"
+                            // 截断，用户会以为没加载成功。
+                            // `expandedFully` 此前是**只读的死状态**（从没被写过），
+                            // 就地分页正好给了它真正的语义：已请求过全量。
+                            expandedFully = expandedFully + c.rpid
+                            onLoadMoreReplies(c.rpid)
+                        },
                         isLoggedIn = isLoggedIn,
                         // ⚠️ 传**原始回调**，不要在这里预绑定 `c`（v1.4.2）。
                         // 行内会用 `comment` 自行绑定，内嵌回复因此能拿到 `r`。
@@ -334,7 +357,10 @@ fun CommentSection(
                         // 用户选完理由后再调外层的 `onReport(comment, reason)`。
                         onReport = { target -> reportTarget = target },
                         onAvatarClick = onAvatarClick,
-                        onViewAllReplies = onViewAllReplies,
+                        // 「查看全部」→ 就地加载**该楼**下一页（v1.5.1）
+                        onViewAllReplies = { onLoadMoreReplies(it.rpid) },
+                        replyLoading = replyLoading,
+                        repliesExhausted = repliesExhausted,
                         onLoginRequired = onLoginRequired,
                     )
                 }
@@ -605,12 +631,17 @@ private fun CommentRow(
     /** 点头像 → 用户主页。 */
     onAvatarClick: (Long) -> Unit = {},
     /**
-     * 「查看全部 N 条回复」→ 楼中楼详情页。
+     * 「查看全部 N 条回复」→ **就地加载下一页**（v1.5.1）。
      *
-     * 与外层的 [onExpandAll] 分开：内嵌回复行里的"查看全部"也要能跳，
-     * 但内嵌行自己不带完整上下文（它只有该回复的数据）。
+     * 与外层的 [onExpandAll] 分开：内嵌回复行里的"查看全部"也要能用，
+     * 但内嵌行自己不带完整上下文（它只有该回复的数据），
+     * 所以这里传的是 `(CommentItem) -> Unit`，由行内自行绑定 root rpid。
      */
     onViewAllReplies: (CommentItem) -> Unit = {},
+    /** 正在加载更多回复的 rpid 集合（v1.5.1：就地分页）。 */
+    replyLoading: Set<Long> = emptySet(),
+    /** 某条主评论的回复是否已拉到底。 */
+    repliesExhausted: (Long) -> Boolean = { true },
     /** 「查看全部 N 条回复」—— 展开该楼全部已加载回复（修死入口）。 */
     onExpandAll: () -> Unit = {},
     /** 是否已突破内嵌上限（点了「查看全部」）。 */
@@ -647,9 +678,25 @@ private fun CommentRow(
             //
             // 标尺是一条竖线 + 左侧固定缩进：层级靠"线在不在"表达，
             // 不靠"缩进多少" —— 无论多少层，正文宽度都不变。
+            // ## 🔴 v1.5.1：顶层评论**不再每条画线**（用户反馈"分割线过多、视觉杂乱"）
+            //
+            // 原实现 `else Modifier.ruleTop(color = Rule.subtle)` ——
+            // **每一条**顶层评论上方都有一条横线。1168 条评论就是 1168 条线，
+            // 屏幕上一眼望去全是横纹，正文被切成碎片。
+            //
+            // 这与 §5.1 硬规则 4 冲突："**优先用间距分组**，发丝线是兜底手段"。
+            // 评论本来就是"同质的一长串"，靠**行间距**分组完全够用，
+            // 画线是过度分组。
+            //
+            // 现在：
+            // - **顶层评论之间不画线** —— 靠 `Rhythm` 的组内间距（下方 spacer）
+            // - **回复**保留 `ruler`（纵向标尺）—— 那是表达**层级**的，
+            //   不是分隔线，且竖线不产生横纹噪声
+            //
+            // 判据：一屏内横线数量从"每条约 1 条"降到 **0**，
+            // 层级仍由标尺 + 缩进 + 明度差表达。
             .then(
-                if (isReply) Modifier.ruler(Rule.color)
-                else Modifier.ruleTop(color = Rule.subtle),
+                if (isReply) Modifier.ruler(Rule.color) else Modifier,
             )
             // 定位高亮：用品牌色的低透明度铺底，不改文字色 ——
             // 改文字色会破坏对比度约束（见 §5.2 的"文字安全版"）。
@@ -968,6 +1015,8 @@ private fun CommentRow(
                         onReport = onReport,
                         onAvatarClick = onAvatarClick,
                         onViewAllReplies = onViewAllReplies,
+                        replyLoading = replyLoading,
+                        repliesExhausted = repliesExhausted,
                         onLoginRequired = onLoginRequired,
                         onExpandAll = onExpandAll,
                         isReply = true,
@@ -978,7 +1027,9 @@ private fun CommentRow(
                 // ⚠️ 首版这里是**死入口** —— 渲染了一个蓝色可点的样子，
                 // 但 `Modifier` 里没有任何 `clickable`，点了完全没反应。
                 //
-                // 修法：跳楼中楼详情页，由 `x/v2/reply/reply` 真正分页拉全量。
+                // 🔴 v1.5.1：改成**就地加载下一页**（用户报告 #12）——
+                // 不再跳楼中楼详情页。点一次拉一页（20 条），
+                // 一直留在当前评论区；到底后按钮消失。
                 //
                 // ⚠️ 条件必须用 `replyCount > 已展示条数`：
                 // 只有"确实还有没展示的回复"时才给入口，否则会出现
@@ -988,12 +1039,22 @@ private fun CommentRow(
                 } else {
                     minOf(MAX_INLINE_REPLIES, comment.replies.size)
                 }
-                if (!isReply && comment.replyCount > shownCount) {
+                // 加载中：显示进度而不是可点按钮（防重复点击）
+                val loading = comment.rpid in replyLoading
+                // 已到底：不再显示入口（避免"点了没反应"）
+                val exhausted = repliesExhausted(comment.rpid)
+                if (!isReply && !exhausted &&
+                    (comment.replyCount > shownCount || loading)
+                ) {
                     Text(
-                        text = "查看全部 ${comment.replyCount} 条回复",
+                        text = when {
+                            loading -> "加载中…"
+                            else -> "查看全部 ${comment.replyCount} 条回复"
+                        },
                         style = MaterialTheme.typography.labelMedium.copy(
                             fontSize = FontSize.badge,
-                            color = colors.textLinkSafe,
+                            // 加载中用弱化色，避免看起来还能点
+                            color = if (loading) colors.textTertiary else colors.textLinkSafe,
                             fontWeight = FontWeight.Medium,
                         ),
                         modifier = Modifier
@@ -1002,8 +1063,10 @@ private fun CommentRow(
                                 bottom = Space.x2,
                             )
                             .clip(RoundedCornerShape(Radius.badge))
-                            // 跳楼中楼详情页（真正分页拉全量）
-                            .clickable { onViewAllReplies(comment) }
+                            // 就地加载下一页（加载中不可点）
+                            .clickable(enabled = !loading) {
+                                onViewAllReplies(comment)
+                            }
                             .padding(horizontal = Space.x1, vertical = Space.compactVertical),
                     )
                 }

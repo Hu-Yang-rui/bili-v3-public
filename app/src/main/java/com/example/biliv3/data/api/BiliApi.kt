@@ -558,16 +558,37 @@ class BiliApi(
      * @param add true 收藏，false 取消
      * @param folderIds 收藏夹 id 列表
      */
+    /**
+     * 收藏 / 取消收藏。
+     *
+     * ## 🔴 `rid` 必须是**数字 aid**，不能传 bvid（v1.5.1 修的真实 bug）
+     *
+     * 实测（真实账号，`fav/resource/deal`）：
+     * ```
+     * rid=<数字 aid>   -> code=0  OK，收藏生效
+     * rid=BVxxxxxxx    -> 非 0 / 静默失败
+     * ```
+     *
+     * 原实现写 `"rid" to bvid` —— 传的是 `BV134TF6gEnG` 这种字符串，
+     * 服务端**不认**。表现就是用户报告的「收藏按钮点了没反应 / 收藏失效」：
+     * 本地图标可能乐观更新了，但**服务端从未真正收藏**。
+     *
+     * ⚠️ 这与 `fav/resource/ids`（读）不同 —— 那个接口接受 bvid。
+     * 写接口要 aid，读接口要 bvid，是 B 站接口的不一致之处，别想当然。
+     *
+     * @param aid 视频的**数字** aid（不是 bvid）
+     */
     suspend fun favorite(
-        bvid: String,
+        aid: Long,
         add: Boolean,
         csrf: String,
         folderIds: List<Long>,
     ): Boolean {
+        if (aid <= 0L) return false
         val json = postForm(
             path = Endpoints.FAV_DEAL,
             form = mapOf(
-                "rid" to bvid,
+                "rid" to aid.toString(),
                 "type" to "2", // 2 = 视频
                 "add_media_ids" to if (add) folderIds.joinToString(",") else "",
                 "del_media_ids" to if (add) "" else folderIds.joinToString(","),

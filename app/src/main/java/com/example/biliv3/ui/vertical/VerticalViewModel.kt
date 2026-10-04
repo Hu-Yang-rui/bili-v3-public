@@ -291,7 +291,9 @@ class VerticalViewModel(
         _state.value = cur.copy(interaction = prev.copy(favored = next))
 
         viewModelScope.launch {
-            repo.favorite(detail.bvid, next)
+            // 🔴 v1.5.1：传 **aid**（不是 bvid）——
+            // `fav/resource/deal` 的 `rid` 只认 aid，传 bvid 会静默失败。
+            repo.favorite(detail.aid, next)
                 .onSuccess {
                     _state.value = _state.value.copy(
                         toast = if (next) "已收藏" else "已取消收藏",

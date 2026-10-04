@@ -95,7 +95,17 @@ fun VideoPlayerSurface(
     // ⚠️ `audioOnly` 必须在 key 里：看/听切换时视频轨的有无不同，
     // 必须重建 —— 否则"点了听视频但画面还在解码"。
     // 重建会重置位置，所以下面把当前位置传进 `bindMedia` 恢复。
-    LaunchedEffect(info.videoUrl, info.audioUrl, info.currentQuality, audioOnly) {
+    //
+    // 🔴 v1.5.1：**`cid` 必须进 key**（用户反馈"选 P2/P3 还是播 P1"）。
+    //
+    // 原 key 只有 URL。切分P 时新 URL 通常不同，所以**多数情况能切**；
+    // 但 `bindMedia` 内部的 `same` 判断也只比 URL —— 一旦两 P 拿到
+    // 相同 URL（同清晰度 + CDN 复用，实测会出现），
+    // `bindMedia` 直接返回 `Reused`，**播放器完全不换流** → 仍播 P1。
+    //
+    // 把 `cid` 同时加进 key 与 `same` 判断（见 `PlayerHolder.bindMedia`），
+    // 才是"分P 切换一定换流"的可靠判据。
+    LaunchedEffect(info.videoUrl, info.audioUrl, info.currentQuality, audioOnly, info.cid) {
         // 防御：播放器可能已被释放（如快速退出页面、或生命周期竞态）。
         // 对已释放的 player 调 setMediaSource 会抛 IllegalStateException
         // 并直接崩溃；这里转成可见的错误而不是崩。
@@ -254,16 +264,54 @@ private class TextureSurfaceBinder(
 
     override fun onSurfaceTextureUpdated(st: android.graphics.SurfaceTexture) = Unit
 
-    /** 重新绑定到（可能已变化的）player 实例。 */
+    /**
+     * 重新绑定到（可能已变化的）player 实例。
+     *
+     * ⚠️ 若当前没有 Surface（例如刚从别的页面转过来、还没收到
+     * `onSurfaceTextureAvailable`），主动读一次 —— 共享的 TextureView
+     * 在重新挂载时可能**已经可用但不再回调**（见 [dispose] 的说明）。
+     */
     fun rebind(newPlayer: ExoPlayer) {
         player = newPlayer
+        if (surface == null && view.isAvailable) {
+            view.surfaceTexture?.let {
+                onSurfaceTextureAvailable(
+                    it,
+                    view.width.coerceAtLeast(1),
+                    view.height.coerceAtLeast(1),
+                )
+            }
+        }
         surface?.let { runCatching { player.setVideoSurface(it) } }
     }
 
+    /**
+     * 解绑（Compose 的 `onRelease`）。
+     *
+     * ## 🔴 v1.5.1 修：「切到评论 Tab 后画面全黑」（用户报告的 #3）
+     *
+     * 原实现里有 `player.setVideoSurface(null)` —— **把播放器的视频输出
+     * 整个清掉了**。切 Tab 时简介分支的 `AndroidView` 被销毁 →
+     * `dispose()` → Surface 被解绑；而新分支的 `factory` 虽然重新 attach
+     * 了共享 TextureView，**但同一个 TextureView 的 SurfaceTexture 早已可用**，
+     * 系统**不会**再回调 `onSurfaceTextureAvailable` →
+     * Surface 永远不重建 → **画面永久黑屏**（音频还在放）。
+     *
+     * 这就是用户说的「点评论后视频不能正常继续播放」。
+     *
+     * ## 修法
+     *
+     * - **不清 player 的 Surface** —— 播放器是 Activity 级的，
+     *   它的视频输出不该被一个页面分支的销毁影响；
+     *   真正需要清的场景（退出视频页）由 `PlayerHolder.release()` 负责
+     * - **也不清 `surfaceTextureListener`** —— 共享 View 会被下一个分支
+     *   继续使用，清掉监听等于让后续 Surface 变化无人响应
+     * - 只释放**本 binder 自己创建的** `Surface` 包装对象
+     *   （`Surface` 是轻量句柄，`surfaceTexture` 本体由 TextureView 持有）
+     */
     fun dispose() {
-        runCatching { player.setVideoSurface(null) }
+        // ⚠️ 不调 player.setVideoSurface(null) —— 见上面的 KDoc
         surface?.release()
         surface = null
-        view.surfaceTextureListener = null
     }
 }

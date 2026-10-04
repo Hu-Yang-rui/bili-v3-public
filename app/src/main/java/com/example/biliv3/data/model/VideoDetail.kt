@@ -122,6 +122,21 @@ data class VideoPage(
  * Media3 用 `MergingMediaSource` 把两条合轨播放。
  */
 data class PlayInfo(
+    /**
+     * 这份流对应的 **cid**（v1.5.1 新增）。
+     *
+     * ## 🔴 为什么必须带上它
+     *
+     * 判断"要不要换流"**不能只比 URL**。切分P 时两个 P 有可能拿到
+     * **完全相同的 URL**（同清晰度 + CDN 复用，实测会出现）——
+     * 那时只比 URL 会得出"流没变"的结论，于是**播放器不换流，仍播上一个 P**。
+     *
+     * 表现就是用户报告的「选 P2/P3 还是播 P1」。
+     *
+     * `cid` 是分P 的**唯一标识**，把它放进 `LaunchedEffect` 的 key
+     * 与 `PlayerHolder.bindMedia` 的 `same` 判断，才可靠。
+     */
+    val cid: Long = 0L,
     /** 可选的清晰度档位，如 [120,116,80,64,32,16]（4K→360P）。 */
     val acceptQuality: List<Int>,
     /** 档位对应的中文描述，与 [acceptQuality] 一一对应。 */

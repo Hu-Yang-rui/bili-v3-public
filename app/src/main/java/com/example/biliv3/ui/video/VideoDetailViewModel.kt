@@ -215,6 +215,100 @@ class VideoDetailViewModel(
     private val _commentHasMore = MutableStateFlow(true)
     val commentHasMore: StateFlow<Boolean> = _commentHasMore.asStateFlow()
 
+    // ---------------------------------------------------------------------
+    // 楼中楼「就地分页」（v1.5.1）
+    // ---------------------------------------------------------------------
+
+    /**
+     * 各主评论**已加载到的回复页**（rpid → 已加载页数）。
+     *
+     * ## 🔴 为什么要有它（用户报告 #12）
+     *
+     * 原先「查看全部 N 条回复」是**跳到独立页**（`ReplyDetailScreen`）。
+     * 用户明确要求："需要在当前评论区域持续查看回复，不要每次跳转到独立页面"。
+     *
+     * `reply/wbi/main` 每条评论最多内嵌 **3** 条回复（实测），
+     * 想要更多只能走 `x/v2/reply/reply` 分页。这里记录每条评论
+     * **已经拉了几页**，实现"就地继续加载"。
+     *
+     * ⚠️ 用 rpid 作 key 而不是全局一个页码 —— 不同评论的回复必须
+     * **各自独立分页**，否则展开 A 再展开 B 会用错偏移量。
+     */
+    private val _replyPages = MutableStateFlow<Map<Long, Int>>(emptyMap())
+    val replyPages: StateFlow<Map<Long, Int>> = _replyPages.asStateFlow()
+
+    /** 正在加载更多回复的主评论 rpid 集合（用于显示 loading，防重复点击）。 */
+    private val _replyLoading = MutableStateFlow<Set<Long>>(emptySet())
+    val replyLoading: StateFlow<Set<Long>> = _replyLoading.asStateFlow()
+
+    /**
+     * 就地加载某条主评论的**下一页**回复。
+     *
+     * - 第 1 页也走这里（点「展开」时把内嵌的 3 条替换成第 1 页完整数据）
+     * - 已加载的回复**按 rpid 去重**，不会重复出现
+     * - 加载中**丢弃**重复点击（防并发）
+     * - 失败**保留已有回复**，只把 rpid 从 loading 集合移除，用户可重试
+     *
+     * @return 是否还有更多（false = 已到底，UI 据此隐藏按钮）
+     */
+    fun loadMoreReplies(rootRpid: Long) {
+        val repo = commentRepo ?: return
+        val cur = _state.value
+        if (cur !is DetailUiState.Content) return
+        val oid = cur.detail.aid
+        if (oid <= 0L || rootRpid <= 0L) return
+
+        // 防并发：同一条评论同时只允许一个请求在途
+        if (rootRpid in _replyLoading.value) return
+        _replyLoading.value = _replyLoading.value + rootRpid
+
+        val nextPage = (_replyPages.value[rootRpid] ?: 0) + 1
+
+        viewModelScope.launch {
+            runCatching { repo.replies(oid = oid, root = rootRpid, page = nextPage) }
+                .onSuccess { page ->
+                    // 合并：已有的 + 新拉的，按 rpid 去重
+                    _comments.value = _comments.value.map { c ->
+                        if (c.rpid != rootRpid) return@map c
+                        val existing = c.replies
+                        val seen = existing.mapTo(HashSet()) { it.rpid }
+                        val merged = existing + page.comments.filter { it.rpid !in seen }
+                        c.copy(
+                            replies = merged,
+                            // 让 UI 知道"已突破内嵌上限"，不再截断显示
+                            replyCount = maxOf(c.replyCount, merged.size),
+                        )
+                    }
+                    _replyPages.value = _replyPages.value + (rootRpid to nextPage)
+                    // 这一页没满 → 到底了
+                    if (page.isEnd || page.comments.isEmpty()) {
+                        _replyPages.value = _replyPages.value + (rootRpid to REPLY_PAGE_MAX)
+                    }
+                }
+                .onFailure { e ->
+                    // ⚠️ 失败不改数据（已有回复保留），只提示。
+                    // 不用 `_commentError`（那是首屏的），否则整个列表会变成错误页。
+                    toast("加载回复失败：${userMessageFor(e)}")
+                }
+            _replyLoading.value = _replyLoading.value - rootRpid
+        }
+    }
+
+    /** 该主评论是否已把回复拉到底（UI 据此隐藏「加载更多」）。 */
+    fun repliesExhausted(rootRpid: Long): Boolean =
+        (_replyPages.value[rootRpid] ?: 0) >= REPLY_PAGE_MAX
+
+    /** 楼中楼每页条数（与 `CommentRepository.replies` 的默认值一致）。 */
+    private val REPLY_PAGE_SIZE = 20
+
+    /**
+     * 已加载页数的"到底"哨兵。
+     *
+     * 用 `>= REPLY_PAGE_MAX` 判"没有更多"，而不是再开一个 Set ——
+     * 少一份需要同步的状态，就不会出现"两处不一致"。
+     */
+    private val REPLY_PAGE_MAX = Int.MAX_VALUE
+
     /**
      * 评论**首屏**加载失败的原因（null = 没有失败）。
      *
@@ -410,11 +504,29 @@ class VideoDetailViewModel(
         loadedSegment = segment
 
         viewModelScope.launch {
-            // 当前片 + 下一片一起拉（并行），下一片用于无缝衔接
-            val current = async { dr.segment(cid, segment) }
-            val next = async { dr.segment(cid, segment + 1) }
-            val merged = (current.await() + next.await()).sortedBy { it.progressMs }
-            _danmaku.value = merged
+            // 🔴 v1.5.1 修：**两片各自独立容错**，不能因为预取失败丢掉当前片。
+            //
+            // 原写法 `current.await() + next.await()` 有真实缺陷：
+            // `async` 里任一个抛异常，`await()` 就会把它抛出来 →
+            // **整个协程崩掉** → `_danmaku` 保持上一次的值（首次是空）→
+            // 表现为「这个视频没有弹幕」，而其实**当前片拉到了**。
+            //
+            // 触发场景很常见：视频接近末尾时 `segment + 1` 超出范围，
+            // 接口返回非 0 code 或空 → 预取失败 → 当前片的弹幕也被丢掉。
+            //
+            // 现在：各自 `runCatching`，当前片失败才算失败；预取失败忽略。
+            val current = runCatching { dr.segment(cid, segment) }.getOrDefault(emptyList())
+            val next = runCatching { dr.segment(cid, segment + 1) }.getOrDefault(emptyList())
+
+            // ⚠️ 竞态防护：这期间可能已切分P（cid 变了）。
+            // 若不再匹配，丢弃本次结果，避免把旧 cid 的弹幕盖上去。
+            val nowCid = runCatching {
+                (_state.value as? DetailUiState.Content)
+                    ?.detail?.pages?.getOrNull(_currentPage.value)?.cid
+            }.getOrNull()
+            if (nowCid != null && nowCid != cid) return@launch
+
+            _danmaku.value = (current + next).sortedBy { it.progressMs }
         }
     }
 
@@ -1085,13 +1197,21 @@ class VideoDetailViewModel(
         val repoI = interactions ?: return
         if (!repoI.isLoggedIn) return toast("请先登录")
         if (_favoriteInFlight.value) return
+
+        // 🔴 v1.5.1：必须传 **aid**（数字），不能传 bvid ——
+        // `fav/resource/deal` 的 `rid` 只认 aid，传 bvid 会静默失败
+        // （本地图标变了、服务端没收藏 = 用户看到的"收藏失效"）。
+        val cur = _state.value
+        val aid = (cur as? DetailUiState.Content)?.detail?.aid ?: 0L
+        if (aid <= 0L) return toast("视频信息未就绪，请稍后重试")
+
         _favoriteInFlight.value = true
 
         val next = !_interaction.value.favored
         _interaction.value = _interaction.value.copy(favored = next)
         viewModelScope.launch {
             try {
-                repoI.favorite(bvid, next)
+                repoI.favorite(aid, next)
                     .onSuccess {
                         toast(if (next) "已收藏" else "已取消收藏")
                         // ⚠️ 通知其它页面刷新（收藏列表 / 我的页计数）。
