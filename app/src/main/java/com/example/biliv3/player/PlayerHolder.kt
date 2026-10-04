@@ -65,6 +65,15 @@ class PlayerHolder(private val context: Context) {
     var currentPlayInfo: PlayInfo? = null
         private set
 
+    /**
+     * 当前装配是否为"只听音频"。
+     *
+     * 与 `currentPlayInfo` 一起参与"是否需要重建"的判断 ——
+     * 同一条流在看/听之间切换时视频轨有无不同，必须重建。
+     */
+    var currentAudioOnly: Boolean = false
+        private set
+
     /** 当前关联的视频标识（bvid 或 ep_id 的字符串形式）。 */
     var currentKey: String? = null
         private set
@@ -182,26 +191,44 @@ class PlayerHolder(private val context: Context) {
     /**
      * 装配媒体源（仅在流信息变化时真正重建）。
      *
+     * @param resumePositionMs 重建后要恢复到的位置（毫秒）。
+     *        **听视频 ⇄ 看视频切换时必须传**，否则会从 0 重播 ——
+     *        因为切换模式必然重建 MediaSource。
+     * @param audioOnly 听视频模式：不装配视频轨（真省解码，见 `PlayerFactory`）
      * @return true 表示重新装配了；false 表示流未变、复用现有缓冲
      */
-    fun bindMedia(info: PlayInfo, playWhenReady: Boolean = true): BindResult {
+    fun bindMedia(
+        info: PlayInfo,
+        playWhenReady: Boolean = true,
+        audioOnly: Boolean = false,
+        resumePositionMs: Long = 0L,
+    ): BindResult {
         val p = player ?: return BindResult.NoPlayer
         if (p.isReleased) return BindResult.Released
 
         // URL 相同视为同一条流：不要重复 setMediaSource，
         // 否则会把用户已经缓冲的进度扔掉（表现为"卡一下重头来"）
+        //
+        // ⚠️ audioOnly 也必须参与比较：同一条流在"看/听"之间切换时
+        // 视频轨的有无不同，必须重建（否则听视频时画面还在解码）。
         val same = currentPlayInfo?.let {
             it.videoUrl == info.videoUrl && it.audioUrl == info.audioUrl &&
                 it.currentQuality == info.currentQuality
-        } == true
+        } == true && currentAudioOnly == audioOnly
         if (same) return BindResult.Reused
 
-        val source = PlayerFactory.buildMediaSource(info) ?: return BindResult.NoSource
+        val source = PlayerFactory.buildMediaSource(info, audioOnly = audioOnly)
+            ?: return BindResult.NoSource
 
         currentPlayInfo = info
+        currentAudioOnly = audioOnly
         return runCatching {
             p.setMediaSource(source)
             p.prepare()
+            // 恢复位置要在 prepare 之后设置（prepare 会重置位置）
+            if (resumePositionMs > 0L) {
+                p.seekTo(resumePositionMs)
+            }
             p.playWhenReady = playWhenReady
             BindResult.Bound
         }.getOrElse { BindResult.Failed(it.message ?: "未知错误") }
@@ -212,6 +239,7 @@ class PlayerHolder(private val context: Context) {
         releaseInternal()
         currentKey = null
         currentPlayInfo = null
+        currentAudioOnly = false
     }
 
     private fun releaseInternal() {

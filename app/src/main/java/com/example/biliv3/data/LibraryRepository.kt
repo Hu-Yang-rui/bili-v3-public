@@ -407,6 +407,196 @@ class LibraryRepository(
         }
     }
 
+    // ---------------- 批量整理（v1.3.0） ----------------
+
+    /**
+     * 一条收藏记录的**操作标识**。
+     *
+     * ## ⚠️ 为什么批量操作需要三个 id 而不是一个 bvid
+     *
+     * B 站收藏接口（`x/v3/fav/resource/deal`）需要的是：
+     *
+     * | 参数 | 含义 | 从哪来 |
+     * |---|---|---|
+     * | `rid` | **视频 aid**（不是 bvid！） | `resource/list` 的 `id`/`aid` |
+     * | `add_media_ids` / `del_media_ids` | **收藏夹 id** | `FavFolder.id` |
+     *
+     * 而 `removeFavorite` 还需要该条记录的 **favItemId**（`media.id`）——
+     * 它**不等于 aid**。传错的表现是 `code=0` 但什么都没发生。
+     *
+     * 所以批量操作必须携带完整的三个标识，不能只传 bvid。
+     */
+    data class FavRef(
+        val bvid: String,
+        val aid: Long,
+        /** `resource/list` 里该条的 `id`（取消收藏用）。 */
+        val favItemId: Long,
+        /** 当前所在收藏夹 id。 */
+        val folderId: Long,
+    )
+
+    /**
+     * 批量移动到指定收藏夹（**B 站服务器操作**）。
+     *
+     * ## 实现方式：一次请求处理一条
+     *
+     * `resource/deal` 支持 `add_media_ids` + `del_media_ids` 同时传 ——
+     * 所以"移动"是**一个请求**完成的（先加新夹、再从旧夹删），
+     * 不是"先删后加"两次（那样中途失败会丢收藏）。
+     *
+     * ## 为什么不用 `resources/deal`（复数）批量接口
+     *
+     * 那个接口一次要传多个 `rid`，但**所有 rid 只能进同一个目标夹**，
+     * 且返回结构更复杂。逐条调用更容易做**部分失败**的精确报告：
+     * 用户可以知道"20 个里成功了 18 个，哪 2 个失败了"。
+     *
+     * @param onProgress 每完成一条回调（done, total），用于进度显示
+     * @return 每条的结果
+     */
+    suspend fun batchMove(
+        refs: List<FavRef>,
+        targetFolderId: Long,
+        onProgress: ((done: Int, total: Int) -> Unit)? = null,
+    ): List<BatchResult> {
+        if (refs.isEmpty()) return emptyList()
+        if (!isLoggedIn) return refs.map { BatchResult(it.bvid, false, "未登录") }
+        val csrf = authStore.biliJct
+        if (csrf.isEmpty()) return refs.map { BatchResult(it.bvid, false, "未登录") }
+        if (targetFolderId <= 0) return refs.map { BatchResult(it.bvid, false, "目标收藏夹无效") }
+
+        val out = ArrayList<BatchResult>(refs.size)
+        refs.forEachIndexed { i, ref ->
+            // 已在目标夹里 → 跳过（不算失败，也不发请求）
+            if (ref.folderId == targetFolderId) {
+                out.add(BatchResult(ref.bvid, true, "已在目标收藏夹"))
+            } else {
+                val r = runCatching {
+                    val json = api.postPassportForm(
+                        path = "x/v3/fav/resource/deal",
+                        form = mapOf(
+                            "rid" to ref.aid.toString(),
+                            "type" to "2",
+                            "add_media_ids" to targetFolderId.toString(),
+                            // 从原夹移除 —— 与添加在同一个请求里完成
+                            "del_media_ids" to ref.folderId.toString(),
+                            "csrf" to csrf,
+                        ),
+                    )
+                    val code = json.optInt("code", -1)
+                    if (code != 0) {
+                        throw IllegalStateException(
+                            json.optString("message").ifEmpty { "code=$code" },
+                        )
+                    }
+                }
+                out.add(
+                    r.fold(
+                        onSuccess = { BatchResult(ref.bvid, true, null) },
+                        onFailure = { BatchResult(ref.bvid, false, it.message ?: "失败") },
+                    ),
+                )
+            }
+            onProgress?.invoke(i + 1, refs.size)
+        }
+        return out
+    }
+
+    /**
+     * 批量取消收藏（**B 站服务器操作**，破坏性）。
+     *
+     * ⚠️ UI 必须二次确认（任务书 §4.4）。
+     */
+    suspend fun batchRemoveFavorite(
+        refs: List<FavRef>,
+        onProgress: ((done: Int, total: Int) -> Unit)? = null,
+    ): List<BatchResult> {
+        if (refs.isEmpty()) return emptyList()
+        if (!isLoggedIn) return refs.map { BatchResult(it.bvid, false, "未登录") }
+        val csrf = authStore.biliJct
+        if (csrf.isEmpty()) return refs.map { BatchResult(it.bvid, false, "未登录") }
+
+        val out = ArrayList<BatchResult>(refs.size)
+        refs.forEachIndexed { i, ref ->
+            val r = runCatching {
+                if (ref.favItemId <= 0) {
+                    throw IllegalStateException("条目信息不完整，请下拉刷新")
+                }
+                val json = api.postPassportForm(
+                    path = "x/v3/fav/resource/deal",
+                    form = mapOf(
+                        "rid" to ref.aid.toString(),
+                        "type" to "2",
+                        "add_media_ids" to "",
+                        "del_media_ids" to ref.favItemId.toString(),
+                        "csrf" to csrf,
+                    ),
+                )
+                val code = json.optInt("code", -1)
+                if (code != 0) {
+                    throw IllegalStateException(
+                        json.optString("message").ifEmpty { "code=$code" },
+                    )
+                }
+            }
+            out.add(
+                r.fold(
+                    onSuccess = { BatchResult(ref.bvid, true, null) },
+                    onFailure = { BatchResult(ref.bvid, false, it.message ?: "失败") },
+                ),
+            )
+            onProgress?.invoke(i + 1, refs.size)
+        }
+        return out
+    }
+
+    /**
+     * 批量加入稍后再看（**B 站服务器操作**）。
+     *
+     * ⚠️ 该接口**每条一个请求**（`x/v2/history/toview/add` 只收单个 aid）。
+     */
+    suspend fun batchAddToView(
+        aids: List<Long>,
+        onProgress: ((done: Int, total: Int) -> Unit)? = null,
+    ): List<BatchResult> {
+        if (aids.isEmpty()) return emptyList()
+        val out = ArrayList<BatchResult>(aids.size)
+        aids.forEachIndexed { i, aid ->
+            val ok = runCatching { addToView(aid) }.getOrDefault(false)
+            out.add(BatchResult(aid.toString(), ok, if (ok) null else "加入失败"))
+            onProgress?.invoke(i + 1, aids.size)
+        }
+        return out
+    }
+
+    /**
+     * 单条批量操作结果。
+     *
+     * @param ok 是否成功
+     * @param message 失败原因 / 跳过说明
+     */
+    data class BatchResult(
+        val bvid: String,
+        val ok: Boolean,
+        val message: String?,
+    )
+
+    /**
+     * 汇总批量结果（UI 用一句话展示）。
+     *
+     * 区分"成功"与"跳过" —— "已在目标夹"不是失败，
+     * 若混在失败里报"2 个失败"，用户会以为出了问题。
+     */
+    fun summarize(results: List<BatchResult>): String {
+        val ok = results.count { it.ok && it.message == null }
+        val skipped = results.count { it.ok && it.message != null }
+        val failed = results.count { !it.ok }
+        return buildString {
+            append("成功 $ok")
+            if (skipped > 0) append("，跳过 $skipped")
+            if (failed > 0) append("，失败 $failed")
+        }
+    }
+
     // ---------------- 容错取值 ----------------
 
     private fun optIntLoose(o: JSONObject?, key: String): Int {

@@ -188,6 +188,148 @@ val pmRepository: PmRepository = PmRepository(api, authStore)
      */
     val playerHolder: PlayerHolder = PlayerHolder(appContext)
 
+    /**
+     * 歌词仓库（v1.3.0）。
+     *
+     * ## Provider 顺序即优先级
+     *
+     * 1. `SubtitleLyricsProvider` —— 复用现有 `subtitleRepository`，
+     *    时间轴与视频严格对齐，且走自家 API（不泄露 Cookie）
+     * 2. （将来）第三方歌词源 / 本地 `.lrc` 文件
+     *
+     * ⚠️ 第三方源**必须**用独立 OkHttpClient（§4.2 红线），
+     * 绝不能复用 [client]（它挂着 B 站 CookieJar）。
+     */
+    val lyricsRepository: com.example.biliv3.data.lyrics.LyricsRepository =
+        com.example.biliv3.data.lyrics.LyricsRepository(
+            providers = listOf(
+                com.example.biliv3.data.lyrics.SubtitleLyricsProvider(subtitleRepository),
+            ),
+        )
+
+    /**
+     * 统一播放控制器（v1.3.0）—— 队列 / 模式 / 定时器 / 歌词的唯一入口。
+     *
+     * ⚠️ 它**不创建** ExoPlayer，所有播放都经过 [playerHolder]
+     * （任务书 §22「禁止创建第二套 Player」）。
+     *
+     * `scope` 用 `MainScope()`：控制器与 Activity 同寿命，
+     * 定时器轮询不会在 Activity 销毁后继续跑。
+     */
+    val playbackController: com.example.biliv3.player.PlaybackController =
+        com.example.biliv3.player.PlaybackController(
+            context = appContext,
+            holder = playerHolder,
+            scope = kotlinx.coroutines.MainScope(),
+            lyricsRepository = lyricsRepository,
+        )
+
+    /**
+     * 系统媒体中心桥（v1.3.0）。
+     *
+     * 连接 [com.example.biliv3.player.PlaybackService] ——
+     * 锁屏 / 通知栏 / 耳机按键通过它控制播放。
+     */
+    val mediaSessionBridge: com.example.biliv3.player.MediaSessionBridge =
+        com.example.biliv3.player.MediaSessionBridge(appContext)
+
+    /**
+     * 插件管理器（v1.3.0）。
+     *
+     * ## 权限隔离的关键：只传 `PluginHost` 而不是整个 container
+     *
+     * 插件通过 `PluginContext` 访问能力，而 `PluginContext` 的每个方法
+     * 都从 [pluginHost] 取数据 —— **不是**从这里直接取。
+     *
+     * 这样插件能做的事被限制在 `PluginHost` 接口的方法里，
+     * **编译期**就挡住了"偷偷拿 Repository / Cookie"（§15 红线）。
+     */
+    private val pluginHost: com.example.biliv3.plugin.PluginHost =
+        object : com.example.biliv3.plugin.PluginHost {
+            override fun playbackSnapshot(): com.example.biliv3.plugin.PluginPlaybackSnapshot? {
+                val s = playbackController.state.value
+                val item = s.currentItem ?: return null
+                return com.example.biliv3.plugin.PluginPlaybackSnapshot(
+                    title = item.title,
+                    author = item.author,
+                    positionMs = playbackController.positionMs(),
+                    durationMs = playbackController.durationMs(),
+                    isPlaying = s.isPlaying,
+                )
+            }
+
+            override fun controlPlayback(
+                command: com.example.biliv3.plugin.PluginPlaybackCommand,
+            ): Boolean {
+                when (command) {
+                    com.example.biliv3.plugin.PluginPlaybackCommand.PLAY ->
+                        playbackController.play()
+                    com.example.biliv3.plugin.PluginPlaybackCommand.PAUSE ->
+                        playbackController.pause()
+                    com.example.biliv3.plugin.PluginPlaybackCommand.NEXT ->
+                        playbackController.next(userInitiated = true)
+                    com.example.biliv3.plugin.PluginPlaybackCommand.PREVIOUS ->
+                        playbackController.previous()
+                    com.example.biliv3.plugin.PluginPlaybackCommand.STOP -> {
+                        playbackController.pause()
+                        playbackController.queue.clear()
+                    }
+                }
+                return true
+            }
+
+            override fun queueSnapshot(): List<com.example.biliv3.plugin.PluginQueueItem> =
+                playbackController.queue.items.value.map {
+                    com.example.biliv3.plugin.PluginQueueItem(
+                        key = it.key,
+                        title = it.title,
+                        author = it.author,
+                    )
+                }
+
+            override fun modifyQueue(
+                action: com.example.biliv3.plugin.PluginQueueAction,
+            ): Boolean = when (action) {
+                is com.example.biliv3.plugin.PluginQueueAction.Add -> {
+                    val item = com.example.biliv3.player.QueueItem(
+                        bvid = action.item.key,
+                        title = action.item.title,
+                        author = action.item.author,
+                    )
+                    if (action.toNext) {
+                        playbackController.queue.playNext(item)
+                    } else {
+                        playbackController.queue.add(item)
+                    }
+                    true
+                }
+                is com.example.biliv3.plugin.PluginQueueAction.Remove ->
+                    playbackController.queue.remove(action.key)
+                com.example.biliv3.plugin.PluginQueueAction.Clear -> {
+                    playbackController.queue.clear()
+                    true
+                }
+            }
+
+            override fun storageDirFor(pluginId: String): java.io.File {
+                // 每个插件独立子目录，且**在 App 私有目录内** ——
+                // 插件拿不到别的插件的文件，也拿不到 App 数据目录
+                val safe = pluginId.replace(Regex("[^A-Za-z0-9._-]"), "_")
+                return java.io.File(appContext.filesDir, "plugins/$safe").apply {
+                    if (!exists()) mkdirs()
+                }
+            }
+        }
+
+    /** 插件管理器。 */
+    val pluginManager: com.example.biliv3.plugin.PluginManager =
+        com.example.biliv3.plugin.PluginManager(appContext, pluginHost).apply {
+            // ⚠️ 必须恢复已安装的插件 —— 否则 App 重启后插件列表为空
+            // （装机实测确认过这个 bug）。放在 AppContainer 初始化里，
+            // 保证任何入口进插件页时列表已经就绪。
+            runCatching { restoreInstalled() }
+        }
+
     /** 离线缓存索引（元数据）。 */
     val downloadStore: DownloadStore = DownloadStore(appContext)
 

@@ -108,8 +108,66 @@ object PlayerFactory {
     fun buildMediaSource(
         info: PlayInfo,
         dataSourceFactory: DataSource.Factory = mediaDataSource(),
+        /**
+         * **听视频模式**：true 时**不装配视频轨**。
+         *
+         * ## ⚠️ 为什么不是"把画面藏起来"
+         *
+         * 任务书 §6 明确要求「不是简单把视频画面透明掉」。区别是实打实的：
+         *
+         * | 做法 | 视频解码器 | GPU 合成 | 省电 |
+         * |---|---|---|---|
+         * | 画面透明 / 尺寸 0 | **仍在解码** | 仍在合成 | ❌ 几乎不省 |
+         * | 不装配视频轨（本实现） | **完全不创建** | 不参与 | ✅ 真省 |
+         *
+         * ExoPlayer 只有在 MediaSource 里存在视频轨时才会创建视频解码器；
+         * 只喂音频源，解码器与 `MediaCodec` 视频实例都不会出现。
+         *
+         * ## 代价与前提
+         *
+         * 切换模式**必须重建 MediaSource** → 会重新 prepare。
+         * 所以调用方要在切换前后**保存并恢复播放位置**
+         * （见 `PlayerHolder.bindMedia` 的 `resumePositionMs`）——
+         * 这正是任务书要求「切换过程中播放位置必须保持」的实现点。
+         */
+        audioOnly: Boolean = false,
     ): androidx.media3.exoplayer.source.MediaSource? {
-        if (info.videoUrl.isEmpty()) return null
+        if (info.videoUrl.isEmpty() && info.audioUrl.isEmpty()) return null
+
+        // 音频源：两种模式都需要
+        val audioSource = if (info.audioUrl.isNotEmpty()) {
+            ProgressiveMediaSource.Factory(dataSourceFactory)
+                .createMediaSource(
+                    MediaItem.Builder()
+                        .setUri(info.audioUrl)
+                        .setMimeType(MimeTypes.AUDIO_MP4)
+                        .build(),
+                )
+        } else {
+            null
+        }
+
+        // ---- 听视频：只要有音轨就够 ----
+        if (audioOnly) {
+            // 音轨缺失时**退化为视频**（总比什么都不播强），
+            // 但不能静默 —— 调用方通过 BindResult 判断实际装配了什么
+            return audioSource ?: run {
+                if (info.videoUrl.isEmpty()) return null
+                ProgressiveMediaSource.Factory(dataSourceFactory)
+                    .createMediaSource(
+                        MediaItem.Builder()
+                            .setUri(info.videoUrl)
+                            .setMimeType(MimeTypes.VIDEO_MP4)
+                            .build(),
+                    )
+            }
+        }
+
+        // ---- 看视频：视频轨必需 ----
+        if (info.videoUrl.isEmpty()) {
+            // 只有音频（部分接口在特定清晰度下如此）—— 直接播音频，不报错
+            return audioSource
+        }
 
         val videoSource = ProgressiveMediaSource.Factory(dataSourceFactory)
             .createMediaSource(
@@ -121,15 +179,7 @@ object PlayerFactory {
 
         // 无音轨（退化路径 / 音频流缺失）时只播视频，不合并。
         // MergingMediaSource 传 null 会抛异常，所以必须分支。
-        if (info.audioUrl.isEmpty()) return videoSource
-
-        val audioSource = ProgressiveMediaSource.Factory(dataSourceFactory)
-            .createMediaSource(
-                MediaItem.Builder()
-                    .setUri(info.audioUrl)
-                    .setMimeType(MimeTypes.AUDIO_MP4)
-                    .build(),
-            )
+        if (audioSource == null) return videoSource
 
         return MergingMediaSource(videoSource, audioSource)
     }

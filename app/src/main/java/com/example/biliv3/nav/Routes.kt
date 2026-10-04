@@ -152,6 +152,37 @@ object Routes {
     const val LIVE = "live"
 
     /**
+     * 播放队列（v1.3.0）。
+     *
+     * 队列是**应用级**状态（在 `PlaybackController` 里），
+     * 所以这个页面不接收参数 —— 它直接读当前队列。
+     */
+    const val QUEUE = "queue"
+
+    /**
+     * 沉浸式播放页（v1.3.0）。
+     *
+     * 承载三种模式（看视频 / 听视频 / 黑胶）+ 歌词 + 队列入口。
+     * 同样读应用级状态，不接收参数。
+     */
+    const val PLAYER = "player"
+
+    /**
+     * 插件中心（v1.3.0）。
+     */
+    const val PLUGINS = "plugins"
+
+    /**
+     * 收藏夹快速整理（v1.3.0）。
+     *
+     * 参数是收藏夹 id（0 = 全部收藏夹）。
+     */
+    const val ORGANIZE_ARG_FOLDER = "folderId"
+    const val ORGANIZE = "organize/{$ORGANIZE_ARG_FOLDER}"
+
+    fun organize(folderId: Long): String = "organize/$folderId"
+
+    /**
      * 楼中楼详情（某条评论的全部回复）。
      *
      * ## 为什么需要独立页面

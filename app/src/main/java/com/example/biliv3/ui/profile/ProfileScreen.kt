@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.DownloadDone
 import androidx.compose.material.icons.automirrored.outlined.ManageSearch
+import androidx.compose.material.icons.automirrored.outlined.QueueMusic
+import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.SmartDisplay
 import androidx.compose.material.icons.outlined.Settings
@@ -202,6 +204,10 @@ private fun GuestPanel(
                 // 竖屏模式同样不依赖登录态：推荐流匿名可读，
                 // 探测竖屏要的详情/取流接口也都能匿名访问。
                 Entry("竖屏模式", Icons.Outlined.SmartDisplay, "vertical"),
+                // v1.3.0：播放队列与插件中心都不依赖登录态
+                // （队列是本地状态；插件是本地解析）
+                Entry("播放队列", Icons.AutoMirrored.Outlined.QueueMusic, "queue"),
+                Entry("插件中心", Icons.Outlined.Extension, "plugins"),
             ),
             enabled = true,
             onNavigate = onNavigate,

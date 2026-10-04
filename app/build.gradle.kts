@@ -40,8 +40,8 @@ android {
         applicationId = "com.example.biliv3"
         minSdk = 26
         targetSdk = 35
-        versionCode = 29
-        versionName = "1.2.5"
+        versionCode = 30
+        versionName = "1.3.0"
     }
 
     signingConfigs {
@@ -147,8 +147,16 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.exoplayer.dash)
     implementation(libs.androidx.media3.ui)
+    // 后台播放 / 系统媒体中心（v1.3.0）。⚠️ 必须显式声明：
+    // media3-exoplayer 不传递依赖 media3-session，缺了会 Unresolved reference。
+    implementation(libs.androidx.media3.session)
 
     testImplementation(libs.junit)
     testImplementation(libs.truth)
     testImplementation(libs.kotlinx.coroutines.test)
+    // ⚠️ 必须显式引入真实 org.json：android.jar 里的是 **stub**，
+    // 本地 JVM 单元测试调用它的任何方法都会抛
+    // `RuntimeException: Method xxx in org.json.JSONArray not mocked`。
+    // 只影响 test classpath，不进 APK。
+    testImplementation(libs.json)
 }

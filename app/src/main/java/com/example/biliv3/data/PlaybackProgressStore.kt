@@ -117,11 +117,40 @@ class PlaybackProgressStore(context: Context) {
         const val MIN_RATIO = 0.05f
         const val MAX_RATIO = 0.95f
 
+        /**
+         * **播放完成阈值**（v1.3.0 起成为设计令牌）。
+         *
+         * ## 为什么从"硬编码 95%"改成令牌
+         *
+         * 任务书 §4.3 要求「完成阈值不要直接硬编码在 UI」。
+         * 此前 `MAX_RATIO = 0.95f` 是**续播提示**的阈值，
+         * 而"是否已看完"是另一个语义（用于历史列表的进度条颜色、
+         * 收藏整理的"已观看"筛选）—— 两者此前混用同一个值。
+         *
+         * 现在明确分开：
+         * - [MAX_RATIO] 0.95 —— **不给续播提示**的门槛（UI 行为）
+         * - [COMPLETE_RATIO] 0.90 —— **标记为已看完**的门槛（数据语义）
+         *
+         * 取 90% 而非 95% 的理由：片尾曲 / 下集预告通常占 5~10%，
+         * 用户看到 90% 就是"看完了"，不该因为没拖到最后一秒而算未看。
+         */
+        const val COMPLETE_RATIO = 0.90f
+
         /** 是否值得弹续播提示。 */
         fun shouldResume(positionMs: Long, durationMs: Long): Boolean {
             if (durationMs <= 0L || positionMs <= 0L) return false
             val ratio = positionMs.toFloat() / durationMs
             return ratio in MIN_RATIO..MAX_RATIO
+        }
+
+        /**
+         * 是否已看完（达到 [COMPLETE_RATIO]）。
+         *
+         * 单测钉死：90% 整算看完，89.9% 不算。
+         */
+        fun isCompleted(positionMs: Long, durationMs: Long): Boolean {
+            if (durationMs <= 0L) return false
+            return positionMs.toFloat() / durationMs >= COMPLETE_RATIO
         }
 
         /** 进度键（`bvid:cid`）。UI 与仓库共用同一拼法，避免不一致。 */

@@ -1,5 +1,8 @@
 package com.example.biliv3.nav
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
@@ -56,6 +59,9 @@ import com.example.biliv3.ui.category.CategoryScreen
 import com.example.biliv3.ui.download.DownloadScreen
 import com.example.biliv3.ui.dynamic.DynamicScreen
 import com.example.biliv3.ui.live.LiveScreen
+import com.example.biliv3.ui.player.QueueScreen
+import com.example.biliv3.ui.plugin.PluginCenterScreen
+import com.example.biliv3.ui.plugin.PluginDetailScreen
 import com.example.biliv3.ui.space.SpaceScreen
 import com.example.biliv3.ui.home.BottomNav
 import com.example.biliv3.ui.library.FavoriteFolderScreen
@@ -839,6 +845,115 @@ fun MainShell(
                         ),
                     ),
                 )
+            }
+
+            // ---------- 播放队列（v1.3.0） ----------
+            composable(Routes.QUEUE) {
+                val queueItems by container.playbackController.queue.items
+                    .collectAsStateWithLifecycle()
+                val currentIdx by container.playbackController.queue.currentIndex
+                    .collectAsStateWithLifecycle()
+                val repeatMode by container.playbackController.queue.repeatMode
+                    .collectAsStateWithLifecycle()
+                val shuffled by container.playbackController.queue.shuffled
+                    .collectAsStateWithLifecycle()
+
+                val currentKey = queueItems.getOrNull(currentIdx)?.key
+
+                QueueScreen(
+                    items = queueItems,
+                    currentKey = currentKey,
+                    repeatMode = repeatMode,
+                    shuffled = shuffled,
+                    onBack = safeBack,
+                    onSelect = { item ->
+                        // 选中队列项 → 回视频页播放它
+                        navController.navigate(Routes.video(item.bvid)) {
+                            popUpTo(Routes.QUEUE) { inclusive = true }
+                        }
+                    },
+                    onRemove = { container.playbackController.queue.remove(it.key) },
+                    onMove = { from, to -> container.playbackController.queue.move(from, to) },
+                    onClear = { container.playbackController.queue.clear() },
+                    onToggleShuffle = { container.playbackController.queue.toggleShuffle() },
+                    onCycleRepeat = { container.playbackController.queue.cycleRepeatMode() },
+                )
+            }
+
+            // ---------- 插件中心（v1.3.0） ----------
+            composable(Routes.PLUGINS) {
+                val plugins by container.pluginManager.plugins.collectAsStateWithLifecycle()
+                var detail by remember { mutableStateOf<com.example.biliv3.plugin.PluginRuntime?>(null) }
+
+                // ⚠️ 声明必须在 launcher 之前 —— launcher 的 lambda 里要写它
+                var importError by remember { mutableStateOf<String?>(null) }
+
+                // 文件选择器：选 .bvplugin / .json 后解析预览 → 用户确认 → 安装
+                val importLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocument(),
+                ) { uri ->
+                    uri ?: return@rememberLauncherForActivityResult
+                    val text = runCatching {
+                        context.contentResolver.openInputStream(uri)?.use {
+                            it.bufferedReader().readText()
+                        }
+                    }.getOrNull()
+
+                    if (text.isNullOrBlank()) {
+                        importError = "无法读取文件"
+                    } else {
+                        val err = runCatching {
+                            container.pluginManager.installRulePlugin(
+                                json = org.json.JSONObject(text),
+                                source = uri.lastPathSegment ?: "导入的插件",
+                            )
+                        }.getOrElse { "文件不是合法 JSON：${it.message}" }
+                        importError = err ?: "安装成功（默认未启用，请在列表里打开）"
+                    }
+                }
+
+                val d = detail
+                if (d != null) {
+                    PluginDetailScreen(
+                        runtime = d,
+                        onBack = { detail = null },
+                        onReload = { container.pluginManager.reload(d.metadata.id) },
+                        onUninstall = {
+                            container.pluginManager.uninstall(d.metadata.id)
+                            detail = null
+                        },
+                    )
+                } else {
+                    PluginCenterScreen(
+                        plugins = plugins,
+                        onBack = safeBack,
+                        onToggle = { p, on ->
+                            if (on) {
+                                container.pluginManager.enable(p.metadata.id)
+                            } else {
+                                container.pluginManager.disable(p.metadata.id)
+                            }
+                            container.pluginManager.rebuildDanmakuHooks()
+                        },
+                        onReload = { container.pluginManager.reload(it.metadata.id) },
+                        onUninstall = { container.pluginManager.uninstall(it.metadata.id) },
+                        onImport = {
+                            importError = null
+                            importLauncher.launch(
+                                arrayOf("application/json", "application/octet-stream", "*/*"),
+                            )
+                        },
+                        onShowDetail = { detail = it },
+                    )
+                }
+
+                // 导入结果提示（成功/失败都必须有反馈 —— 不能"点了没反应"）
+                importError?.let { msg ->
+                    LaunchedEffect(msg) {
+                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                        importError = null
+                    }
+                }
             }
 
             // ---------- 离线缓存管理 ----------
