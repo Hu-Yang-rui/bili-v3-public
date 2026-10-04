@@ -59,6 +59,7 @@ import com.example.biliv3.ui.category.CategoryScreen
 import com.example.biliv3.ui.download.DownloadScreen
 import com.example.biliv3.ui.dynamic.DynamicScreen
 import com.example.biliv3.ui.live.LiveScreen
+import com.example.biliv3.ui.player.ImmersivePlayer
 import com.example.biliv3.ui.player.QueueScreen
 import com.example.biliv3.ui.plugin.PluginCenterScreen
 import com.example.biliv3.ui.plugin.PluginDetailScreen
@@ -527,6 +528,14 @@ fun MainShell(
                     }
                 }
 
+                // v1.3.0：订阅播放模式（听视频/黑胶时详情页不装配视频轨）。
+                // ⚠️ 必须是**订阅**而不是读一次 —— 模式切换后要触发
+                // `VideoPlayerSurface` 重建 MediaSource，否则画面还在解码
+                // （那正是"听视频不省电"的失败形态，见 §7.10-59）。
+                val pbState by container.playbackController.state
+                    .collectAsStateWithLifecycle()
+                val pbMode = pbState.mode
+
                 // 订阅一次设置，按值传给详情页。
                 // ⚠️ 不用 collectAsStateWithLifecycle 的默认 initial ——
                 // 设置是本地同步读，首帧就要拿到真值，否则"自动起播"会失效。
@@ -593,6 +602,40 @@ fun MainShell(
                         onEnterPip = {
                             val act = context as? com.example.biliv3.MainActivity
                             act?.enterPip() ?: false
+                        },
+                        // ---- v1.3.0：听视频 / 黑胶 ----
+                        //
+                        // ⚠️ 模式状态在 `PlaybackController`（全 App 唯一写入方），
+                        // 这里只是触发点。`setMode` 内部会**先记位置再重建**
+                        // MediaSource，所以切换不会从头播。
+                        onToggleAudioOnly = {
+                            container.playbackController.toggleAudioOnly()
+                        },
+                        onOpenVinyl = {
+                            // ⚠️ 必须**同时**切模式再导航。
+                            // 只 navigate 的话播放页仍按 VIDEO 渲染 ——
+                            // 装机实测就是这样：进了播放页却是一块黑框，
+                            // 唱片根本没画出来。
+                            container.playbackController.setMode(
+                                com.example.biliv3.player.PlaybackMode.VINYL,
+                            )
+                            navController.navigate(Routes.PLAYER)
+                        },
+                        // ⚠️ 必须订阅（而不是读一次）：模式切换后
+                        // `VideoPlayerSurface` 要重建 MediaSource 才能真的
+                        // 停掉视频解码 —— 见 §7.10-59。
+                        playbackMode = pbMode,
+                        // v1.3.0：详情页把当前视频登记进应用级队列。
+                        // ⚠️ 覆盖式（队列 = 当前这一个），不是追加 ——
+                        // 否则浏览 10 个视频后队列会堆 10 条无关记录。
+                        onRegisterInQueue = { bvid2, cid, title, author, cover ->
+                            container.playbackController.registerInQueue(
+                                bvid = bvid2,
+                                cid = cid,
+                                title = title,
+                                author = author,
+                                cover = cover,
+                            )
                         },
                         // ---- 新增接线（补齐缺失功能）----
                         onOwnerClick = { mid -> navController.navigate(Routes.space(mid)) },
@@ -878,6 +921,77 @@ fun MainShell(
                     onToggleShuffle = { container.playbackController.queue.toggleShuffle() },
                     onCycleRepeat = { container.playbackController.queue.cycleRepeatMode() },
                 )
+            }
+
+            // ---------- 沉浸式 / 黑胶播放页（v1.3.0） ----------
+            //
+            // 读应用级状态（`PlaybackController`），不接收路由参数 ——
+            // 队列、模式、歌词都在 controller 里，本页只是**呈现**。
+            composable(Routes.PLAYER) {
+                val pbState by container.playbackController.state
+                    .collectAsStateWithLifecycle()
+                val lyricsState by container.lyricsRepository.state
+                    .collectAsStateWithLifecycle()
+
+                // 位置轮询：黑胶/歌词需要比 500ms 更细的刷新
+                var positionMs by remember { mutableStateOf(0L) }
+                var durationMs by remember { mutableStateOf(0L) }
+                LaunchedEffect(pbState.isPlaying) {
+                    while (true) {
+                        positionMs = container.playbackController.positionMs()
+                        durationMs = container.playbackController.durationMs()
+                        kotlinx.coroutines.delay(250L)
+                    }
+                }
+
+                var lyricsExpanded by remember { mutableStateOf(false) }
+                var showQueue by remember { mutableStateOf(false) }
+
+                ImmersivePlayer(
+                    mode = pbState.mode,
+                    item = pbState.currentItem,
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                    isPlaying = pbState.isPlaying,
+                    lyricsState = lyricsState,
+                    lyricsExpanded = lyricsExpanded,
+                    onToggleLyrics = { lyricsExpanded = !lyricsExpanded },
+                    onBack = safeBack,
+                    onTogglePlay = { container.playbackController.togglePlayPause() },
+                    onNext = { container.playbackController.next(userInitiated = true) },
+                    onPrevious = { container.playbackController.previous() },
+                    onSeek = { container.playbackController.seekTo(it) },
+                    onOpenQueue = { showQueue = true },
+                    onRetryLyrics = { container.playbackController.retryLyrics() },
+                )
+
+                if (showQueue) {
+                    QueueScreen(
+                        items = container.playbackController.queue.items
+                            .collectAsStateWithLifecycle().value,
+                        currentKey = pbState.currentItem?.key,
+                        repeatMode = container.playbackController.queue.repeatMode
+                            .collectAsStateWithLifecycle().value,
+                        shuffled = container.playbackController.queue.shuffled
+                            .collectAsStateWithLifecycle().value,
+                        onBack = { showQueue = false },
+                        onSelect = { item ->
+                            showQueue = false
+                            navController.navigate(Routes.video(item.bvid)) {
+                                popUpTo(Routes.PLAYER) { inclusive = true }
+                            }
+                        },
+                        onRemove = { container.playbackController.queue.remove(it.key) },
+                        onMove = { f, t -> container.playbackController.queue.move(f, t) },
+                        onClear = { container.playbackController.queue.clear() },
+                        onToggleShuffle = {
+                            container.playbackController.queue.toggleShuffle()
+                        },
+                        onCycleRepeat = {
+                            container.playbackController.queue.cycleRepeatMode()
+                        },
+                    )
+                }
             }
 
             // ---------- 插件中心（v1.3.0） ----------

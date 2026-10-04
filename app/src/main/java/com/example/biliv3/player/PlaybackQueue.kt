@@ -139,6 +139,39 @@ class PlaybackQueue {
     fun add(item: QueueItem): Int = addAll(listOf(item))
 
     /**
+     * **替换**为单曲队列（详情页登记当前视频用）。
+     *
+     * ## 与 [add] 的区别（很重要）
+     *
+     * 详情页是"从某处点进来的**一个**视频"，不是"往队列里再加一个"。
+     * 用 `add` 的话，用户浏览 10 个视频后队列会堆 10 条无关记录，
+     * 黑胶页的"下一首"就会播到很早以前点开过的视频 —— 那不是用户预期。
+     *
+     * 所以详情页用**覆盖式**登记：队列 = 当前这一个视频。
+     * 用户显式点「添加到队列」时才走 [add] / [playNext]。
+     *
+     * @return true = 队列内容确实变了
+     */
+    fun setSingle(item: QueueItem): Boolean {
+        val same = _items.value.size == 1 && _items.value[0].key == item.key
+        if (same) return false
+        _items.value = listOf(item)
+        _currentIndex.value = 0
+        if (_shuffled.value) shuffleOrder = listOf(0)
+        return true
+    }
+
+    /**
+     * 若队列里没有这一项则追加（**不改变**当前播放项）。
+     *
+     * 用于「添加到队列」这类**非覆盖**语义。
+     */
+    fun ensurePresent(item: QueueItem): Boolean {
+        if (_items.value.any { it.key == item.key }) return false
+        return addAll(listOf(item)) > 0
+    }
+
+    /**
      * 插入到**当前项之后**（"下一首播放"）。
      *
      * 注意：插入位置是 `currentIndex + 1`，**不是**末尾 ——

@@ -288,6 +288,43 @@ class PlaybackController(
         return next()
     }
 
+    // ---------------- 队列登记 ----------------
+
+    /**
+     * 把「当前在播的视频」登记进队列（详情页调用）。
+     *
+     * ## 为什么需要它（装机实测发现的缺口）
+     *
+     * 详情页此前**完全不碰队列** —— 于是黑胶 / 听视频页读到的
+     * `currentItem` 是 null，界面显示「暂无播放」而音频却在响。
+     *
+     * ## 为什么是"覆盖"而不是"追加"
+     *
+     * 详情页是"点进来的**一个**视频"。用追加的话，用户浏览 10 个视频后
+     * 队列会堆 10 条无关记录，「下一首」会播到很早以前点开的视频。
+     * 用户显式点「添加到队列」时才走 `queue.add` / `queue.playNext`。
+     */
+    fun registerInQueue(
+        bvid: String,
+        cid: Long,
+        title: String,
+        author: String,
+        cover: String,
+        durationSeconds: Int = 0,
+    ) {
+        val changed = queue.setSingle(
+            QueueItem(
+                bvid = bvid,
+                cid = cid,
+                title = title,
+                author = author,
+                cover = cover,
+                durationSeconds = durationSeconds,
+            ),
+        )
+        if (changed) publish()
+    }
+
     // ---------------- 歌词 ----------------
 
     private fun loadLyricsFor(item: QueueItem) {

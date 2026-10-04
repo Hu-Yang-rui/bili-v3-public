@@ -29,8 +29,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.PlayArrow
@@ -169,6 +171,38 @@ fun VideoDetailScreen(
      * 请求进入 PiP。不支持的设备上应传入 `{ false }`。
      */
     onEnterPip: () -> Boolean = { false },
+    /**
+     * 切换「听视频」（v1.3.0）。
+     *
+     * 由导航层接到 `container.playbackController.toggleAudioOnly()` ——
+     * 模式状态在 `PlaybackController`（全 App 唯一写入方），本页只是触发点。
+     * 切换时**播放位置保持**（先记位置 → 重建 MediaSource → seek 回去）。
+     */
+    onToggleAudioOnly: () -> Unit = {},
+    /**
+     * 打开黑胶唱片模式（v1.3.0）。
+     *
+     * 由导航层 `navController.navigate(Routes.PLAYER)` 实现 ——
+     * 黑胶要整屏空间，做成独立页面而不是本页内的浮层。
+     */
+    onOpenVinyl: () -> Unit = {},
+    /**
+     * v1.3.0：当前播放模式（看视频 / 听视频 / 黑胶）。
+     *
+     * 由导航层从 `container.playbackController.state.mode` 订阅后传入。
+     * 页面**不持有**模式状态 —— 它是应用级的（切页 / PiP 后仍生效）。
+     */
+    playbackMode: com.example.biliv3.player.PlaybackMode =
+        com.example.biliv3.player.PlaybackMode.VIDEO,
+    /**
+     * v1.3.0：把当前视频登记进应用级播放队列。
+     *
+     * 由导航层接到 `container.playbackController.registerInQueue(...)`。
+     * **覆盖式**登记（队列 = 当前这一个视频），不是追加 ——
+     * 理由见 `PlaybackQueue.setSingle` 的注释。
+     */
+    onRegisterInQueue: (String, Long, String, String, String) -> Unit =
+        { _, _, _, _, _ -> },
     /**
      * 播放器弹层里改弹幕档位时回调，用于**写回全局设置**。
      *
@@ -701,6 +735,9 @@ fun VideoDetailScreen(
                     onOpenSettings = { showSettings = true },
                     onEnterPip = onEnterPip,
                     isInPip = isInPip,
+                    onToggleAudioOnly = onToggleAudioOnly,
+                    onOpenVinyl = onOpenVinyl,
+                    playbackMode = playbackMode,
                     onBack = onBack,
                     holder = holder,
                     onToggleDesc = viewModel::toggleDesc,
@@ -753,6 +790,18 @@ fun VideoDetailScreen(
                     onLoginRequired = onLoginRequired,
                     // ⋮ → 下载 / 稍后再看 / 分享渠道
                     onMoreClick = { showMoreMenu = true },
+                    // v1.3.0：把当前视频登记进应用级队列 ——
+                    // 否则黑胶/听视频页读不到 currentItem，
+                    // 会显示「暂无播放」而音频却在响（装机实测发现的缺口）。
+                    onRegisterInQueue = { d ->
+                        onRegisterInQueue(
+                            d.bvid,
+                            d.cid,
+                            d.title,
+                            d.ownerName,
+                            d.coverUrl(),
+                        )
+                    },
                 )
             }
         }
@@ -1323,6 +1372,12 @@ private fun DetailContent(
     onEnterPip: () -> Boolean,
     /** 是否已在 PiP 中（PiP 下隐藏设置齿轮等）。 */
     isInPip: Boolean,
+    /** v1.3.0：切换听视频模式。 */
+    onToggleAudioOnly: () -> Unit,
+    /** v1.3.0：打开黑胶唱片模式。 */
+    onOpenVinyl: () -> Unit,
+    /** v1.3.0：当前播放模式（决定是否装配视频轨）。 */
+    playbackMode: com.example.biliv3.player.PlaybackMode,
     /** Activity 级播放器持有者（装配去重）。 */
     holder: com.example.biliv3.player.PlayerHolder?,
     /** 返回。传给 PlayerArea 的浮动返回按钮。 */
@@ -1350,8 +1405,31 @@ private fun DetailContent(
     onLoginRequired: () -> Unit = {},
     /** 点元信息行的 ⋮ → 更多菜单（下载 / 稍后再看 / 分享渠道）。 */
     onMoreClick: () -> Unit,
+    /**
+     * v1.3.0：把当前视频登记进播放队列。
+     *
+     * ⚠️ 详情页**不持有**队列（那是 `PlaybackController` 的），
+     * 只在这里把"当前在播什么"告诉它 —— 否则黑胶/听视频页
+     * 读不到 `currentItem`，会显示「暂无播放」。
+     */
+    onRegisterInQueue: (com.example.biliv3.data.model.VideoDetail) -> Unit = {},
 ) {
     val colors = BiliTheme.colors
+
+    // v1.3.0：把当前视频登记进播放队列。
+    //
+    // ## 为什么必须在这里做
+    //
+    // 队列是**应用级**的（`PlaybackController.queue`），但详情页此前
+    // 完全不碰它 —— 于是黑胶/听视频页读到的 `currentItem` 是 null，
+    // 表现为「暂无播放」而音频却在响（装机实测发现的缺口）。
+    //
+    // 登记时机：详情加载完成（有标题/作者/封面）后**覆盖式**写入单曲队列。
+    // 用 `setSingle` 语义而不是 append：详情页是"从某处点进来的一个视频"，
+    // 不该把之前的队列越堆越长。
+    androidx.compose.runtime.LaunchedEffect(detail.bvid, detail.cid) {
+        onRegisterInQueue(detail)
+    }
 
     if (isFullscreen) {
         Box(
@@ -1451,6 +1529,9 @@ private fun DetailContent(
                     onOpenSettings = onOpenSettings,
                     onEnterPip = onEnterPip,
                     isInPip = isInPip,
+                    onToggleAudioOnly = onToggleAudioOnly,
+                    onOpenVinyl = onOpenVinyl,
+                    playbackMode = playbackMode,
                     holder = holder,
                     onBack = onBack,
                     onRetryPlay = onRetryPlay,
@@ -1574,6 +1655,9 @@ private fun DetailContent(
                     onOpenSettings = onOpenSettings,
                     onEnterPip = onEnterPip,
                     isInPip = isInPip,
+                    onToggleAudioOnly = onToggleAudioOnly,
+                    onOpenVinyl = onOpenVinyl,
+                    playbackMode = playbackMode,
                     holder = holder,
                     onRetryPlay = onRetryPlay,
                     onPlayerError = onPlayerError,
@@ -2114,6 +2198,29 @@ private fun PlayerArea(
     onOpenSettings: () -> Unit,
     onEnterPip: () -> Boolean,
     isInPip: Boolean,
+    /**
+     * 切换「听视频」（v1.3.0）。
+     *
+     * 由 `PlaybackController.setMode(AUDIO/VIDEO)` 实现 ——
+     * **切换时保持播放位置**（先记位置 → 重建 MediaSource → seek 回去）。
+     */
+    onToggleAudioOnly: () -> Unit = {},
+    /**
+     * 打开黑胶唱片模式（v1.3.0）。
+     *
+     * 进独立的全屏播放页（`Routes.PLAYER`），不是本页内的浮层 ——
+     * 黑胶需要整屏空间，塞在播放器小窗里没有意义。
+     */
+    onOpenVinyl: () -> Unit = {},
+    /**
+     * v1.3.0：当前播放模式（看视频 / 听视频 / 黑胶）。
+     *
+     * ⚠️ 由导航层从 `container.playbackController.state.mode` 传入 ——
+     * **不能在本页 `remember`**：模式是应用级的，
+     * 页面重建（PiP 进出 / 转屏）后必须仍然生效。
+     */
+    playbackMode: com.example.biliv3.player.PlaybackMode =
+        com.example.biliv3.player.PlaybackMode.VIDEO,
     /** Activity 级播放器持有者（装配去重）。 */
     holder: com.example.biliv3.player.PlayerHolder? = null,
     /** 返回。浮动返回按钮用它（默认隐藏、点画面才浮现）。 */
@@ -2171,6 +2278,9 @@ private fun PlayerArea(
                     // 交给 holder 判断是否需要重新装配：
                     // PiP 进出/页面重建时不重复 prepare，保住缓冲与进度
                     holder = holder,
+                    // v1.3.0：听视频 / 黑胶时**不装配视频轨**（真省解码，
+                    // 不是把画面藏起来 —— 见 §7.10-59）
+                    mode = playbackMode,
                     modifier = Modifier.fillMaxSize(),
                 )
                 // 弹幕层：在画面之上、字幕之下（弹幕不遮挡字幕）
@@ -2295,6 +2405,21 @@ private fun PlayerArea(
                                 icon = Icons.Filled.PictureInPictureAlt,
                                 contentDescription = "小窗播放",
                                 onClick = { onEnterPip() },
+                            )
+
+                            // ---- v1.3.0：听视频 / 黑胶模式 ----
+                            //
+                            // ⚠️ 与"小窗"同条件显示：没有可播放的流时切模式
+                            // 只会得到一块黑，属于"看着能点但没反应"（§1 自检 6）。
+                            PlayerChromeButton(
+                                icon = Icons.Filled.Headphones,
+                                contentDescription = "听视频（只听不看）",
+                                onClick = onToggleAudioOnly,
+                            )
+                            PlayerChromeButton(
+                                icon = Icons.Filled.Album,
+                                contentDescription = "黑胶唱片模式",
+                                onClick = onOpenVinyl,
                             )
                         }
 

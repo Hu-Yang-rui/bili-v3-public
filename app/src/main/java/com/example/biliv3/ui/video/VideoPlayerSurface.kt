@@ -72,21 +72,49 @@ fun VideoPlayerSurface(
      * [PlayerHolder.bindMedia] 会比对 URL，同一条流时不重复装配。
      */
     holder: com.example.biliv3.player.PlayerHolder? = null,
+    /**
+     * 播放模式（v1.3.0）。
+     *
+     * ⚠️ 由 `PlaybackController` 提供，**不是**本组件自己维护的状态 ——
+     * 听视频/黑胶是应用级模式（切页、PiP 后仍要保持），
+     * 组件内部 `remember` 会在重建时丢失。
+     *
+     * 非 `VIDEO` 时 `bindMedia(audioOnly = true)`：
+     * **不装配视频轨**，从而不创建视频解码器（真省电，见 §7.10-59）。
+     */
+    mode: com.example.biliv3.player.PlaybackMode = com.example.biliv3.player.PlaybackMode.VIDEO,
 ) {
     // 当前 Surface 绑定（随组合存活；onRelease 里释放）
     var surfaceBinding by remember { mutableStateOf<TextureSurfaceBinder?>(null) }
 
-    // 取流变化（切分P / 切清晰度）时重新装配 MediaSource。
+    val audioOnly = mode != com.example.biliv3.player.PlaybackMode.VIDEO
+
+    // 取流变化（切分P / 切清晰度）**或播放模式变化**时重新装配 MediaSource。
     // ⚠️ 绝不缓存 MediaSource —— 取流 URL 约 2h 过期。
-    LaunchedEffect(info.videoUrl, info.audioUrl, info.currentQuality) {
+    //
+    // ⚠️ `audioOnly` 必须在 key 里：看/听切换时视频轨的有无不同，
+    // 必须重建 —— 否则"点了听视频但画面还在解码"。
+    // 重建会重置位置，所以下面把当前位置传进 `bindMedia` 恢复。
+    LaunchedEffect(info.videoUrl, info.audioUrl, info.currentQuality, audioOnly) {
         // 防御：播放器可能已被释放（如快速退出页面、或生命周期竞态）。
         // 对已释放的 player 调 setMediaSource 会抛 IllegalStateException
         // 并直接崩溃；这里转成可见的错误而不是崩。
         if (player.isReleased) return@LaunchedEffect
 
         if (holder != null) {
+            // 切换模式时保住播放位置：重建 MediaSource 会把位置重置到 0，
+            // 所以先读当前位置、装配后 seek 回去。
+            val resumeAt = if (audioOnly) player.currentPosition.coerceAtLeast(0L) else 0L
+
             // 走 holder：同一条流不重复装配（保住缓冲与播放进度）
-            when (val r = holder.bindMedia(info, playWhenReady = true)) {
+            when (
+                val r = holder.bindMedia(
+                    info = info,
+                    playWhenReady = true,
+                    audioOnly = audioOnly,
+                    resumePositionMs = resumeAt,
+                )
+            ) {
                 is com.example.biliv3.player.PlayerHolder.BindResult.NoSource ->
                     onError("无法构建播放源（取流地址为空）")
                 is com.example.biliv3.player.PlayerHolder.BindResult.Failed ->
@@ -97,7 +125,7 @@ fun VideoPlayerSurface(
             return@LaunchedEffect
         }
 
-        val source = PlayerFactory.buildMediaSource(info)
+        val source = PlayerFactory.buildMediaSource(info, audioOnly = audioOnly)
         if (source == null) {
             onError("无法构建播放源（取流地址为空）")
             return@LaunchedEffect

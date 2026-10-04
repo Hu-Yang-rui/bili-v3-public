@@ -12,12 +12,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -242,11 +246,15 @@ private fun ChromeLayer(
 
     Box(modifier = Modifier.fillMaxSize()) {
         // ---- 顶栏：返回 + 标题 ----
+        // ⚠️ 必须消费 statusBars：MainShell 的 contentWindowInsets 是 0，
+        // inset 由各页自理。漏了它的表现是**图标画到状态栏底下、点不动**
+        // （点击被系统状态栏吃掉）—— 与插件中心「导入」是同一个坑（§7.10-53）。
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .fillMaxWidth()
                 .alpha(alpha)
+                .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = Space.x2, vertical = Space.x4),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -284,11 +292,14 @@ private fun ChromeLayer(
         }
 
         // ---- 底部：进度 + 控制 ----
+        // ⚠️ 同样要消费 navigationBars：否则控制按钮压在系统导航栏上，
+        // 点"播放/暂停"会先触发手势导航（返回桌面）。
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .alpha(alpha)
+                .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(horizontal = Space.x6, vertical = Space.x8),
         ) {
             ImmersiveProgressBar(
