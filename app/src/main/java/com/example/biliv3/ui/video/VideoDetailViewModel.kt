@@ -124,6 +124,20 @@ class VideoDetailViewModel(
     private val _interaction = MutableStateFlow(InteractionState())
     val interaction: StateFlow<InteractionState> = _interaction.asStateFlow()
 
+    /**
+     * 点赞请求是否在途。
+     *
+     * 用于**防并发点击** —— 快速连点会发出多个 like/unlike 请求，
+     * 响应顺序不确定，本地与服务端状态可能永久不一致。
+     * 详见 [toggleLike] 的说明。
+     */
+    private val _likeInFlight = MutableStateFlow(false)
+
+    /**
+     * 收藏请求是否在途（与 [_likeInFlight] 同理，见 [toggleFavorite]）。
+     */
+    private val _favoriteInFlight = MutableStateFlow(false)
+
     /** 一次性提示（操作失败、需登录等）。 */
     private val _toast = MutableStateFlow<String?>(null)
     val toast: StateFlow<String?> = _toast.asStateFlow()
@@ -918,19 +932,59 @@ class VideoDetailViewModel(
 
     // ---------------- 互动操作 ----------------
 
+    /**
+     * 点赞 / 取消点赞。
+     *
+     * ## 🔴 必须防并发点击（v1.4.2 修 #15）
+     *
+     * 首版没有任何在途保护：每次点击都立刻 `launch` 一个请求。
+     * 用户快速点 3 次会发出**三个并发请求**：
+     *
+     * ```
+     * 点击1 → liked=false → 请求A(like=1)
+     * 点击2 → liked=true  → 请求B(like=2)
+     * 点击3 → liked=false → 请求C(like=1)
+     * ```
+     *
+     * 三个请求的**响应顺序不确定**，服务端最终状态取决于最后到达的那个，
+     * 而本地 UI 状态取决于最后一次点击 —— 两者可能永久不一致
+     * （UI 显示已赞、服务端其实已取消，或反之）。
+     *
+     * ## 做法：在途时忽略后续点击
+     *
+     * 用 [_likeInFlight] 标记。在途期间的点击**直接丢弃**而不是排队 ——
+     * 点赞是幂等的开关语义，"连点 3 次"的用户意图就是"切一下"，
+     * 排队执行 3 次反而会转回来。
+     *
+     * 请求结束（无论成功失败）都在 `finally` 里复位标记，
+     * 否则一次失败会把按钮永久锁死。
+     */
     fun toggleLike() {
         val repoI = interactions ?: return
         if (!repoI.isLoggedIn) return toast("请先登录")
+        // 在途则忽略：避免并发请求导致本地与服务端状态错乱
+        if (_likeInFlight.value) return
+        _likeInFlight.value = true
+
         val next = !_interaction.value.liked
         // 乐观更新：先改 UI 再发请求，失败回滚。
         // 点赞是高频轻操作，等网络回来再变会有明显延迟感。
         _interaction.value = _interaction.value.copy(liked = next)
         viewModelScope.launch {
-            repoI.like(bvid, next)
-                .onFailure { e ->
-                    _interaction.value = _interaction.value.copy(liked = !next)
-                    toast(userMessageFor(e))
-                }
+            try {
+                repoI.like(bvid, next)
+                    .onFailure { e ->
+                        // 只在**仍然是本次操作的目标态**时回滚。
+                        // 若期间状态已被其它来源改写（如投币同时点赞），
+                        // 盲目回滚会把那个正确的状态覆盖掉。
+                        if (_interaction.value.liked == next) {
+                            _interaction.value = _interaction.value.copy(liked = !next)
+                        }
+                        toast(userMessageFor(e))
+                    }
+            } finally {
+                _likeInFlight.value = false
+            }
         }
     }
 
@@ -982,24 +1036,44 @@ class VideoDetailViewModel(
         }
     }
 
+    /**
+     * 收藏 / 取消收藏。
+     *
+     * ## 同样需要防并发（与 [toggleLike] 同理）
+     *
+     * 快速连点会并发发出 add / del 两组请求，且**收藏夹接口比点赞更重**
+     * （要先查默认收藏夹）。响应乱序会让"到底收藏了没有"变得不确定，
+     * 而收藏状态还要通过 `favoritesSync` 广播给其它页面 ——
+     * 一个错误状态会被同步到整个 App。
+     */
     fun toggleFavorite() {
         val repoI = interactions ?: return
         if (!repoI.isLoggedIn) return toast("请先登录")
+        if (_favoriteInFlight.value) return
+        _favoriteInFlight.value = true
+
         val next = !_interaction.value.favored
         _interaction.value = _interaction.value.copy(favored = next)
         viewModelScope.launch {
-            repoI.favorite(bvid, next)
-                .onSuccess {
-                    toast(if (next) "已收藏" else "已取消收藏")
-                    // ⚠️ 通知其它页面刷新（收藏列表 / 我的页计数）。
-                    // 不通知的话，用户从详情页收藏后回到「我的收藏」，
-                    // 列表还是旧的 —— 就是"功能孤立、状态不同步"。
-                    favoritesSync.notifyChanged()
-                }
-                .onFailure { e ->
-                    _interaction.value = _interaction.value.copy(favored = !next)
-                    toast(userMessageFor(e))
-                }
+            try {
+                repoI.favorite(bvid, next)
+                    .onSuccess {
+                        toast(if (next) "已收藏" else "已取消收藏")
+                        // ⚠️ 通知其它页面刷新（收藏列表 / 我的页计数）。
+                        // 不通知的话，用户从详情页收藏后回到「我的收藏」，
+                        // 列表还是旧的 —— 就是"功能孤立、状态不同步"。
+                        favoritesSync.notifyChanged()
+                    }
+                    .onFailure { e ->
+                        // 仅当仍是我们设的目标态时才回滚，避免覆盖其它来源
+                        if (_interaction.value.favored == next) {
+                            _interaction.value = _interaction.value.copy(favored = !next)
+                        }
+                        toast(userMessageFor(e))
+                    }
+            } finally {
+                _favoriteInFlight.value = false
+            }
         }
     }
 

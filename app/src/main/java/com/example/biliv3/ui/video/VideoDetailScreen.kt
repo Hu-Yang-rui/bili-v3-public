@@ -762,22 +762,19 @@ fun VideoDetailScreen(
                         if (viewModel.isLoggedIn) viewModel.toggleFavorite() else onLoginRequired()
                     },
                     onShare = {
-                        // 唤起系统分享面板，同时上报埋点
-                        val intent = android.content.Intent(
-                            android.content.Intent.ACTION_SEND,
-                        ).apply {
-                            type = "text/plain"
-                            putExtra(
-                                android.content.Intent.EXTRA_TEXT,
-                                "https://www.bilibili.com/video/$bvid",
-                            )
-                        }
-                        runCatching {
-                            context.startActivity(
-                                android.content.Intent.createChooser(intent, "分享到"),
-                            )
-                        }
-                        viewModel.onShared()
+                        // 🔴 改为打开**应用内分享面板**（v1.4.2 修 #14）。
+                        //
+                        // 首版直接 `createChooser()` 弹系统分享 ——
+                        // 问题是：
+                        // 1. 系统面板样式与本 App 完全不同，是明显的"跳出感"
+                        // 2. 无法提供"复制链接"这种不需要离开 App 的轻量操作
+                        // 3. 无法在面板里标注第三方渠道（微信等需 SDK，我们不集成）
+                        //
+                        // 现在复用 `ItemMoreMenu`（⋮ 菜单用的同一个面板），
+                        // 它已含「微信 / 朋友圈 / 下载分享 / 复制链接」四个渠道，
+                        // 其中「复制链接」**不离开 App**，其余渠道再转系统分享。
+                        // 这样两条入口（互动栏 + ⋮ 菜单）行为一致。
+                        showMoreMenu = true
                     },
                     onVideoClick = onVideoClick,
                     // 头像 / 名字 → UP 主主页（此前完全不可点）

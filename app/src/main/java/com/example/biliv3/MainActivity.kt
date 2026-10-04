@@ -16,7 +16,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
 import com.example.biliv3.nav.MainShell
@@ -126,6 +130,23 @@ class MainActivity : ComponentActivity() {
          * `ActivityManager`。
          */
         deviceTier = com.example.biliv3.design.detectDeviceTier(this)
+
+        /**
+         * 订阅「退出后自动小窗」设置（v1.4.2）。
+         *
+         * 用 `repeatOnLifecycle(STARTED)` 而不是裸 `launch` 收集 ——
+         * 后者在 Activity 进后台时仍在收集，白白占用资源。
+         *
+         * 缓存到 [autoPipEnabled]：`onUserLeaveHint()` 是同步回调，
+         * 来不及等 DataStore（详见该字段的说明）。
+         */
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                container.settingsStore.settings.collect { s ->
+                    autoPipEnabled = s.autoPip
+                }
+            }
+        }
 
         setContent {
             CompositionLocalProvider(
@@ -260,6 +281,54 @@ class MainActivity : ComponentActivity() {
         if (isFinishing) {
             container.playerHolder.release()
         }
+    }
+
+    /**
+     * 「退出 App 后自动进入小窗」的缓存值（v1.4.2 新增）。
+     *
+     * ## 为什么缓存而不是每次读 DataStore
+     *
+     * `onUserLeaveHint()` 是**同步**回调，必须在其中立刻决定是否
+     * `enterPictureInPictureMode()`；而读 DataStore 是挂起操作，
+     * 等它返回时用户已经离开、PiP 时机已过（系统会拒绝）。
+     *
+     * 所以启动时读一次、订阅变化更新缓存，回调里只读这个字段。
+     * 用 `repeatOnLifecycle(STARTED)` 订阅，避免后台无谓收集。
+     */
+    @Volatile
+    private var autoPipEnabled: Boolean = false
+
+    /**
+     * 用户**主动**离开 App（按 Home / 最近任务 / 手势回桌面）时触发。
+     *
+     * ## 为什么用 `onUserLeaveHint` 而不是 `onStop`
+     *
+     * `onStop` 也会在**锁屏、切到另一个 App、被系统回收**时触发，
+     * 那些场景自动弹小窗是打扰（尤其锁屏时弹一个视频窗口很怪）。
+     * `onUserLeaveHint` 只在"用户主动离开"时调用，语义正好匹配
+     * 「退出 App 后自动进入小窗」。
+     *
+     * ## 不与手动小窗冲突
+     *
+     * - 已经在小窗里（`isInPip`）：不重复请求
+     * - 已经在请求中（`pipRequested`）：不重复请求
+     * - 没有播放中的播放器：不请求（否则小窗是一片黑）
+     * - 听视频交给 Service 时**不请求** —— 那种情况用户要的是
+     *   "后台听"，不是"弹出画面"
+     */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+
+        if (!autoPipEnabled) return
+        if (isInPip || pipRequested) return
+        if (!supportsPip()) return
+
+        // 只有真正在播、且前台持有播放器时才值得弹小窗。
+        // 交给 Service（听视频）时不弹：那是纯音频场景，弹画面无意义。
+        val player = container.playerHolder.player
+        if (player == null || player.isReleased) return
+
+        runCatching { enterPip() }
     }
 }
 

@@ -199,6 +199,18 @@ fun SettingsScreen(
                 onCheckedChange = viewModel::setAutoPlay,
             )
 
+            // ---- 退出后自动小窗（v1.4.2 新增）----
+            //
+            // 默认关闭：这是新增能力，默认值必须保持改动前的行为，
+            // 否则升级会带来"按 Home 键突然多出一个小窗"的意外。
+            SwitchRow(
+                title = "退出后自动小窗",
+                subtitle = "按 Home 键离开时自动进入画中画继续播放；" +
+                    "听视频（纯音频）模式不会弹出画面",
+                checked = settings.autoPip,
+                onCheckedChange = viewModel::setAutoPip,
+            )
+
 
             InlinePicker(
                 label = "默认清晰度",

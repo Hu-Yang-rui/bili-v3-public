@@ -75,6 +75,11 @@ class SettingsViewModel(
 
     fun setNotifyReply(v: Boolean) = launch { store.setNotifyReply(v) }
 
+    // ---- 播放 ----
+
+    /** 退出 App 后自动进入小窗（v1.4.2 新增）。 */
+    fun setAutoPip(v: Boolean) = launch { store.setAutoPip(v) }
+
     // ---- 空降助手 ----
 
     fun setSponsorBlockEnabled(v: Boolean) = launch { store.setSponsorBlockEnabled(v) }

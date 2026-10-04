@@ -68,6 +68,8 @@ class SettingsStore(
             personalizedRecommend = p[KEY_PERSONALIZED] ?: true,
             // ---- 通知 ----
             notifyReply = p[KEY_NOTIFY_REPLY] ?: true,
+            // ---- 播放 ----
+            autoPip = p[KEY_AUTO_PIP] ?: false,
             // ---- 空降助手 ----
             sponsorBlockEnabled = p[KEY_SB_ENABLED] ?: false,
             sponsorBlockCategories = (p[KEY_SB_CATEGORIES] ?: "")
@@ -182,6 +184,21 @@ class SettingsStore(
      */
     suspend fun setNotifyReply(v: Boolean) = edit { it[KEY_NOTIFY_REPLY] = v }
 
+    /**
+     * 退出 App 后自动进入小窗（画中画）。
+     *
+     * ## 默认值为什么是 `false`
+     *
+     * 这是**新增**设置，默认值必须保持与改动前一致的行为，否则
+     * 老用户升级后会遇到"按 Home 键突然多出一个小窗"的意外 ——
+     * 用户没有主动要求过的行为变化不该由升级带来。
+     *
+     * 想用的人去设置里打开即可（默认关闭 = 保持向后兼容）。
+     *
+     * 消费者：[com.example.biliv3.MainActivity] 的 `onUserLeaveHint`。
+     */
+    suspend fun setAutoPip(v: Boolean) = edit { it[KEY_AUTO_PIP] = v }
+
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         context.settingsDataStore.edit(block)
     }
@@ -200,6 +217,7 @@ class SettingsStore(
         private val KEY_SAVE_HISTORY = booleanPreferencesKey("save_history")
         private val KEY_PERSONALIZED = booleanPreferencesKey("personalized_recommend")
         private val KEY_NOTIFY_REPLY = booleanPreferencesKey("notify_reply")
+        private val KEY_AUTO_PIP = booleanPreferencesKey("auto_pip")
         private val KEY_H264 = booleanPreferencesKey("prefer_h264")
 
         /** 弹幕屏蔽关键词。用 `\n` 连接存储（DataStore 无 StringSet 语义保证顺序）。 */
@@ -285,6 +303,14 @@ data class Settings(
 
     // ---- 通知 ----
     val notifyReply: Boolean = true,
+
+    /**
+     * 退出 App（按 Home / 切到后台）时自动进入小窗。
+     *
+     * 默认 **false**：这是新增能力，默认必须保持改动前的行为，
+     * 否则升级会带来"没要求过的行为变化"。
+     */
+    val autoPip: Boolean = false,
 
     // ---- 空降助手（SponsorBlock for Bilibili）----
     /**
