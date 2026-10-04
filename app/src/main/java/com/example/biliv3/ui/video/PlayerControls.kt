@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -51,6 +52,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.biliv3.ui.component.MonoReadout
 import com.example.biliv3.design.tokens.Motion
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.tokens.FontSize
@@ -379,29 +381,45 @@ fun PlayerControls(
                 )
             }
         } else {
-            AnimatedVisibility(
-                visible = controlsVisible,
-                enter = fadeIn(animationSpec = tween(Motion.FADE_MS, easing = Motion.standard)),
-                exit = fadeOut(animationSpec = tween(Motion.FADE_MS, easing = Motion.standard)),
-                modifier = Modifier.align(Alignment.Center),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(CENTER_BUTTON)
-                        .clip(CircleShape)
-                        .background(colors.overlayCover)
-                        .clickable {
-                            if (player.isPlaying) player.pause() else player.play()
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (isPlaying) "暂停" else "播放",
-                        tint = colors.onOverlay,
-                        modifier = Modifier.size(Sizes.iconXl + Space.x1),
+            // ================= 中央：播放 / 暂停 =================
+            //
+            // 🔴 这里**必须用 `alpha`，不能用 `AnimatedVisibility`**（v1.4.1 修）。
+            //
+            // `AnimatedVisibility(visible = false)` 会把子树**移出组合树** ——
+            // 不只是变透明，而是**组件根本不存在**。后果：
+            // 控件自动隐藏后，用户在画面中央点一下想"唤出控件 + 继续播"，
+            // 这个按钮**不存在**，点击落到下面的手势层，只唤出控件，
+            // 播放状态没变。表现就是「点了中间没反应，要点两次」。
+            //
+            // 这与 §11.0.1「浮层按钮：可点性不能用 AnimatedVisibility 控制」
+            // 是**同一类错误** —— 那次踩的是返回键，这次是播放键。
+            //
+            // 正确做法：始终在组合里、始终可点，只用 alpha 控制视觉。
+            // 隐藏时按钮不可见但**命中区仍在**，点一下立刻继续播。
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .alpha(
+                        animateFloatAsState(
+                            targetValue = if (controlsVisible) 1f else 0f,
+                            animationSpec = tween(Motion.FADE_MS, easing = Motion.standard),
+                            label = "centerButtonAlpha",
+                        ).value,
                     )
-                }
+                    .size(CENTER_BUTTON)
+                    .clip(CircleShape)
+                    .background(colors.overlayCover)
+                    .clickable {
+                        if (player.isPlaying) player.pause() else player.play()
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (isPlaying) "暂停" else "播放",
+                    tint = colors.onOverlay,
+                    modifier = Modifier.size(Sizes.iconXl + Space.x1),
+                )
             }
         }
 

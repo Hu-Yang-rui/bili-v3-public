@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -84,7 +85,6 @@ import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
-import com.example.biliv3.design.biliCard
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
@@ -2373,24 +2373,54 @@ private fun PlayerArea(
         // 仍跟随 `chromeVisible`：默认纯画面，点一下三个一起出现。
         // PiP 下整组隐藏（小窗里点不中且挡画面）。
         if (!isInPip) {
-            AnimatedVisibility(
-                visible = chromeVisible,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.TopEnd),
+            // 🔴 同样**不能用 `AnimatedVisibility`**（v1.4.1 修）。
+            //
+            // 与左上角返回键、中央播放键是**同一个坑**：
+            // `visible = false` 会把整组按钮移出组合树 → 组件不存在 →
+            // 想点齿轮时点击落在视频画面上（只唤出控件），
+            // 用户必须先"点一下唤出"再"点第二下"，很别扭。
+            //
+            // 现在用 alpha 淡出：看不见但**命中区始终在**。
+            // 隐藏状态下直接点齿轮位置即可打开设置。
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .alpha(
+                        animateFloatAsState(
+                            targetValue = if (chromeVisible) 1f else 0f,
+                            animationSpec = tween(Motion.FADE_MS, easing = Motion.standard),
+                            label = "chromeAlpha",
+                        ).value,
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                // 右上角按钮组：走统一的 `biliCard()` 玻璃原语。
+                // 右上角按钮组：**深色实体工具面板**（v1.4.1 去玻璃）。
                 //
-                // 三个圆钮各自带半透明底会显得"三块分离的补丁"；
-                // 用一层玻璃把它们收成一个整体，观感更整。
+                // ## 为什么不再是玻璃（§6 / §30）
                 //
-                // backdrop 已由外层 `ProvideGlassBackdrop` 注入，
-                // 所以这里自动是真毛玻璃（糊的是当前视频画面）。
+                // 这里是**工具层**（小窗 / 听视频 / 黑胶 / 全屏 / 齿轮），
+                // 不是"需要与画面融合的展示浮层"。任务书明确：
+                // **工具层不要用玻璃制造高级感** ——
+                // 玻璃会糊掉按钮边缘、降低图标对比度，用户反而更难快速点中。
+                //
+                // 现在用 `surfaceElevated`（弹层档，比页面底亮一档）+
+                // 发丝描边。深色不透明 → 图标对比度稳定 → 扫读快。
+                //
+                // 保留 `Radius.pill`：它是**交互控件的外形**（圆钮组），
+                // 不是"内容容器圆角"，符合 §5.1 硬规则 2。
                 Row(
                     modifier = Modifier
                         .statusBarsPadding()
                         .padding(Space.x2)
-                        .biliCard(
+                        .clip(
+                            androidx.compose.foundation.shape.RoundedCornerShape(
+                                com.example.biliv3.design.tokens.Radius.pill,
+                            ),
+                        )
+                        .background(colors.surfaceElevated)
+                        .border(
+                            width = 1.dp,
+                            color = colors.borderHairline,
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(
                                 com.example.biliv3.design.tokens.Radius.pill,
                             ),
@@ -2474,18 +2504,15 @@ private fun PlayerChromeButton(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        // ⚠️ **不再自己画半透明圆底**。
+        // ⚠️ 按钮**自己不再画底**（v1.4.1）。
         //
-        // 外层按钮组已经是一整块毛玻璃（`biliCard()`）。
-        // 如果每颗按钮再套一层 `overlayControl`（半透明黑圆），
-        // 就变成"玻璃外面再糊一个黑圆" —— 玻璃被完全盖掉，
-        // 观感是"白玻璃板 + 三个黑圆点"，而不是"玻璃上的三个图标"。
+        // 外层已改成**深色实体面板**（`surfaceElevated`），
+        // 每颗按钮再套一层半透明圆会让面板变成"深色板上三个更深的圆" ——
+        // 多余的层级，且圆点边缘与面板描边打架。
         //
-        // 实测浅色主题截图里，那三个黑圆点非常突兀。
-        //
-        // 现在：玻璃负责底与分层，按钮只画图标。
-        // 图标用 `onOverlay`（白）—— 玻璃已把画面压暗，白图标在
-        // 任何画面上都可读。
+        // 现在：面板负责底，按钮只画图标。
+        // 图标用 `onOverlay`（白）—— 面板已是不透明深色，
+        // 白图标对比度稳定（不再依赖"玻璃把画面压暗"）。
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
