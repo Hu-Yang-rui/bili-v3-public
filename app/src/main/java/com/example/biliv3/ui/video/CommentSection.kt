@@ -55,7 +55,6 @@ import coil.compose.AsyncImage
 import com.example.biliv3.data.model.CommentItem
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.model.formatRelativeTime
-import com.example.biliv3.design.ruler
 import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
@@ -678,26 +677,27 @@ private fun CommentRow(
             //
             // 标尺是一条竖线 + 左侧固定缩进：层级靠"线在不在"表达，
             // 不靠"缩进多少" —— 无论多少层，正文宽度都不变。
-            // ## 🔴 v1.5.1：顶层评论**不再每条画线**（用户反馈"分割线过多、视觉杂乱"）
+            // 🔴 v1.5.1：顶层评论**不画线**，回复**也不画**（用户反馈"两条线"）
             //
-            // 原实现 `else Modifier.ruleTop(color = Rule.subtle)` ——
-            // **每一条**顶层评论上方都有一条横线。1168 条评论就是 1168 条线，
-            // 屏幕上一眼望去全是横纹，正文被切成碎片。
+            // ## 历史上这里有两种线，叠在一起就是"两条"
             //
-            // 这与 §5.1 硬规则 4 冲突："**优先用间距分组**，发丝线是兜底手段"。
-            // 评论本来就是"同质的一长串"，靠**行间距**分组完全够用，
-            // 画线是过度分组。
+            // 1. **回复区容器**的 `drawBehind` 竖线（见下方 replies 块）——
+            //    整块回复区左侧一条 2dp 竖线，表达"这些是子级"
+            // 2. **每条回复自己**的 `Modifier.ruler(Rule.color)` ——
+            //    每一行回复再画一条
             //
-            // 现在：
-            // - **顶层评论之间不画线** —— 靠 `Rhythm` 的组内间距（下方 spacer）
-            // - **回复**保留 `ruler`（纵向标尺）—— 那是表达**层级**的，
-            //   不是分隔线，且竖线不产生横纹噪声
+            // 两者位置接近，视觉上就是**并排两条线**，用户明确要求
+            // "要么只留一个，要么一个都不留"。
             //
-            // 判据：一屏内横线数量从"每条约 1 条"降到 **0**，
-            // 层级仍由标尺 + 缩进 + 明度差表达。
-            .then(
-                if (isReply) Modifier.ruler(Rule.color) else Modifier,
-            )
+            // ## 决定：只留容器的，去掉每行的
+            //
+            // 判据：**层级是"块"的属性，不是"行"的属性**。
+            // 回复区整体属于父评论 → 一条线画在**块**的左边就够；
+            // 每行再画一遍是重复表达，且 20 条回复就是 20 条线。
+            //
+            // 顶层评论之间同理不画（1168 条 = 1168 条横线，纯噪声）。
+            // 分组靠 `Space.x6` 留白 + 容器那条竖线。
+            .then(Modifier)
             // 定位高亮：用品牌色的低透明度铺底，不改文字色 ——
             // 改文字色会破坏对比度约束（见 §5.2 的"文字安全版"）。
             //
