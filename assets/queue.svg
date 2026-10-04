@@ -1,34 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 560" width="1600" height="560" role="img" aria-labelledby="ttl dsc">
-<title id="ttl">BiliV3 playback queue</title>
-<desc id="dsc">A five item playback queue. Item 02 is current, marked by a pink bar and a partial progress line. Shuffle is off, repeat all is on, and rows can be dragged to reorder.</desc>
-<defs></defs>
-<rect width="1600" height="560" fill="#0E1116"/>
-<text x="80" y="92" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">06</text>
-<rect x="124" y="84" width="40" height="1" fill="#66707F"/>
-<text x="180" y="92" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="2">QUEUE</text>
-<text x="80" y="180" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">01</text>
-<text x="170" y="180" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">循环歌单｜FLUXO TROPICAL</text>
-<text x="1520" y="180" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="end" letter-spacing="0">10:42</text>
-<rect x="80" y="206" width="1440" height="1" fill="#ffffff14"/>
-<rect x="62" y="222" width="3" height="46" fill="#FF8FB0"/>
-<text x="80" y="248" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">02</text>
-<text x="170" y="248" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">只愿君心似我心【卜算子】</text>
-<text x="1520" y="248" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="end" letter-spacing="0">3:06</text>
-<rect x="170" y="262" width="320" height="3" fill="#ffffff14"/>
-<rect x="170" y="262" width="134.4" height="3" fill="#FF8FB0"/>
-<rect x="80" y="274" width="1440" height="1" fill="#ffffff14"/>
-<text x="80" y="316" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">03</text>
-<text x="170" y="316" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">【一百日】第二日：另一战场</text>
-<text x="1520" y="316" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="end" letter-spacing="0">6:31</text>
-<rect x="80" y="342" width="1440" height="1" fill="#ffffff14"/>
-<text x="80" y="384" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">04</text>
-<text x="170" y="384" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">猫狗养娃记｜5-8 合集</text>
-<text x="1520" y="384" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="end" letter-spacing="0">9:13</text>
-<rect x="80" y="410" width="1440" height="1" fill="#ffffff14"/>
-<text x="80" y="452" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">05</text>
-<text x="170" y="452" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">曾哥来了</text>
-<text x="1520" y="452" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="end" letter-spacing="0">15:00</text>
-<rect x="80" y="478" width="1440" height="1" fill="#ffffff14"/>
-<text x="80" y="536" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="1.5">SHUFFLE OFF · REPEAT ALL · DRAG TO REORDER</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 620" width="1600" height="620" role="img" aria-labelledby="t d">
+<title id="t">Queue — sequence</title>
+<desc id="d">Six parallel lanes, each with its own playhead. The current lane is highlighted in pink with its head advancing, while the others rest. Reads as order rather than as a list.</desc>
+<rect width="1600" height="620" fill="#0E1116"/>
+<rect x="220.0" y="210.0" width="1160.0" height="1.0" fill="#FFFFFF" opacity="0.160"/>
+<rect x="220.0" y="210.0" width="464.8" height="2.0" fill="#FF8FB0" opacity="0.850"/>
+<circle cx="684.8" cy="211.0" r="6.0" fill="#FF8FB0" opacity="0.950"/>
+<circle cx="684.8" cy="211.0" r="17.0" fill="none" stroke="#FF8FB0" stroke-width="1" opacity="0.260"/>
+<circle cx="684.8" cy="211.0" r="30.0" fill="none" stroke="#FF8FB0" stroke-width="1" opacity="0.110"/>
+<text x="1414.0" y="217.0" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18" font-weight="400" text-anchor="start" opacity="0.850">PLAYING</text>
+<rect x="220.0" y="284.0" width="1160.0" height="1.0" fill="#FFFFFF" opacity="0.090"/>
+<rect x="220.0" y="284.0" width="644.5" height="2.0" fill="#A0A9B8" opacity="0.220"/>
+<circle cx="864.5" cy="285.0" r="3.5" fill="#A0A9B8" opacity="0.300"/>
+<rect x="220.0" y="358.0" width="1160.0" height="1.0" fill="#FFFFFF" opacity="0.090"/>
+<rect x="220.0" y="358.0" width="207.5" height="2.0" fill="#A0A9B8" opacity="0.220"/>
+<circle cx="427.5" cy="359.0" r="3.5" fill="#A0A9B8" opacity="0.300"/>
+<rect x="220.0" y="432.0" width="1160.0" height="1.0" fill="#FFFFFF" opacity="0.090"/>
+<rect x="220.0" y="432.0" width="1046.1" height="2.0" fill="#A0A9B8" opacity="0.220"/>
+<circle cx="1266.1" cy="433.0" r="3.5" fill="#A0A9B8" opacity="0.300"/>
+<rect x="220.0" y="506.0" width="1160.0" height="1.0" fill="#FFFFFF" opacity="0.090"/>
+<rect x="220.0" y="506.0" width="1026.8" height="2.0" fill="#A0A9B8" opacity="0.220"/>
+<circle cx="1246.8" cy="507.0" r="3.5" fill="#A0A9B8" opacity="0.300"/>
+<rect x="220.0" y="580.0" width="1160.0" height="1.0" fill="#FFFFFF" opacity="0.090"/>
+<rect x="220.0" y="580.0" width="944.2" height="2.0" fill="#A0A9B8" opacity="0.220"/>
+<circle cx="1164.2" cy="581.0" r="3.5" fill="#A0A9B8" opacity="0.300"/>
+<text x="220.0" y="150.0" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="400" text-anchor="start" opacity="0.850">QUEUE</text>
+<text x="1000.0" y="150.0" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18" font-weight="400" text-anchor="start" opacity="0.450">SHUFFLE</text>
+<text x="1150.0" y="150.0" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18" font-weight="400" text-anchor="start" opacity="0.450">REPEAT ALL</text>
+<text x="1300.0" y="150.0" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18" font-weight="400" text-anchor="start" opacity="0.450">DRAG</text>
 </svg>

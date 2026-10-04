@@ -1,31 +1,114 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 560" width="1600" height="560" role="img" aria-labelledby="ttl dsc">
-<title id="ttl">BiliV3 player architecture</title>
-<desc id="dsc">Two DASH media streams, video and audio, converge through MergingMediaSource into a single Playback Core on Media3, which emits to MediaSession, queue and playback progress. One writer of state.</desc>
-<defs></defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 560" width="1600" height="560" role="img" aria-labelledby="t d">
+<title id="t">Player — time, flow, playback</title>
+<desc id="d">A wide timeline with a playhead travelling left to right, a waveform above and fine ticks below, with elapsed time following the head. No buttons or panels; playback is expressed purely as motion along time.</desc>
 <rect width="1600" height="560" fill="#0E1116"/>
-<text x="80" y="92" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="0">02</text>
-<rect x="124" y="84" width="40" height="1" fill="#66707F"/>
-<text x="180" y="92" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="500" text-anchor="start" letter-spacing="2">PLAYER</text>
-<text x="80" y="186" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="30" font-weight="500" text-anchor="start" letter-spacing="0">VIDEO STREAM</text>
-<text x="80" y="214" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">DASH · H.264 · 1080P60</text>
-<path d="M80 248 H520 C596 248 604 300 664 300" fill="none" stroke="#ffffff14" stroke-width="1.5"/>
-<text x="80" y="380" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="30" font-weight="500" text-anchor="start" letter-spacing="0">AUDIO STREAM</text>
-<text x="80" y="408" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">DASH · AAC · 192K</text>
-<path d="M80 442 H520 C596 442 604 390 664 390" fill="none" stroke="#ffffff14" stroke-width="1.5"/>
-<rect x="700" y="248" width="3" height="194" fill="#FF8FB0"/>
-<text x="728" y="336" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="44" font-weight="600" text-anchor="start" letter-spacing="0">PLAYBACK CORE</text>
-<text x="728" y="378" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">MERGING MEDIA SOURCE · MEDIA3</text>
-<text x="728" y="412" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">single writer of state</text>
-<path d="M1140 345 H1520" fill="none" stroke="#ffffff14" stroke-width="1.5"/>
-<polygon points="1514,340 1522,345 1514,350" fill="#66707F"/>
-<text x="1140" y="322" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="500" text-anchor="start" letter-spacing="2">OUTPUT</text>
-<text x="1140" y="384" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">MEDIA SESSION</text>
-<circle cx="1144" cy="404" r="3" fill="#4FD1C5"/>
-<text x="1272" y="384" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">QUEUE</text>
-<circle cx="1276" cy="404" r="3" fill="#4FD1C5"/>
-<text x="1404" y="384" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" letter-spacing="0">PROGRESS</text>
-<circle cx="1408" cy="404" r="3" fill="#4FD1C5"/>
-<rect x="80" y="496" width="1440" height="1" fill="#ffffff14"/>
-<text x="80" y="532" fill="#66707F" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="26" font-weight="400" text-anchor="start" letter-spacing="0">No second player. Every surface reads the same state.</text>
+<rect x="200.0" y="380.0" width="1200.0" height="2.0" fill="#FFFFFF" opacity="0.100"/>
+<rect x="200.0" y="380.0" width="686.4" height="2.0" fill="#FF8FB0" opacity="0.900"/>
+<circle cx="886.4" cy="381.0" r="7.0" fill="#FF8FB0"/>
+<circle cx="886.4" cy="381.0" r="18.0" fill="none" stroke="#FF8FB0" stroke-width="1" opacity="0.220"/>
+<circle cx="886.4" cy="381.0" r="34.0" fill="none" stroke="#FF8FB0" stroke-width="1" opacity="0.100"/>
+<text x="886.4" y="326.0" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="30" font-weight="400" text-anchor="middle" opacity="0.950">14:02</text>
+<text x="1400.0" y="442.0" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="end" opacity="0.700">24:51</text>
+<text x="200.0" y="442.0" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="22" font-weight="400" text-anchor="start" opacity="0.700">00:00</text>
+<path d="M200.0 230.2 L210.9 232.9 L221.8 235.8 L232.7 238.8 L243.6 241.9 L254.5 245.1 L265.5 248.1 L276.4 251.1 L287.3 253.8 L298.2 256.2 L309.1 258.3 L320.0 260.0 L330.9 261.2 L341.8 261.9 L352.7 262.0 L363.6 261.5 L374.5 260.5 L385.5 258.8 L396.4 256.6 L407.3 253.7 L418.2 250.4 L429.1 246.5 L440.0 242.3 L450.9 237.7 L461.8 232.8 L472.7 227.8 L483.6 222.6 L494.5 217.5 L505.5 212.5 L516.4 207.7 L527.3 203.2 L538.2 199.0 L549.1 195.3 L560.0 192.2 L570.9 189.6 L581.8 187.7 L592.7 186.4 L603.6 185.8 L614.5 185.9 L625.5 186.7 L636.4 188.2 L647.3 190.3 L658.2 192.9 L669.1 196.1 L680.0 199.8 L690.9 203.8 L701.8 208.2 L712.7 212.8 L723.6 217.5 L734.5 222.3 L745.5 227.0 L756.4 231.7 L767.3 236.1 L778.2 240.3 L789.1 244.2 L800.0 247.8 L810.9 250.9 L821.8 253.6 L832.7 255.9 L843.6 257.7 L854.5 259.0 L865.5 259.8 L876.4 260.2 L887.3 260.2 L898.2 259.8 L909.1 259.0 L920.0 257.9 L930.9 256.6 L941.8 255.0 L952.7 253.2 L963.6 251.3 L974.5 249.2 L985.5 247.2 L996.4 245.0 L1007.3 242.9 L1018.2 240.9 L1029.1 238.8 L1040.0 236.9 L1050.9 235.1 L1061.8 233.4 L1072.7 231.7 L1083.6 230.2 L1094.5 228.9 L1105.5 227.6 L1116.4 226.4 L1127.3 225.4 L1138.2 224.4 L1149.1 223.6 L1160.0 222.8 L1170.9 222.2 L1181.8 221.6 L1192.7 221.0 L1203.6 220.6 L1214.5 220.2 L1225.5 219.9 L1236.4 219.6 L1247.3 219.5 L1258.2 219.4 L1269.1 219.4 L1280.0 219.5 L1290.9 219.6 L1301.8 219.8 L1312.7 220.2 L1323.6 220.6 L1334.5 221.1 L1345.5 221.6 L1356.4 222.3 L1367.3 223.0 L1378.2 223.7 L1389.1 224.5 L1400.0 225.3" fill="none" stroke="#4FD1C5" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.550"/>
+<rect x="200.0" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="213.5" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="227.0" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="240.4" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="253.9" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="267.4" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="280.9" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="294.4" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="307.9" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="321.3" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="334.8" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="348.3" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="361.8" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="375.3" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="388.8" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="402.2" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="415.7" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="429.2" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="442.7" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="456.2" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="469.7" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="483.1" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="496.6" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="510.1" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="523.6" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="537.1" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="550.6" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="564.0" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="577.5" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="591.0" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="604.5" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="618.0" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="631.5" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="644.9" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="658.4" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="671.9" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="685.4" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="698.9" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="712.4" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="725.8" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="739.3" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="752.8" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="766.3" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="779.8" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="793.3" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="806.7" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="820.2" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="833.7" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="847.2" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="860.7" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="874.2" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="887.6" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="901.1" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="914.6" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="928.1" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="941.6" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="955.1" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="968.5" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="982.0" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="995.5" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1009.0" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="1022.5" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1036.0" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1049.4" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1062.9" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1076.4" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="1089.9" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1103.4" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1116.9" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1130.3" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1143.8" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="1157.3" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1170.8" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1184.3" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1197.8" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1211.2" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="1224.7" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1238.2" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1251.7" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1265.2" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1278.7" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="1292.1" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1305.6" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1319.1" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1332.6" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1346.1" y="402.0" width="1.0" height="10.8" fill="#3C4450" opacity="0.500"/>
+<rect x="1359.6" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1373.0" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1386.5" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<rect x="1400.0" y="402.0" width="1.0" height="6.0" fill="#3C4450" opacity="0.500"/>
+<circle cx="464.0" cy="153.6" r="4.0" fill="#4FD1C5" opacity="0.415"/>
+<circle cx="464.0" cy="153.6" r="13.0" fill="none" stroke="#4FD1C5" stroke-width="1" opacity="0.145"/>
+<circle cx="860.0" cy="167.0" r="4.0" fill="#FF8FB0" opacity="0.304"/>
+<circle cx="860.0" cy="167.0" r="13.0" fill="none" stroke="#FF8FB0" stroke-width="1" opacity="0.106"/>
+<circle cx="1136.0" cy="135.3" r="4.0" fill="#4FD1C5" opacity="0.353"/>
+<circle cx="1136.0" cy="135.3" r="13.0" fill="none" stroke="#4FD1C5" stroke-width="1" opacity="0.124"/>
+<circle cx="1304.0" cy="168.0" r="4.0" fill="#66707F" opacity="0.508"/>
+<circle cx="1304.0" cy="168.0" r="13.0" fill="none" stroke="#66707F" stroke-width="1" opacity="0.178"/>
+<text x="800.0" y="108.0" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24" font-weight="400" text-anchor="middle" opacity="0.850">PLAYBACK</text>
 </svg>
