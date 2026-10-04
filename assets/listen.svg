@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360" role="img" aria-label="听视频模式：不装配视频轨，因此不创建视频解码器">
+<title>听视频模式：不装配视频轨，因此不创建视频解码器</title>
+<defs>
+<linearGradient id="fadeR" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#0E1116" stop-opacity="0"/><stop offset="1" stop-color="#0E1116" stop-opacity="1"/>
+</linearGradient>
+<radialGradient id="glow" cx="50%" cy="50%" r="50%">
+<stop offset="0" stop-color="#FF8FB0" stop-opacity="0.10"/><stop offset="1" stop-color="#FF8FB0" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect width="1200" height="360" fill="#0E1116"/>
+<text x="72" y="62" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">04</text>
+<rect x="98" y="53" width="22" height="1" fill="#66707F"/>
+<text x="130" y="62" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="1.5">LISTEN MODE</text>
+<rect x="72" y="104" width="300" height="150" fill="#171B22" stroke="#ffffff14"/>
+<text x="92" y="136" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="start" letter-spacing="1.5">VIDEO</text>
+<rect x="92" y="152" width="260" height="1" fill="#ffffff14"/>
+<text x="92" y="186" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">video track assembled</text>
+<text x="92" y="206" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">video decoder created</text>
+<text x="92" y="226" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">GPU compositing on</text>
+<path d="M392 179 H470" stroke="#FF8FB0" stroke-width="1.5"/>
+<polygon points="470,174 482,179 470,184" fill="#FF8FB0"/>
+<text x="436" y="168" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="500" text-anchor="middle" letter-spacing="0">audioOnly</text>
+<rect x="502" y="104" width="300" height="150" fill="#171B22" stroke="#FF8FB0" stroke-opacity="0.4"/>
+<text x="522" y="136" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="start" letter-spacing="1.5">AUDIO</text>
+<rect x="522" y="152" width="260" height="1" fill="#ffffff14"/>
+<text x="522" y="186" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">video track NOT assembled</text>
+<text x="522" y="206" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">no video decoder at all</text>
+<text x="522" y="226" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">audio-only pipeline</text>
+<rect x="832" y="104" width="296" height="150" fill="#1F2530" stroke="#ffffff14"/>
+<text x="852" y="136" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="start" letter-spacing="1.5">ENABLES</text>
+<rect x="852" y="152" width="256" height="1" fill="#ffffff14"/>
+<circle cx="858" cy="178" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="2.2s" repeatCount="indefinite"/></circle>
+<text x="872" y="182" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">background playback</text>
+<circle cx="858" cy="202" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="2.5s" repeatCount="indefinite"/></circle>
+<text x="872" y="206" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">lock-screen controls</text>
+<circle cx="858" cy="226" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="2.8000000000000003s" repeatCount="indefinite"/></circle>
+<text x="872" y="230" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">headset buttons</text>
+<rect x="72" y="292" width="1056" height="1" fill="#ffffff14"/>
+<text x="72" y="320" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">Hiding the view still decodes video. Not assembling the track is what actually stops it.</text>
+</svg>

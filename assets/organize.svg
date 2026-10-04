@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 430" width="1200" height="430" role="img" aria-label="收藏批量整理：多选、全选反选、批量移动与取消收藏，破坏性操作需确认">
+<title>收藏批量整理：多选、全选反选、批量移动与取消收藏，破坏性操作需确认</title>
+<defs>
+<linearGradient id="fadeR" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#0E1116" stop-opacity="0"/><stop offset="1" stop-color="#0E1116" stop-opacity="1"/>
+</linearGradient>
+<radialGradient id="glow" cx="50%" cy="50%" r="50%">
+<stop offset="0" stop-color="#FF8FB0" stop-opacity="0.10"/><stop offset="1" stop-color="#FF8FB0" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect width="1200" height="430" fill="#0E1116"/>
+<text x="72" y="62" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">06</text>
+<rect x="98" y="53" width="22" height="1" fill="#66707F"/>
+<text x="130" y="62" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="1.5">FAVORITES / ORGANIZE</text>
+<rect x="72" y="96" width="700" height="266" fill="#171B22" stroke="#ffffff14"/>
+<rect x="96" y="116" width="18" height="18" fill="#FF8FB0" stroke="#FF8FB0"/>
+<polyline points="100,125 105,130 111,120" fill="none" stroke="#0E1116" stroke-width="2"/>
+<text x="128" y="130" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">循环歌单｜FLUXO TROPICAL</text>
+<text x="748" y="130" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="end" letter-spacing="0">10:42</text>
+<rect x="72" y="156" width="700" height="1" fill="#ffffff14"/>
+<rect x="96" y="176" width="18" height="18" fill="#FF8FB0" stroke="#FF8FB0"/>
+<polyline points="100,185 105,190 111,180" fill="none" stroke="#0E1116" stroke-width="2"/>
+<text x="128" y="190" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">只愿君心似我心【卜算子】</text>
+<text x="748" y="190" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="end" letter-spacing="0">3:06</text>
+<rect x="72" y="216" width="700" height="1" fill="#ffffff14"/>
+<rect x="96" y="236" width="18" height="18" fill="none" stroke="#66707F"/>
+<text x="128" y="250" fill="#A0A9B8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">【一百日】第二日：另一战场</text>
+<text x="748" y="250" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="end" letter-spacing="0">6:31</text>
+<rect x="72" y="276" width="700" height="1" fill="#ffffff14"/>
+<rect x="96" y="296" width="18" height="18" fill="#FF8FB0" stroke="#FF8FB0"/>
+<polyline points="100,305 105,310 111,300" fill="none" stroke="#0E1116" stroke-width="2"/>
+<text x="128" y="310" fill="#E8ECF2" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">猫狗养娃记｜5-8 合集</text>
+<text x="748" y="310" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="end" letter-spacing="0">9:13</text>
+<rect x="72" y="372" width="700" height="1" fill="#ffffff14"/>
+<text x="72" y="400" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">已选 3 项</text>
+<text x="200" y="400" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">全选</text>
+<text x="284" y="400" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">反选</text>
+<text x="368" y="400" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">本页全选</text>
+<rect x="808" y="96" width="320" height="266" fill="#1F2530" stroke="#ffffff14"/>
+<text x="832" y="128" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="start" letter-spacing="1.5">RULE CANDIDATES</text>
+<rect x="832" y="142" width="272" height="1" fill="#ffffff14"/>
+<text x="832" y="176" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">时长 &lt; 10 分钟</text>
+<text x="1080" y="176" fill="#4FD1C5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="end" letter-spacing="0">12 条</text>
+<text x="832" y="210" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">UP 主匹配</text>
+<text x="1080" y="210" fill="#4FD1C5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="end" letter-spacing="0">5 条</text>
+<text x="832" y="244" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">已整理过</text>
+<text x="1080" y="244" fill="#4FD1C5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="end" letter-spacing="0">3 条</text>
+<rect x="832" y="290" width="272" height="1" fill="#ffffff14"/>
+<text x="832" y="320" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">规则筛范围 · 人做决定</text>
+<text x="832" y="338" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">收藏不可撤销</text>
+</svg>

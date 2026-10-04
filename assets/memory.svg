@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 330" width="1200" height="330" role="img" aria-label="播放记忆：按 bvid + cid 记录进度，多 P 独立，完成度阈值 90%">
+<title>播放记忆：按 bvid + cid 记录进度，多 P 独立，完成度阈值 90%</title>
+<defs>
+<linearGradient id="fadeR" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#0E1116" stop-opacity="0"/><stop offset="1" stop-color="#0E1116" stop-opacity="1"/>
+</linearGradient>
+<radialGradient id="glow" cx="50%" cy="50%" r="50%">
+<stop offset="0" stop-color="#FF8FB0" stop-opacity="0.10"/><stop offset="1" stop-color="#FF8FB0" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect width="1200" height="330" fill="#0E1116"/>
+<text x="72" y="62" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">05</text>
+<rect x="98" y="53" width="22" height="1" fill="#66707F"/>
+<text x="130" y="62" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="1.5">PLAYBACK MEMORY</text>
+<rect x="72" y="96" width="1056" height="120" fill="#171B22" stroke="#ffffff14"/>
+<text x="96" y="130" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="start" letter-spacing="1.5">CONTINUE WATCHING</text>
+<text x="96" y="168" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="26" font-weight="500" text-anchor="start" letter-spacing="0">12:34</text>
+<text x="160" y="168" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" font-weight="400" text-anchor="start" letter-spacing="0">/ 24:51</text>
+<rect x="96" y="186" width="1008" height="3" fill="#1F2530"/>
+<rect x="96" y="186" width="510.0" height="3" fill="#FF8FB0"/>
+<rect x="96" y="183" width="2" height="9" fill="#FF8FB0"><animate attributeName="x" values="96;1102;96" dur="11s" repeatCount="indefinite"/></rect>
+<text x="72" y="262" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="start" letter-spacing="1.5">multi-part</text>
+<rect x="200" y="236" width="216" height="46" fill="#1F2530" stroke="#ffffff14"/>
+<text x="216" y="256" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="600" text-anchor="start" letter-spacing="0">P1</text>
+<text x="248" y="256" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">0.72</text>
+<rect x="216" y="268" width="184" height="3" fill="#1F2530"/>
+<rect x="216" y="268" width="132.5" height="3" fill="#FF8FB0"/>
+<rect x="436" y="236" width="216" height="46" fill="#1F2530" stroke="#ffffff14"/>
+<text x="452" y="256" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="600" text-anchor="start" letter-spacing="0">P2</text>
+<text x="484" y="256" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">0.18</text>
+<rect x="452" y="268" width="184" height="3" fill="#1F2530"/>
+<rect x="452" y="268" width="33.1" height="3" fill="#FF8FB0"/>
+<rect x="672" y="236" width="216" height="46" fill="#1F2530" stroke="#ffffff14"/>
+<text x="688" y="256" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="600" text-anchor="start" letter-spacing="0">P3</text>
+<text x="720" y="256" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">0.91</text>
+<rect x="688" y="268" width="184" height="3" fill="#1F2530"/>
+<rect x="688" y="268" width="167.4" height="3" fill="#FF8FB0"/>
+<text x="868" y="256" fill="#4FD1C5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="700" text-anchor="end" letter-spacing="0">✓</text>
+<rect x="908" y="236" width="216" height="46" fill="#1F2530" stroke="#ffffff14"/>
+<text x="924" y="256" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="600" text-anchor="start" letter-spacing="0">P4</text>
+<text x="956" y="256" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">0.00</text>
+<rect x="924" y="268" width="184" height="3" fill="#1F2530"/>
+<rect x="924" y="268" width="2.0" height="3" fill="#FF8FB0"/>
+</svg>

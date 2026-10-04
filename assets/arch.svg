@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" width="1200" height="520" role="img" aria-label="架构：UI 到 ApiClient 的主干，周围挂载播放、歌词与插件运行时">
+<title>架构：UI 到 ApiClient 的主干，周围挂载播放、歌词与插件运行时</title>
+<defs>
+<linearGradient id="fadeR" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#0E1116" stop-opacity="0"/><stop offset="1" stop-color="#0E1116" stop-opacity="1"/>
+</linearGradient>
+<radialGradient id="glow" cx="50%" cy="50%" r="50%">
+<stop offset="0" stop-color="#FF8FB0" stop-opacity="0.10"/><stop offset="1" stop-color="#FF8FB0" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect width="1200" height="520" fill="#0E1116"/>
+<text x="72" y="62" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">11</text>
+<rect x="98" y="53" width="22" height="1" fill="#66707F"/>
+<text x="130" y="62" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="1.5">ARCHITECTURE</text>
+<rect x="72" y="96" width="300" height="62" fill="#171B22" stroke="#ffffff14"/>
+<rect x="72" y="96" width="3" height="62" fill="#FF8FB0"><animate attributeName="opacity" values="0.25;1;0.25" dur="3.2s" begin="0.0s" repeatCount="indefinite"/></rect>
+<text x="96" y="124" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" font-weight="600" text-anchor="start" letter-spacing="0">UI (Compose)</text>
+<text x="96" y="144" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">design tokens · no-card layout</text>
+<path d="M222 158 V178" stroke="#ffffff14"/>
+<polygon points="218,174 222,180 226,174" fill="#66707F"/>
+<rect x="72" y="178" width="300" height="62" fill="#171B22" stroke="#ffffff14"/>
+<rect x="72" y="178" width="3" height="62" fill="#FF8FB0"><animate attributeName="opacity" values="0.25;1;0.25" dur="3.2s" begin="0.5s" repeatCount="indefinite"/></rect>
+<text x="96" y="206" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" font-weight="600" text-anchor="start" letter-spacing="0">ViewModel</text>
+<text x="96" y="226" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">StateFlow</text>
+<path d="M222 240 V260" stroke="#ffffff14"/>
+<polygon points="218,256 222,262 226,256" fill="#66707F"/>
+<rect x="72" y="260" width="300" height="62" fill="#171B22" stroke="#ffffff14"/>
+<rect x="72" y="260" width="3" height="62" fill="#FF8FB0"><animate attributeName="opacity" values="0.25;1;0.25" dur="3.2s" begin="1.0s" repeatCount="indefinite"/></rect>
+<text x="96" y="288" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" font-weight="600" text-anchor="start" letter-spacing="0">Repository</text>
+<text x="96" y="308" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">tolerant parsing</text>
+<path d="M222 322 V342" stroke="#ffffff14"/>
+<polygon points="218,338 222,344 226,338" fill="#66707F"/>
+<rect x="72" y="342" width="300" height="62" fill="#171B22" stroke="#ffffff14"/>
+<rect x="72" y="342" width="3" height="62" fill="#FF8FB0"><animate attributeName="opacity" values="0.25;1;0.25" dur="3.2s" begin="1.5s" repeatCount="indefinite"/></rect>
+<text x="96" y="370" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" font-weight="600" text-anchor="start" letter-spacing="0">BiliApi</text>
+<text x="96" y="390" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">Wbi · Endpoints</text>
+<path d="M372 126 H440" stroke="#ffffff14"/>
+<rect x="440" y="96" width="330" height="48" fill="#1F2530" stroke="#ffffff14"/>
+<text x="462" y="118" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">Media3 / ExoPlayer</text>
+<text x="462" y="134" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">DASH via MergingMediaSource</text>
+<circle cx="748" cy="120" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="2.2s" repeatCount="indefinite"/></circle>
+<path d="M372 186 H440" stroke="#ffffff14"/>
+<rect x="440" y="156" width="330" height="48" fill="#1F2530" stroke="#ffffff14"/>
+<text x="462" y="178" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">PlaybackController</text>
+<text x="462" y="194" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">single writer</text>
+<circle cx="748" cy="180" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="2.5s" repeatCount="indefinite"/></circle>
+<path d="M372 246 H440" stroke="#ffffff14"/>
+<rect x="440" y="216" width="330" height="48" fill="#1F2530" stroke="#ffffff14"/>
+<text x="462" y="238" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">PlaybackQueue</text>
+<text x="462" y="254" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">pure Kotlin · unit-tested</text>
+<circle cx="748" cy="240" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="2.8000000000000003s" repeatCount="indefinite"/></circle>
+<path d="M372 306 H440" stroke="#ffffff14"/>
+<rect x="440" y="276" width="330" height="48" fill="#1F2530" stroke="#ffffff14"/>
+<text x="462" y="298" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">PlaybackProgress</text>
+<text x="462" y="314" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">bvid:cid keyed</text>
+<circle cx="748" cy="300" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="3.1s" repeatCount="indefinite"/></circle>
+<path d="M372 366 H440" stroke="#ffffff14"/>
+<rect x="440" y="336" width="330" height="48" fill="#1F2530" stroke="#ffffff14"/>
+<text x="462" y="358" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">Lyrics Runtime</text>
+<text x="462" y="374" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">provider chain</text>
+<circle cx="748" cy="360" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="3.4000000000000004s" repeatCount="indefinite"/></circle>
+<path d="M372 426 H440" stroke="#ffffff14"/>
+<rect x="440" y="396" width="330" height="48" fill="#1F2530" stroke="#ffffff14"/>
+<text x="462" y="418" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">Plugin Runtime</text>
+<text x="462" y="434" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">sandboxed rules</text>
+<circle cx="748" cy="420" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="3.7s" repeatCount="indefinite"/></circle>
+<path d="M372 486 H440" stroke="#ffffff14"/>
+<rect x="440" y="456" width="330" height="48" fill="#1F2530" stroke="#ffffff14"/>
+<text x="462" y="478" fill="#E8ECF2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="500" text-anchor="start" letter-spacing="0">MediaSessionService</text>
+<text x="462" y="494" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="400" text-anchor="start" letter-spacing="0">background playback</text>
+<circle cx="748" cy="480" r="3" fill="#4FD1C5"><animate attributeName="opacity" values="1;0.35;1" dur="4.0s" repeatCount="indefinite"/></circle>
+<rect x="808" y="96" width="320" height="420" fill="#171B22" stroke="#ffffff14"/>
+<text x="832" y="128" fill="#66707F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="500" text-anchor="start" letter-spacing="1.5">DELIBERATE CHOICES</text>
+<rect x="832" y="142" width="272" height="1" fill="#ffffff14"/>
+<text x="832" y="176" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="600" text-anchor="start" letter-spacing="0.5">DI</text>
+<text x="832" y="193" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">hand-written AppContainer</text>
+<text x="832" y="222" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="600" text-anchor="start" letter-spacing="0.5">Parsing</text>
+<text x="832" y="239" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">manual tolerant JSON</text>
+<text x="832" y="268" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="600" text-anchor="start" letter-spacing="0.5">Protobuf</text>
+<text x="832" y="285" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">hand-written</text>
+<text x="832" y="314" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="600" text-anchor="start" letter-spacing="0.5">Persistence</text>
+<text x="832" y="331" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">DataStore + Keystore</text>
+<text x="832" y="360" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="600" text-anchor="start" letter-spacing="0.5">Tests</text>
+<text x="832" y="377" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">379 unit cases</text>
+<text x="832" y="406" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="600" text-anchor="start" letter-spacing="0.5">Cards</text>
+<text x="832" y="423" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">removed site-wide</text>
+<text x="832" y="452" fill="#FF8FB0" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" font-weight="600" text-anchor="start" letter-spacing="0.5">Theme</text>
+<text x="832" y="469" fill="#A0A9B8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" font-weight="400" text-anchor="start" letter-spacing="0">dark only</text>
+</svg>
