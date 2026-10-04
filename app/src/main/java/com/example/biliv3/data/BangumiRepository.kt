@@ -1,6 +1,7 @@
 package com.example.biliv3.data
 
 import com.example.biliv3.data.api.BiliApi
+import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.model.CoverUrls
 import org.json.JSONObject
 
@@ -53,12 +54,20 @@ class BangumiRepository(
                 ),
                 signed = false,
             )
-        } catch (_: Exception) {
-            return emptyList()
+        } catch (e: Exception) {
+            // ⚠️ 失败必须抛（v1.2.5）：返回空列表会让"接口报错"
+            // 与"这个分类没有内容"在 UI 上完全一样（§7.8-44 同类错误）。
+            // 实测该接口会返回 `code=-400`。
+            // 调用方 `BangumiViewModel.load` 已用 runCatching 接住。
+            throw e
         }
-        if (json.optInt("code", -1) != 0) return emptyList()
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            throw BiliException(code, json.optString("message", "番剧索引加载失败"))
+        }
 
-        val arr = json.optJSONObject("data")?.optJSONArray("list") ?: return emptyList()
+        val arr = json.optJSONObject("data")?.optJSONArray("list")
+            ?: throw BiliException(-1, "番剧索引响应缺少 list")
         val out = ArrayList<BangumiItem>(arr.length())
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
@@ -81,12 +90,19 @@ class BangumiRepository(
                 query = mapOf("season_id" to seasonId.toString()),
                 signed = false,
             )
-        } catch (_: Exception) {
-            return null
+        } catch (e: Exception) {
+            // ⚠️ 失败抛异常（v1.2.5）：返回 null 会让"请求失败"
+            // 与"这个 seasonId 不存在"在 UI 上一样。
+            // 调用方 `BangumiDetailViewModel` 已用 runCatching 接住。
+            throw e
         }
-        if (json.optInt("code", -1) != 0) return null
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            throw BiliException(code, json.optString("message", "番剧详情加载失败"))
+        }
 
-        val d = json.optJSONObject("result") ?: json.optJSONObject("data") ?: return null
+        val d = json.optJSONObject("result") ?: json.optJSONObject("data")
+            ?: throw BiliException(-1, "番剧详情响应缺少 result")
 
         // 剧集列表
         //

@@ -1,6 +1,7 @@
 package com.example.biliv3.data
 
 import com.example.biliv3.data.api.BiliApi
+import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.auth.AuthStore
 import com.example.biliv3.data.model.PmMessage
 import com.example.biliv3.data.model.PmMessagePage
@@ -68,11 +69,16 @@ class PmRepository(
             host = host,
         )
 
-        if (json.optInt("code", -1) != 0) {
-            return PmSessionPage(emptyList(), false)
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            // ⚠️ 失败抛异常（v1.2.5）：返回空页会让"未登录/请求失败"
+            // 与"没有任何会话"在 UI 上一样（§7.8-44 同类错误）。
+            // 调用方 `MessageViewModel` 已用 runCatching 接住。
+            throw BiliException(code, json.optString("message", "会话列表加载失败"))
         }
 
-        val data = json.optJSONObject("data") ?: return PmSessionPage(emptyList(), false)
+        val data = json.optJSONObject("data")
+            ?: throw BiliException(-1, "会话响应缺少 data")
         val arr = data.optJSONArray("session_list") ?: JSONArray()
         val out = ArrayList<PmSession>(arr.length())
 
@@ -142,11 +148,15 @@ class PmRepository(
             host = host,
         )
 
-        if (json.optInt("code", -1) != 0) {
-            return PmMessagePage(emptyList(), 0L, false)
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            // ⚠️ 失败抛异常（v1.2.5）：与 sessions() 同理。
+            // 调用方 `MessageViewModel` 已用 runCatching 接住。
+            throw BiliException(code, json.optString("message", "聊天记录加载失败"))
         }
 
-        val data = json.optJSONObject("data") ?: return PmMessagePage(emptyList(), 0L, false)
+        val data = json.optJSONObject("data")
+            ?: throw BiliException(-1, "聊天记录响应缺少 data")
         val arr = data.optJSONArray("messages") ?: JSONArray()
         val myMid = store.mid
 

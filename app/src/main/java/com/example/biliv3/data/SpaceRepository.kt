@@ -1,6 +1,7 @@
 package com.example.biliv3.data
 
 import com.example.biliv3.data.api.BiliApi
+import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.api.Endpoints
 import com.example.biliv3.data.model.VideoItem
 import org.json.JSONObject
@@ -55,12 +56,19 @@ class SpaceRepository(
                 ),
                 signed = false,
             )
-        } catch (_: Exception) {
-            return null
+        } catch (e: Exception) {
+            // ⚠️ 失败抛异常（v1.2.5）：返回 null 会让"请求失败"
+            // 与"该用户不存在"在 UI 上一样（§7.8-44 同类错误）。
+            // 调用方 `SpaceViewModel` 已用 runCatching 接住。
+            throw e
         }
-        if (json.optInt("code", -1) != 0) return null
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            throw BiliException(code, json.optString("message", "用户资料加载失败"))
+        }
 
-        val card = json.optJSONObject("data")?.optJSONObject("card") ?: return null
+        val card = json.optJSONObject("data")?.optJSONObject("card")
+            ?: throw BiliException(-1, "用户资料响应缺少 card")
 
         return SpaceProfile(
             mid = card.optLong("mid", mid),

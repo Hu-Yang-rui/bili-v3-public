@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.biliv3.data.BangumiItem
 import com.example.biliv3.data.BangumiRepository
+import com.example.biliv3.ui.component.userMessageFor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,11 +54,25 @@ class BangumiViewModel(
             _loading.value = true
             _error.value = null
 
-            val list = repo.index(seasonType = seasonType)
-            _items.value = list
-            if (list.isEmpty()) {
-                _error.value = "暂时拿不到数据，可能是请求过于频繁"
-            }
+            // ⚠️ 必须包 runCatching（v1.2.5）：
+            // `repo.index()` 现在会对 `code != 0` **抛异常**
+            // （原先返回空列表，把"接口报错"伪装成"没有内容"，见 §7.8-44）。
+            // 不接住的话，网络异常会直接崩在协程里。
+            val result = runCatching { repo.index(seasonType = seasonType) }
+
+            result.fold(
+                onSuccess = { list ->
+                    _items.value = list
+                    // 成功但为空 = 真的没有内容（不再是失败）
+                    if (list.isEmpty()) {
+                        _error.value = "这个分类暂时没有内容"
+                    }
+                },
+                onFailure = {
+                    _items.value = emptyList()
+                    _error.value = userMessageFor(it)
+                },
+            )
             _loading.value = false
         }
     }

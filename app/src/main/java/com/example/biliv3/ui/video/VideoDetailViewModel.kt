@@ -245,7 +245,11 @@ class VideoDetailViewModel(
                     _state.value = DetailUiState.Content(detail = detail)
                     // 相关推荐与互动状态都是增强模块，失败静默
                     launch {
-                        val related = repo.related(bvid)
+                        // ⚠️ 必须自己接住异常（v1.2.5）：`repo.related` 现在会对
+                        // `code != 0` 抛异常。"失败静默"是**有意设计**（增强模块
+                        // 不该阻断主内容），但静默的前提是**真的接住** ——
+                        // 否则异常会崩在子协程里，反而比不静默更糟。
+                        val related = runCatching { repo.related(bvid) }.getOrDefault(emptyList())
                         val cur = _state.value
                         if (cur is DetailUiState.Content) {
                             _state.value = cur.copy(related = related)
@@ -262,8 +266,10 @@ class VideoDetailViewModel(
                     // ⚠️ UP 粉丝数 / 在看人数**不在 view 接口里**，
                     // 需要额外两个请求。并行拉，失败静默（不显示该项）。
                     launch {
-                        val fans = repo.ownerFans(detail.ownerMid)
-                        val viewers = repo.viewerCount(detail.aid, detail.cid)
+                        // 同上：两个请求各自静默失败（缺失就显示 0，
+                        // 与 VideoDetail 的默认值一致）
+                        val fans = runCatching { repo.ownerFans(detail.ownerMid) }.getOrDefault(0)
+                        val viewers = runCatching { repo.viewerCount(detail.aid, detail.cid) }.getOrDefault(0)
                         val cur = _state.value
                         if (cur is DetailUiState.Content) {
                             _state.value = cur.copy(

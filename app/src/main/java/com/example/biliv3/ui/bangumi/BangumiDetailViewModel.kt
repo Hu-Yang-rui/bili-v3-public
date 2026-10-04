@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.biliv3.data.BangumiDetail
 import com.example.biliv3.data.BangumiEpisode
 import com.example.biliv3.data.BangumiRepository
+import com.example.biliv3.ui.component.userMessageFor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -65,13 +66,20 @@ class BangumiDetailViewModel(
             _loading.value = true
             _error.value = null
 
-            val d = runCatching { repo.season(seasonId) }.getOrNull()
-            if (d == null) {
-                _error.value = "番剧详情加载失败（可能需要登录，或该剧集已下架）"
-            } else {
-                _detail.value = d
-                _following.value = d.isFollowed
-            }
+            // ⚠️ 现在 `repo.season` 失败会**抛异常**（v1.2.5），
+            // 所以这里要区分"抛了"与"返回 null"：
+            // 抛出 = 请求/接口错误；null 只可能是 seasonId 非法。
+            runCatching { repo.season(seasonId) }.fold(
+                onSuccess = { d ->
+                    if (d == null) {
+                        _error.value = "该剧集不存在或已下架"
+                    } else {
+                        _detail.value = d
+                        _following.value = d.isFollowed
+                    }
+                },
+                onFailure = { _error.value = userMessageFor(it) },
+            )
             _loading.value = false
         }
     }

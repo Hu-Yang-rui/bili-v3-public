@@ -1,6 +1,7 @@
 package com.example.biliv3.data
 
 import com.example.biliv3.data.api.BiliApi
+import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.api.Endpoints
 import com.example.biliv3.data.model.VideoItem
 import org.json.JSONArray
@@ -66,10 +67,17 @@ class DynamicRepository(
                 query = query,
                 signed = false,
             )
-        } catch (_: Exception) {
-            return DynamicPage(emptyList(), "", false)
+        } catch (e: Exception) {
+            // ⚠️ 失败抛异常（v1.2.5）：返回空页会让"未登录/请求失败"
+            // 与"没有关注任何人"在 UI 上一样（§7.8-44 同类错误）。
+            // 实测未登录返回 `code=-101`。
+            // 调用方 `DynamicViewModel` 已用 runCatching 接住。
+            throw e
         }
-        if (json.optInt("code", -1) != 0) return DynamicPage(emptyList(), "", false)
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            throw BiliException(code, json.optString("message", "动态加载失败"))
+        }
 
         return parsePage(json.optJSONObject("data"))
     }
@@ -77,9 +85,15 @@ class DynamicRepository(
     /**
      * 某个用户的动态（用户主页的「动态」Tab）。
      *
-     * `space` 接口不需要登录即可读公开动态 ——
-     * 但实测未登录经常返回空（B 站对空间动态的可见性有额外限制）。
-     * 拿不到就返回空列表，由 UI 显示空态。
+     * ⚠️ 这里**保持"失败返回空页"**，与 [feed] 的处理**故意不同**。
+     *
+     * 理由：`space` 接口对空间动态的可见性有额外限制 ——
+     * 未登录、或对方设置了隐私时，**返回空是正常结果**而不是故障。
+     * 若也抛异常，用户主页的「动态」Tab 会对"这个人没发动态"
+     * 显示成错误态，那是**反向的谎报**。
+     *
+     * 判据：**"空"是接口的正常语义**（隐私/无内容）时返回空；
+     * "空"只可能由失败造成时才抛。
      */
     suspend fun spaceFeed(mid: Long, offset: String = ""): DynamicPage {
         if (mid <= 0) return DynamicPage(emptyList(), "", false)

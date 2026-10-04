@@ -1,6 +1,7 @@
 package com.example.biliv3.data
 
 import com.example.biliv3.data.api.BiliApi
+import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.model.VideoItem
 import org.json.JSONObject
 
@@ -247,12 +248,19 @@ class LibraryRepository(
                 query = mapOf("up_mid" to mid.toString()),
                 signed = false,
             )
-        } catch (_: Exception) {
-            return emptyList()
+        } catch (e: Exception) {
+            // ⚠️ 失败抛异常（v1.2.5）：返回空列表会让"请求失败"
+            // 与"还没有收藏夹"在 UI 上一样（§7.8-44 同类错误）。
+            // 调用方 `LibraryViewModels` 已用 runCatching 接住。
+            throw e
         }
-        if (json.optInt("code", -1) != 0) return emptyList()
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            throw BiliException(code, json.optString("message", "收藏夹加载失败"))
+        }
 
-        val arr = json.optJSONObject("data")?.optJSONArray("list") ?: return emptyList()
+        val arr = json.optJSONObject("data")?.optJSONArray("list")
+            ?: throw BiliException(-1, "收藏夹响应缺少 list")
         val out = ArrayList<FavFolder>(arr.length())
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
@@ -304,14 +312,22 @@ class LibraryRepository(
                 ),
                 signed = false,
             )
-        } catch (_: Exception) {
-            return FavPage(emptyList(), true)
+        } catch (e: Exception) {
+            // ⚠️ 失败抛异常（v1.2.5）：返回空页会让"请求失败"
+            // 与"这个收藏夹是空的"在 UI 上一样（§7.8-44 同类错误）。
+            // 调用方 `LibraryViewModels` 已用 runCatching 接住。
+            throw e
         }
-        if (json.optInt("code", -1) != 0) return FavPage(emptyList(), true)
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            throw BiliException(code, json.optString("message", "收藏内容加载失败"))
+        }
 
         val data = json.optJSONObject("data")
-        val hasMore = data?.optBoolean("has_more", false) ?: false
-        val arr = data?.optJSONArray("medias") ?: return FavPage(emptyList(), true)
+            ?: throw BiliException(-1, "收藏内容响应缺少 data")
+        val hasMore = data.optBoolean("has_more", false)
+        val arr = data.optJSONArray("medias")
+            ?: throw BiliException(-1, "收藏内容响应缺少 medias")
 
         val out = ArrayList<FavoriteEntry>(arr.length())
         for (i in 0 until arr.length()) {
