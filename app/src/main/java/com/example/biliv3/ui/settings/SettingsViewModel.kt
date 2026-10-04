@@ -91,6 +91,119 @@ class SettingsViewModel(
 
     fun setSponsorBlockAllowUndo(v: Boolean) = launch { store.setSponsorBlockAllowUndo(v) }
 
+    // ---------------------------------------------------------------------
+    // 开发者工具：Cookie 导入 / 导出
+    // ---------------------------------------------------------------------
+
+    /**
+     * Cookie 管理状态。
+     *
+     * ⚠️ **只暴露字段名与脱敏摘要，绝不暴露值** —— 这是安全红线（§4.3）。
+     * UI 需要"有没有登录"就用 [loggedIn]，不要自己去读 cookie。
+     */
+    data class CookieState(
+        val loggedIn: Boolean = false,
+        val fieldNames: List<String> = emptyList(),
+        val missingEssentials: List<String> = emptyList(),
+        /** 脱敏摘要（字段名 + 长度），可直接显示。 */
+        val masked: String = "",
+        /** 最近一次操作的结果文案（给用户看）。 */
+        val message: String? = null,
+        /** [message] 是否是错误。 */
+        val isError: Boolean = false,
+    )
+
+    private val _cookie = kotlinx.coroutines.flow.MutableStateFlow(CookieState())
+    val cookie: StateFlow<CookieState> = _cookie
+
+    /**
+     * 刷新 Cookie 状态。
+     *
+     * 每次导入 / 清除后都要调 —— 否则 UI 会停留在旧状态
+     * （"界面显示已登录但实际请求仍使用旧 Cookie"的成因）。
+     */
+    fun refreshCookieState(message: String? = null, isError: Boolean = false) {
+        val fields = authStore?.exportCookieFields().orEmpty()
+        val missing = if (fields.isEmpty()) emptyList()
+        else com.example.biliv3.data.auth.CookieCodec.missingEssentials(fields)
+        _cookie.value = CookieState(
+            loggedIn = authStore?.isLoggedIn == true,
+            fieldNames = fields.keys.toList(),
+            missingEssentials = missing,
+            masked = if (fields.isEmpty()) "" else
+                com.example.biliv3.data.auth.CookieCodec.maskedSummary(fields),
+            message = message,
+            isError = isError,
+        )
+    }
+
+    /** 清除操作结果提示（消费后调，避免重复弹 toast）。 */
+    fun consumeCookieMessage() {
+        _cookie.value = _cookie.value.copy(message = null, isError = false)
+    }
+
+    /**
+     * 导入 cookie 文本（覆盖现有登录态）。
+     *
+     * 流程：解析 → 校验 → 落库 → 清身份缓存 → 刷新状态 → **通知外部刷新账号**。
+     *
+     * ⚠️ 解析失败时**不改动任何已有凭据** —— 不能让一次手滑粘贴把登录态弄丢。
+     */
+    fun importCookie(raw: String) {
+        when (val r = com.example.biliv3.data.auth.CookieCodec.parse(raw)) {
+            is com.example.biliv3.data.auth.CookieCodec.Result.Fail -> {
+                refreshCookieState("导入失败：${r.reason}", isError = true)
+            }
+            is com.example.biliv3.data.auth.CookieCodec.Result.Ok -> {
+                val s = authStore
+                if (s == null) {
+                    refreshCookieState("导入失败：账号模块不可用", isError = true)
+                    return
+                }
+                s.importCookie(com.example.biliv3.data.auth.CookieCodec.serialize(r.pairs))
+                refreshCookieState(
+                    "已导入 ${r.pairs.size} 个字段，正在校验登录态…",
+                )
+                // 身份是服务端算出来的，必须重新拉 —— 不能本地编
+                onCookieChanged?.invoke()
+            }
+        }
+    }
+
+    /** 清除全部登录凭据。 */
+    fun clearCookie() {
+        val s = authStore
+        if (s == null) {
+            refreshCookieState("清除失败：账号模块不可用", isError = true)
+            return
+        }
+        s.clear()
+        refreshCookieState("已清除登录凭据（保留设备指纹）")
+        onCookieChanged?.invoke()
+    }
+
+    /** 导出当前 cookie 为可重新导入的字符串（明文，调用方负责写文件 + 提示风险）。 */
+    fun exportCookieText(): String? {
+        val fields = authStore?.exportCookieFields().orEmpty()
+        if (fields.isEmpty()) return null
+        return com.example.biliv3.data.auth.CookieCodec.serialize(fields)
+    }
+
+    /**
+     * 外部注入：账号相关缓存需要失效时调用（重拉 nav / 清收藏缓存等）。
+     *
+     * 用回调而不是在 VM 里直接依赖 `AuthRepository` —— 设置页不该知道
+     * 有哪些页面要刷新；由导航层统一处理。
+     */
+    var onCookieChanged: (() -> Unit)? = null
+
+    /**
+     * 账号存储（可为 null —— 单测 / 预览里不注入）。
+     *
+     * 由 `SettingsViewModelFactory` 传入。
+     */
+    var authStore: com.example.biliv3.data.auth.AuthStore? = null
+
     // ⚠️ 原 `setThemeMode` 已移除（v1.1.3 移除浅色主题）。
     //
     // 没有消费者了就删掉 —— 留着一个"改了没反应"的方法

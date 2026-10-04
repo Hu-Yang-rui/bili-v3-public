@@ -86,6 +86,7 @@ import com.example.biliv3.ui.ranking.RankingViewModelFactory
 import com.example.biliv3.ui.search.SearchScreen
 import com.example.biliv3.ui.settings.SettingsScreen
 import com.example.biliv3.ui.settings.SettingsViewModelFactory
+import com.example.biliv3.ui.settings.SettingsViewModel
 import com.example.biliv3.ui.video.VideoDetailScreen
 import com.example.biliv3.ui.video.VideoDetailViewModelFactory
 import com.example.biliv3.ui.video.ReplyDetailScreen
@@ -1769,6 +1770,63 @@ fun MainShell(
 
                 LaunchedEffect(Unit) { recalcCache() }
 
+                // ---- 开发者工具：Cookie 导入 / 导出 ----
+                //
+                // ⚠️ 剪贴板与文件 IO 都在这一层做（设置页不碰 Context）。
+                // ⚠️ **任何分支都不把 cookie 值打进日志** —— 只有字段名与长度。
+                val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+                val settingsVm = viewModel<SettingsViewModel>(
+                    factory = SettingsViewModelFactory(container.settingsStore, container.authStore),
+                )
+                val cookieState by settingsVm.cookie.collectAsStateWithLifecycle()
+
+                // 导入 / 清除后要让账号相关缓存失效并重拉身份。
+                // ⚠️ 必须做 —— 否则会「界面显示已登录但请求还是旧凭据」。
+                androidx.compose.runtime.DisposableEffect(settingsVm) {
+                    settingsVm.onCookieChanged = {
+                        // 重拉身份：nav 会用**新 cookie** 发请求
+                        cacheScope.launch {
+                            runCatching { container.authRepository.fetchUserInfo() }
+                        }
+                    }
+                    onDispose { settingsVm.onCookieChanged = null }
+                }
+
+                // 导入结果提示（成功 / 失败都要让用户看到）
+                LaunchedEffect(cookieState.message) {
+                    cookieState.message?.let { msg ->
+                        android.widget.Toast
+                            .makeText(context, msg, android.widget.Toast.LENGTH_LONG)
+                            .show()
+                        settingsVm.consumeCookieMessage()
+                    }
+                }
+
+                // 导出文件选择器
+                var pendingExport by remember { mutableStateOf<String?>(null) }
+                val exportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                    androidx.activity.result.contract.ActivityResultContracts.CreateDocument(
+                        "text/plain",
+                    ),
+                ) { uri ->
+                    val text = pendingExport
+                    pendingExport = null
+                    if (uri != null && text != null) {
+                        cacheScope.launch {
+                            val ok = runCatching {
+                                context.contentResolver.openOutputStream(uri)?.use { out ->
+                                    out.write(text.toByteArray(Charsets.UTF_8))
+                                } != null
+                            }.getOrDefault(false)
+                            Toast.makeText(
+                                context,
+                                if (ok) "已导出（⚠️ 文件含登录凭据，请勿上传）" else "导出失败",
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        }
+                    }
+                }
+
                 SettingsScreen(
                     onBack = safeBack,
                     cacheLabel = cacheLabel,
@@ -1780,9 +1838,39 @@ fun MainShell(
                             recalcCache()
                         }
                     },
-                    viewModel = viewModel(
-                        factory = SettingsViewModelFactory(container.settingsStore),
-                    ),
+                    viewModel = settingsVm,
+                    onImportCookieFromClipboard = {
+                        val text = clipboard.getText()?.text.orEmpty()
+                        if (text.isBlank()) {
+                            Toast.makeText(context, "剪贴板为空", Toast.LENGTH_SHORT).show()
+                        } else {
+                            // ⚠️ 这里**不打印 text** —— 它是凭据明文
+                            settingsVm.importCookie(text)
+                        }
+                    },
+                    onCopyCookie = {
+                        val text = settingsVm.exportCookieText()
+                        if (text.isNullOrBlank()) {
+                            Toast.makeText(context, "没有可复制的凭据", Toast.LENGTH_SHORT).show()
+                        } else {
+                            clipboard.setText(androidx.compose.ui.text.AnnotatedString(text))
+                            Toast.makeText(
+                                context,
+                                "已复制（⚠️ 含登录凭据，别粘贴到公开场合）",
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        }
+                    },
+                    onExportCookie = {
+                        val text = settingsVm.exportCookieText()
+                        if (text.isNullOrBlank()) {
+                            Toast.makeText(context, "没有可导出的凭据", Toast.LENGTH_SHORT).show()
+                        } else {
+                            // 先存待写内容，等用户在系统选择器里定好位置再落盘
+                            pendingExport = text
+                            exportLauncher.launch("biliv3-cookies.txt")
+                        }
+                    },
                 )
             }
         }

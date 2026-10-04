@@ -27,6 +27,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -103,10 +105,29 @@ fun SettingsScreen(
      * 由调用方异步计算后传入 —— 设置页不做 IO。
      */
     cacheLabel: String = "计算中…",
+    /**
+     * 从剪贴板读 cookie 文本并导入（开发者工具）。
+     *
+     * ⚠️ 剪贴板读取必须在**调用方**做 —— 设置页不碰 `Context`，
+     * 而且剪贴板内容属于敏感数据，读取与提示风险应由一处统一负责。
+     */
+    onImportCookieFromClipboard: () -> Unit = {},
+    /**
+     * 导出 cookie 到用户选择的文件（开发者工具）。
+     *
+     * 由调用方弹 `CreateDocument` 选择器并写文件；设置页只触发。
+     */
+    onExportCookie: () -> Unit = {},
+    /** 复制当前 cookie 到剪贴板。 */
+    onCopyCookie: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val colors = BiliTheme.colors
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val cookieState by viewModel.cookie.collectAsStateWithLifecycle()
+
+    // 清除凭据是破坏性操作，必须二次确认
+    var showClearCookieConfirm by remember { mutableStateOf(false) }
 
     /**
      * 当前打开的选择器（null = 未打开）。
@@ -492,9 +513,58 @@ fun SettingsScreen(
                 onClick = onClearImageCache,
             )
 
+            // ================= 开发者工具 · Cookie 管理 =================
+            //
+            // 为什么放在「存储」与「关于」之间：它是**开发者向**的功能，
+            // 不该出现在普通用户视线中心（播放 / 弹幕那些区）。
+            //
+            // ⚠️ 整块只显示**字段名与长度**，永不显示值 —— 见 CookieState 的注释。
+            SectionMark(
+                index = 9,
+                title = "开发者工具 · Cookie",
+                modifier = Modifier.padding(top = Rhythm.section),
+            )
+
+            CookieSection(
+                state = cookieState,
+                onImportFromClipboard = onImportCookieFromClipboard,
+                onExport = onExportCookie,
+                onCopy = onCopyCookie,
+                onValidate = { viewModel.refreshCookieState("已重新读取本地凭据") },
+                onClear = { showClearCookieConfirm = true },
+            )
+
+            if (showClearCookieConfirm) {
+                AlertDialog(
+                    onDismissRequest = { showClearCookieConfirm = false },
+                    title = { Text("清除登录凭据？") },
+                    text = {
+                        Text(
+                            "将删除本地保存的 Cookie，所有依赖登录的功能" +
+                                "（收藏、评论、私信、历史同步）会退回未登录状态。\n\n" +
+                                "设备指纹会保留 —— 清掉会让下次请求看起来像全新设备，" +
+                                "反而更容易触发风控。",
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showClearCookieConfirm = false
+                                viewModel.clearCookie()
+                            },
+                        ) { Text("清除") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearCookieConfirm = false }) {
+                            Text("取消")
+                        }
+                    },
+                )
+            }
+
             // ================= 关于 =================
             SectionMark(
-                index = 8,
+                index = 10,
                 title = "关于",
                 modifier = Modifier.padding(top = Rhythm.section),
             )
@@ -851,6 +921,127 @@ private fun ActionRow(
 /** `1.0` → `1`，`1.25` → `1.25`。 */
 private fun formatSpeedLabel(speed: Float): String =
     if (speed == speed.toInt().toFloat()) speed.toInt().toString() else speed.toString()
+
+// ---------------------------------------------------------------------------
+// 开发者工具：Cookie 管理
+// ---------------------------------------------------------------------------
+
+/**
+ * Cookie 导入 / 导出区块。
+ *
+ * ## 🔴 显示约定（安全红线 §4.3）
+ *
+ * **永不显示 cookie 的值** —— 连前缀都不给。`SESSDATA` 等价于账号密码，
+ * 前缀本身就能缩小爆破范围。这里只显示：
+ *
+ * - 有哪些**字段名**
+ * - 每个值**多长**
+ * - 缺哪些**关键字段**
+ *
+ * 摘要文本由 `CookieCodec.maskedSummary` 生成（那条路径有单测保证不含真实值）。
+ *
+ * ## 为什么"验证登录状态"只是重新读本地
+ *
+ * 本地只能验证"`SESSDATA` 存在"，**不能**验证它是否还有效 ——
+ * 那必须发一次真实请求（`nav` 接口）。这里刻意不做网络请求：
+ * 设置页不该为了显示一个状态就偷偷发请求。真正的校验由"导入后
+ * 重拉账号信息"完成（失败会体现在头像/昵称仍是空的）。
+ */
+@Composable
+private fun CookieSection(
+    state: SettingsViewModel.CookieState,
+    onImportFromClipboard: () -> Unit,
+    onExport: () -> Unit,
+    onCopy: () -> Unit,
+    onValidate: () -> Unit,
+    onClear: () -> Unit,
+) {
+    val colors = BiliTheme.colors
+
+    // 状态行：已登录 / 未登录
+    InfoRow(
+        label = "登录状态",
+        value = if (state.loggedIn) "已登录" else "未登录",
+    )
+
+    if (state.fieldNames.isNotEmpty()) {
+        // 字段清单（只有名字，没有值）
+        Text(
+            text = "字段：${state.fieldNames.joinToString("、")}",
+            style = MaterialTheme.typography.bodySmall.copy(
+                color = colors.textSecondarySafe,
+            ),
+            modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
+        )
+        // 脱敏摘要：字段名 + 长度
+        Text(
+            text = state.masked,
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                color = colors.textTertiary,
+            ),
+            modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x1),
+        )
+    }
+
+    if (state.missingEssentials.isNotEmpty() && state.fieldNames.isNotEmpty()) {
+        Text(
+            text = "缺少关键字段：${state.missingEssentials.joinToString("、")}" +
+                "（缺 SESSDATA 一定不是登录态）",
+            style = MaterialTheme.typography.bodySmall.copy(color = colors.accentCoin),
+            modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
+        )
+    }
+
+    // 操作结果提示（成功 / 失败共用一条，颜色区分）
+    state.message?.let { msg ->
+        Text(
+            text = msg,
+            style = MaterialTheme.typography.bodySmall.copy(
+                color = if (state.isError) colors.stateError else colors.stateSuccess,
+            ),
+            modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
+        )
+    }
+
+    ActionRow(
+        label = "从剪贴板导入",
+        subtitle = "支持 `Cookie:` 头、裸串、换行/& 分隔、JSON —— 导入会覆盖当前登录态",
+        onClick = onImportFromClipboard,
+    )
+
+    ActionRow(
+        label = "导出到文件",
+        subtitle = "⚠️ 导出的文件含登录凭据，请勿上传或提交到仓库",
+        onClick = onExport,
+    )
+
+    ActionRow(
+        label = "复制 Cookie",
+        subtitle = "复制到剪贴板（同样含凭据，注意别粘贴到公开场合）",
+        onClick = onCopy,
+    )
+
+    ActionRow(
+        label = "验证登录状态",
+        subtitle = "重新读取本地凭据并检查关键字段是否齐全",
+        onClick = onValidate,
+    )
+
+    ActionRow(
+        label = "清除 Cookie",
+        subtitle = "退出登录（保留设备指纹，避免下次请求像全新设备）",
+        onClick = onClear,
+    )
+
+    if (state.fieldNames.isEmpty() && state.message == null) {
+        Text(
+            text = "还没有凭据。导入后即可用开发者账号调试接口。",
+            style = MaterialTheme.typography.bodySmall.copy(color = colors.textTertiary),
+            modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
+        )
+    }
+}
 
 // ---------------------------------------------------------------------------
 // 档位常量

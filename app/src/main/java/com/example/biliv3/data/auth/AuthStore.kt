@@ -177,6 +177,53 @@ class AuthStore(context: Context) : AuthState {
     /** 是否有设备指纹。 */
     val hasBuvid: Boolean get() = buvid3.isNotEmpty()
 
+    // ---------------------------------------------------------------------
+    // 开发者工具：Cookie 导入 / 导出
+    // ---------------------------------------------------------------------
+
+    /**
+     * 导入 cookie（覆盖现有登录态）。
+     *
+     * ## 🔴 为什么必须**先清空再写**，不能只覆盖 `cookie` 字段
+     *
+     * `mid` / `userName` / `userFace` 是**上一次登录**的缓存。只改 cookie
+     * 会造成「界面显示 A 的头像昵称，请求却带着 B 的凭据」——
+     * 这正是任务书点名的"界面显示已登录但实际请求仍使用旧 Cookie"的镜像问题。
+     *
+     * 所以导入时把身份缓存一并清掉，由调用方随后调 `nav` 重新拉真实身份。
+     *
+     * ## 为什么保留 buvid
+     *
+     * `buvid3` / `buvid4` 是**设备**指纹，不是账号凭据。清掉会让下次请求
+     * 看起来像全新设备，反而更容易触发风控（与 [clear] 同理）。
+     *
+     * @param cookie 已校验的 cookie 串（调用方先用 [CookieCodec.parse] 校验）
+     */
+    fun importCookie(cookie: String) {
+        prefs.edit()
+            .putString(KEY_COOKIE, cookie)
+            // 身份缓存必须清 —— 否则会显示上一个账号的头像昵称
+            .remove(KEY_MID)
+            .remove(KEY_NAME)
+            .remove(KEY_FACE)
+            .apply()
+    }
+
+    /**
+     * 导出当前 cookie 的**结构化字段**。
+     *
+     * 返回已解析的键值对（不是裸串）—— 调用方要么 [CookieCodec.serialize]
+     * 成文件，要么只拿 [CookieCodec.maskedSummary] 显示摘要。
+     * **不要让裸串在 UI 层流转**，那会很容易被顺手打进日志。
+     */
+    fun exportCookieFields(): LinkedHashMap<String, String> {
+        val r = CookieCodec.parse(cookie)
+        return if (r is CookieCodec.Result.Ok) r.pairs else LinkedHashMap()
+    }
+
+    /** 当前是否已导入过 cookie（用于 UI 显示"可导出"）。 */
+    val hasCookie: Boolean get() = cookie.isNotBlank()
+
     private companion object {
         const val PREFS_NAME = "biliv3_auth"
         const val KEY_COOKIE = "cookie"
