@@ -3,11 +3,14 @@ package com.example.biliv3.ui.video
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,11 +44,35 @@ import com.example.biliv3.design.tokens.Space
 /**
  * 互动栏：点赞 / 投币 / 收藏 / 分享。
  *
- * ## 布局取舍
+ * ## 布局（v1.4.2 重做）
  *
- * 四项**等宽平分一行**，而不是做成悬浮大按钮组 ——
- * 详情页纵向空间紧张（用户明确要求「精简、紧凑」），
- * 一行 48dp 是性价比最高的形式。
+ * 首版是 `Arrangement.SpaceEvenly` + 每项 `padding(horizontal = Space.x4)`。
+ * 两个问题叠加，实测在 412dp 屏上：
+ *
+ * ```
+ * 4 项 × 32dp padding = 128dp
+ * 剩余 284dp 被 SpaceEvenly 分成 5 段 = 每段 56.8dp
+ * 相邻图标中心距 = 16 + 56.8 + 16 = 88.8dp
+ * ```
+ *
+ * 而图标只有 24dp —— **间隙是图标的 3.7 倍**，四项被拉成散开的四个孤岛。
+ *
+ * ## 现在怎么做
+ *
+ * 把「视觉间距」和「触摸热区」分开处理：
+ *
+ * - **触摸热区**：每项 `weight(1f)` 平分整行宽度（最窄也有 ~90dp），
+ *   远超 48dp 的最小触摸目标，且四项热区等宽、不重叠
+ * - **视觉间距**：内容宽度由图标/文字自然决定，用 `SpacedBy` 给一个
+ *   **固定的、紧凑的**间距，不再由 SpaceEvenly 按剩余空间动态撑开
+ *
+ * 这样大屏上四项仍是紧凑的一组（居中对齐），而不是被推到屏幕两端。
+ *
+ * ## 计数用等宽 + 固定最小宽度
+ *
+ * 点赞数会实时变化（`999` → `1000` 宽度不同）。等宽字体保证字宽一致，
+ * 但位数变化仍会改宽度 —— 由于每项是 `weight(1f)` 等宽容器、
+ * 内容居中，位数变化**不会推动相邻项**。
  *
  * ## 激活态用「图标填充 + 变色」双重表达
  *
@@ -80,7 +107,9 @@ fun InteractionBar(
             //
             // 它只需要横向铺满 + 一点纵向呼吸。
             .padding(vertical = Space.x2),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        // ⚠️ 不再用 SpaceEvenly。四项各占 `weight(1f)`，热区等宽；
+        // 内容在各自热区内居中，视觉上自然形成紧凑的一组。
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ActionItem(
@@ -91,6 +120,7 @@ fun InteractionBar(
             activeColor = colors.brandPrimary,
             contentDescription = if (interaction.liked) "取消点赞" else "点赞",
             onClick = onLike,
+            modifier = Modifier.weight(1f),
         )
         ActionItem(
             icon = Icons.Outlined.MonetizationOn,
@@ -99,6 +129,7 @@ fun InteractionBar(
             activeColor = colors.accentCoin,
             contentDescription = "投币",
             onClick = onCoin,
+            modifier = Modifier.weight(1f),
         )
         ActionItem(
             icon = if (interaction.favored) Icons.Filled.Star else Icons.Outlined.StarBorder,
@@ -107,6 +138,7 @@ fun InteractionBar(
             activeColor = colors.accentFavorite,
             contentDescription = if (interaction.favored) "取消收藏" else "收藏",
             onClick = onFavorite,
+            modifier = Modifier.weight(1f),
         )
         ActionItem(
             icon = Icons.Outlined.Share,
@@ -115,6 +147,7 @@ fun InteractionBar(
             activeColor = colors.textSecondarySafe,
             contentDescription = "分享",
             onClick = onShare,
+            modifier = Modifier.weight(1f),
         )
     }
 }
@@ -122,8 +155,14 @@ fun InteractionBar(
 /**
  * 单个互动项。
  *
- * 触摸目标整块约 48dp 高（`Sizes.minTouchTarget` 量级），
- * 图标本身 20dp —— 视觉紧凑但点得中。
+ * ## 触摸热区 vs 视觉尺寸（v1.4.2 重做）
+ *
+ * 外层 `weight(1f)` 的容器撑满整格，`minHeight = Space.minTouchTarget`
+ * 保证热区达标；**内层内容保持紧凑**，靠 `SpacedBy` 控制视觉距离。
+ *
+ * 关键点：热区大不等于视觉松散。首版用 `padding(horizontal = Space.x4)`
+ * 把 padding 当成了「视觉间距」，实际上它同时撑大了热区并把图标推远 ——
+ * 两件事被同一个参数绑死了。
  */
 @Composable
 private fun ActionItem(
@@ -133,34 +172,39 @@ private fun ActionItem(
     activeColor: Color,
     contentDescription: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = BiliTheme.colors
     val tint = if (active) activeColor else colors.textSecondarySafe
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            // ⚠️ 首版写的是 `RoundedCornerShape(Space.x2)` —— **用间距令牌当圆角**。
-            // 值恰好都是 8dp 所以看不出问题，但语义完全错：
-            // 哪天 `Space.x2` 从 8 改成 10，这里会跟着变成一个奇怪的圆角。
+    Box(
+        modifier = modifier
+            // 热区：撑满所在格子，并保证不低于最小触摸目标
+            .fillMaxHeight()
+            .heightIn(min = Space.minTouchTarget)
             .clip(RoundedCornerShape(Radius.interactive))
-            .clickable(onClick = onClick)
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(Sizes.iconXl),
-        )
-        Spacer(Modifier.height(Space.micro))
-        // 计数用等宽：点赞/投币数会实时变化，比例字体下四个数字
-        // 宽度不一，整栏会随交互轻微抖动。
-        MonoReadout(
-            text = label,
-            color = tint,
-            fontSize = FontSize.badge,
-            weight = if (active) FontWeight.Medium else FontWeight.Normal,
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            // 图标与数字之间只留 2dp：它们是**一个整体**，不是两行内容
+            verticalArrangement = Arrangement.spacedBy(Space.micro),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = tint,
+                modifier = Modifier.size(Sizes.iconLg),
+            )
+            // 计数用等宽：点赞/投币数会实时变化，比例字体下四个数字
+            // 宽度不一，整栏会随交互轻微抖动。
+            MonoReadout(
+                text = label,
+                color = tint,
+                fontSize = FontSize.badge,
+                weight = if (active) FontWeight.Medium else FontWeight.Normal,
+            )
+        }
     }
 }

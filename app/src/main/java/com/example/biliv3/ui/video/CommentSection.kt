@@ -296,12 +296,16 @@ fun CommentSection(
                         // 而按钮写着"全部 N 条"（信息不实）。
                         onExpandAll = { onViewAllReplies(c) },
                         isLoggedIn = isLoggedIn,
-                        onLike = { onLike(c) },
-                        onDelete = { onDelete(c) },
-                        onReply = { onReply(c) },
-                        onReport = { reportTarget = c },
-                        onAvatarClick = { onAvatarClick(c.mid) },
-                        onViewAllReplies = { onViewAllReplies(c) },
+                        // ⚠️ 传**原始回调**，不要在这里预绑定 `c`（v1.4.2）。
+                        // 行内会用 `comment` 自行绑定，内嵌回复因此能拿到 `r`。
+                        onLike = onLike,
+                        onDelete = onDelete,
+                        onReply = onReply,
+                        // 举报先把目标存进本页状态（理由选择面板要用），
+                        // 用户选完理由后再调外层的 `onReport(comment, reason)`。
+                        onReport = { target -> reportTarget = target },
+                        onAvatarClick = onAvatarClick,
+                        onViewAllReplies = onViewAllReplies,
                         onLoginRequired = onLoginRequired,
                     )
                 }
@@ -549,21 +553,35 @@ private fun CommentRow(
     repliesExpanded: Boolean,
     onToggleReplies: () -> Unit,
     isLoggedIn: Boolean,
-    onLike: () -> Unit,
-    onDelete: () -> Unit,
-    onReply: () -> Unit,
+    /**
+     * ⚠️ 这些回调都接收 [CommentItem] 而不是零参（v1.4.2 改）。
+     *
+     * ## 为什么必须带参数 —— 「展开评论点赞错对象」的根因
+     *
+     * 首版签名是 `onLike: () -> Unit`，由父级 `items { c -> }` 绑成
+     * `{ onLike(c) }`。渲染内嵌回复时直接 `onLike = onLike` 往下传，
+     * 于是回复行的点赞调用的仍是**父评论**的 rpid ——
+     * 「给回复 B 点赞」实际点到了「主评论 A」。
+     *
+     * 根因是**零参 lambda 已经把目标绑死了**，再往下传无法重新绑定。
+     * 改成接收 `CommentItem`，行内用 `onLike(comment)` 调用，
+     * 内嵌回复传 `onLike` 原样下去即可自动绑定到各自的 `r`。
+     */
+    onLike: (CommentItem) -> Unit,
+    onDelete: (CommentItem) -> Unit,
+    onReply: (CommentItem) -> Unit,
     onLoginRequired: () -> Unit,
     /** 请求举报这条评论（由上层弹出理由选择）。 */
-    onReport: () -> Unit = {},
+    onReport: (CommentItem) -> Unit = {},
     /** 点头像 → 用户主页。 */
-    onAvatarClick: () -> Unit = {},
+    onAvatarClick: (Long) -> Unit = {},
     /**
      * 「查看全部 N 条回复」→ 楼中楼详情页。
      *
      * 与外层的 [onExpandAll] 分开：内嵌回复行里的"查看全部"也要能跳，
      * 但内嵌行自己不带完整上下文（它只有该回复的数据）。
      */
-    onViewAllReplies: () -> Unit = {},
+    onViewAllReplies: (CommentItem) -> Unit = {},
     /** 「查看全部 N 条回复」—— 展开该楼全部已加载回复（修死入口）。 */
     onExpandAll: () -> Unit = {},
     /** 是否已突破内嵌上限（点了「查看全部」）。 */
@@ -630,7 +648,7 @@ private fun CommentRow(
                     .background(colors.avatarPlaceholder)
                     // ⚠️ 点头像进主页、点正文回复 —— 两个动作分开挂，
                     // 避免一次点击触发两件事。
-                    .clickable { onAvatarClick() },
+                    .clickable { onAvatarClick(comment.mid) },
             )
             Spacer(Modifier.width(Space.x2))
 
@@ -733,7 +751,7 @@ private fun CommentRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            if (isLoggedIn) onReply() else onLoginRequired()
+                            if (isLoggedIn) onReply(comment) else onLoginRequired()
                         },
                 )
 
@@ -754,7 +772,7 @@ private fun CommentRow(
                             color = colors.textSecondarySafe,
                         ),
                         modifier = Modifier.clickable {
-                            if (isLoggedIn) onReply() else onLoginRequired()
+                            if (isLoggedIn) onReply(comment) else onLoginRequired()
                         },
                     )
 
@@ -769,7 +787,7 @@ private fun CommentRow(
                                 color = colors.textSecondarySafe,
                             ),
                             modifier = Modifier.clickable {
-                                if (isLoggedIn) onReport() else onLoginRequired()
+                                if (isLoggedIn) onReport(comment) else onLoginRequired()
                             },
                         )
                     }
@@ -783,7 +801,7 @@ private fun CommentRow(
                             tint = colors.textSecondarySafe,
                             modifier = Modifier
                                 .size(Sizes.iconSm + Space.x1)
-                                .clickable { onDelete() },
+                                .clickable { onDelete(comment) },
                         )
                     }
 
@@ -803,7 +821,7 @@ private fun CommentRow(
                         modifier = Modifier
                             .size(Sizes.iconSm + Space.x1)
                             .clickable {
-                                if (isLoggedIn) onLike() else onLoginRequired()
+                                if (isLoggedIn) onLike(comment) else onLoginRequired()
                             },
                     )
                     if (comment.likeCount > 0) {
@@ -908,6 +926,13 @@ private fun CommentRow(
                         repliesExpanded = false,
                         onToggleReplies = {},
                         isLoggedIn = isLoggedIn,
+                        // ⚠️ 这些回调现在接收 `CommentItem`，直接原样下传即可 ——
+                        // 行内会用 `comment`（此处即 `r`）重新绑定，
+                        // 所以回复的点赞/删除/举报都作用于**自己的 rpid**。
+                        //
+                        // 首版签名是零参 `() -> Unit`，父级已绑成 `{ onLike(c) }`，
+                        // 下传后回复行仍调用父评论的 rpid —— 这就是
+                        // 「给回复 B 点赞却点到主评论 A」的根因（v1.4.2 修）。
                         onLike = onLike,
                         onDelete = onDelete,
                         onReply = onReply,
@@ -949,7 +974,7 @@ private fun CommentRow(
                             )
                             .clip(RoundedCornerShape(Radius.badge))
                             // 跳楼中楼详情页（真正分页拉全量）
-                            .clickable { onViewAllReplies() }
+                            .clickable { onViewAllReplies(comment) }
                             .padding(horizontal = Space.x1, vertical = Space.compactVertical),
                     )
                 }

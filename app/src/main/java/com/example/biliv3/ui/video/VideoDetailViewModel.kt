@@ -751,6 +751,18 @@ class VideoDetailViewModel(
      *
      * 回滚时必须**同时**恢复 `liked` 与 `likeCount` —— 只改一个会出现
      * "已点赞但数字没变"这种不自洽的状态。
+     *
+     * ## ⚠️ 必须同时处理顶层评论与内嵌回复（v1.4.2 修）
+     *
+     * 首版只 map 了 `_comments`（顶层列表）。但二级回复存在
+     * `CommentItem.replies` 里，**不在顶层列表中**，于是给回复点赞时：
+     *
+     * 1. 乐观更新找不到 `rpid` 匹配 → 静默什么都不改（图标不动）
+     * 2. API 实际成功 → 但 UI 永远不会显示
+     * 3. 用户看到的是「点了没反应」，而服务端已经记了一次赞
+     *
+     * 现在用一个递归 map：先匹配顶层，匹配不到再进入各自的 `replies` 找。
+     * 回复的回复（三级）接口不返回，但递归写法天然兼容。
      */
     fun likeComment(comment: com.example.biliv3.data.model.CommentItem) {
         val cr = commentRepo ?: return
@@ -759,32 +771,55 @@ class VideoDetailViewModel(
         val target = !comment.liked
         val delta = if (target) 1 else -1
 
-        // 乐观更新
-        _comments.value = _comments.value.map { c ->
-            if (c.rpid == comment.rpid) {
-                c.copy(liked = target, likeCount = (c.likeCount + delta).coerceAtLeast(0))
-            } else {
-                c
-            }
+        // 乐观更新（顶层 + 内嵌回复）
+        _comments.value = updateComment(_comments.value, comment.rpid) { c ->
+            c.copy(liked = target, likeCount = (c.likeCount + delta).coerceAtLeast(0))
         }
 
         viewModelScope.launch {
             cr.likeComment(oid = comment.oid, rpid = comment.rpid, like = target)
                 .onFailure { e ->
                     // 回滚（liked 与 count 一起）
-                    _comments.value = _comments.value.map { c ->
-                        if (c.rpid == comment.rpid) {
-                            c.copy(
-                                liked = !target,
-                                likeCount = (c.likeCount - delta).coerceAtLeast(0),
-                            )
-                        } else {
-                            c
-                        }
+                    _comments.value = updateComment(_comments.value, comment.rpid) { c ->
+                        c.copy(
+                            liked = !target,
+                            likeCount = (c.likeCount - delta).coerceAtLeast(0),
+                        )
                     }
                     toast(userMessageFor(e))
                 }
         }
+    }
+
+    /**
+     * 在评论树里按 `rpid` 定位并替换，找不到就原样返回。
+     *
+     * 顶层找不到时会**递归进入每条评论的 [CommentItem.replies]** ——
+     * 这是回复点赞能正确生效的关键（见 [likeComment] 的说明）。
+     */
+    private fun updateComment(
+        list: List<com.example.biliv3.data.model.CommentItem>,
+        rpid: Long,
+        transform: (com.example.biliv3.data.model.CommentItem) -> com.example.biliv3.data.model.CommentItem,
+    ): List<com.example.biliv3.data.model.CommentItem> {
+        // 先看顶层是否命中：命中就只改这一条，不必进入子树
+        if (list.any { it.rpid == rpid }) {
+            return list.map { if (it.rpid == rpid) transform(it) else it }
+        }
+        // 顶层没有 → 在各自的 replies 里找
+        var changed = false
+        val next = list.map { c ->
+            if (c.replies.isEmpty()) return@map c
+            val updated = c.replies.map { r -> if (r.rpid == rpid) transform(r) else r }
+            if (updated != c.replies) {
+                changed = true
+                c.copy(replies = updated)
+            } else {
+                c
+            }
+        }
+        // 没找到就返回原引用，避免无意义的重组
+        return if (changed) next else list
     }
 
     /**

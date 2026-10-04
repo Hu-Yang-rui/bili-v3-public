@@ -202,6 +202,7 @@ fun ImmersivePlayer(
             durationMs = durationMs,
             isPlaying = isPlaying,
             lyricsExpanded = lyricsExpanded,
+            mode = mode,
             onBack = onBack,
             onTogglePlay = onTogglePlay,
             onNext = onNext,
@@ -228,6 +229,13 @@ fun ImmersivePlayer(
 @Composable
 private fun ChromeLayer(
     visible: Boolean,
+    /**
+     * 当前播放模式。
+     *
+     * 用于决定是否画底部进度条 —— 黑胶模式自己已有时间读数，
+     * 这里再画一条会出现「两个进度条」（v1.4.2 修）。
+     */
+    mode: PlaybackMode,
     item: QueueItem?,
     positionMs: Long,
     durationMs: Long,
@@ -302,14 +310,26 @@ private fun ChromeLayer(
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(horizontal = Space.x6, vertical = Space.x8),
         ) {
-            ImmersiveProgressBar(
-                positionMs = positionMs,
-                durationMs = durationMs,
-                enabled = visible,
-                onSeek = onSeek,
-            )
+            // 🔴 黑胶模式**不画这条进度条**（v1.4.2 修「两个进度条」）。
+            //
+            // `VinylPlayer` 自己已经显示了一组等宽时间读数
+            // （`00:42 / 04:18`）。如果这里再画一条带时间的进度条，
+            // 同一屏就出现**两处完全相同的播放进度** —— 用户会疑惑
+            // "哪个才是当前进度"，且底部控件区被重复信息占满。
+            //
+            // 黑胶是"展示型"界面：进度读数放在唱片旁边更合适，
+            // 所以保留 VinylPlayer 的、去掉这里的。
+            // VIDEO / AUDIO 模式没有自己的读数，仍需这条。
+            if (mode != PlaybackMode.VINYL) {
+                ImmersiveProgressBar(
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                    enabled = visible,
+                    onSeek = onSeek,
+                )
 
-            Spacer(Modifier.height(Space.x6))
+                Spacer(Modifier.height(Space.x6))
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
