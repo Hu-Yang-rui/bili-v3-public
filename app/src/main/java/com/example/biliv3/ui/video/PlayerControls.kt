@@ -1,5 +1,13 @@
 package com.example.biliv3.ui.video
 
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.foundation.Image
+import androidx.core.graphics.drawable.toBitmap
+import coil.imageLoader
 import androidx.compose.runtime.mutableIntStateOf
 import coil.transform.Transformation
 import androidx.compose.ui.layout.ContentScale
@@ -618,24 +626,35 @@ fun PlayerControls(
 }
 
 /**
- * 拖动进度条时的**画面预览**气泡（v1.5.3）。
+ * 拖动进度条时的**画面预览**气泡（v1.6.1 重做，修卡顿）。
  *
- * ## 实现要点（都由实测的接口形态决定）
+ * ## 🔴 上一版为什么卡（根因）
  *
- * 1. **精灵图裁剪**：`videoshot.image` 是一张 10×10 平铺的大图，
- *    不是逐帧图片。用 `BitmapPainter(srcOffset, srcSize)` 裁出单帧 ——
- *    直接当整图渲染会得到"几十帧叠在一起"的乱图。
+ * 上一版每个拖动事件都新建一个 `ImageRequest` + 一个 `CropToFrame`
+ * 交给 `AsyncImage`，而 `CropToFrame.transform()` 里是
+ * `Bitmap.createBitmap(input, x, y, w, h)` —— **这个方法会拷贝像素**：
+ * 每帧 480×270×4B ≈ 518KB。拖动时指针事件 60~120Hz，
+ * 等于**每秒分配几十 MB**，GC 疯狂触发 → 掉帧。
  *
- * 2. **按时间就近取帧**：`videoshot.seconds` 不是均匀间隔
- *    （实测开头 `[0, 0, 5, 10, ...]` 有重复），
- *    所以走 [Videoshot.frameIndexAt] 而不是 `t / step`。
+ * 雪上加霜：`CropToFrame` 的 `cacheKey` 含裁剪坐标，
+ * 每换一帧就是一个**新的缓存条目** → Coil 内存缓存被 68 个 key 打散；
+ * 而且 `AsyncImage` 是**异步**的，拖动中会先显示旧帧再跳新帧（闪）。
  *
- * 3. **位置夹取**：气泡左边缘 = `fraction * 轨道宽 - 气泡宽/2`，
- *    但必须**夹在 [0, 轨道宽 - 气泡宽]** ——
- *    否则拖到最左/最右时气泡超出屏幕被裁掉半截。
+ * ## 现在的做法（零分配 + 同步绘制）
  *
- * 4. **图片加载失败不报错**：`AsyncImage` 失败时保持占位色块，
- *    不弹提示（预览是增强功能，失败不该打断拖动）。
+ * 1. **精灵图只解码一次**（`produceState` + Coil `execute`），
+ *    并按预览实际需要的尺寸**降采样** —— 案例视频的精灵图是
+ *    4800×2700（ARGB 约 51MB），而我们只画 324px 宽的预览，
+ *    没必要为它占 51MB。
+ * 2. 用 `BitmapPainter(srcOffset, srcSize)` 在**绘制期**裁剪 ——
+ *    这是 GPU 侧的源矩形取样，**不拷贝任何像素**。
+ * 3. `remember(sheet, index)` 缓存 painter：**只有帧下标变化时才重建**，
+ *    同一帧内移动指针完全不重建。
+ *
+ * ## 位置夹取
+ *
+ * 气泡左边缘 = `fraction * 轨道宽 - 气泡宽/2`，夹在
+ * `[0, 轨道宽 - 气泡宽]` —— 否则拖到两端会超出屏幕被裁掉。
  */
 @Composable
 private fun SeekPreview(
@@ -646,53 +665,91 @@ private fun SeekPreview(
 ) {
     val colors = BiliTheme.colors
     val density = LocalDensity.current
+    val context = LocalContext.current
 
-    // 预览宽度：屏宽的 30%（够看清画面，又不会挡住整条轨道）
+    // 预览尺寸：屏宽 30%
     val config = LocalConfiguration.current
     val previewW = (config.screenWidthDp * 0.30f).dp
-    val previewH = previewW * (videoshot.frameHeight.toFloat() / videoshot.frameWidth.toFloat())
+    val previewH = previewW *
+        (videoshot.frameHeight.toFloat() / videoshot.frameWidth.toFloat())
 
+    val previewWPx = with(density) { previewW.roundToPx() }
+
+    // ---- 1. 精灵图：只解码一次，且降采样到"预览够用"的尺寸 ----
+    //
+    // 目标尺寸 = 单帧宽度要够 previewWPx → 整图宽 = previewWPx * cols
+    val wantW = (previewWPx * videoshot.cols).coerceAtLeast(1)
+    val wantH = (wantW * videoshot.rows * videoshot.frameHeight / videoshot.frameWidth)
+        .coerceAtLeast(1)
+
+    // ⚠️ 用 `remember` + `LaunchedEffect` 而不是 `produceState` ——
+    // lint 的 `ProduceStateDoesNotAssignValue` 检测器要求 producer lambda 里
+    // **语法上直接**出现 `value = ...`；用 `runCatching` 包一层它就判定"没赋值"
+    // （即使运行时确实赋了）。这个写法同样只解码一次，且意图更直白。
+    var sheet by remember(videoshot.sheetUrl) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(videoshot.sheetUrl, wantW, wantH) {
+        sheet = runCatching {
+            val req = ImageRequest.Builder(context)
+                .data(videoshot.sheetUrl)
+                .size(wantW, wantH)
+                // ⚠️ 必须关硬件位图：硬件位图不能参与 `toBitmap()` 取像素
+                .allowHardware(false)
+                .build()
+            val result = context.imageLoader.execute(req)
+            (result as? coil.request.SuccessResult)
+                ?.drawable
+                ?.toBitmap()
+                ?.asImageBitmap()
+        }.getOrNull()
+    }
+
+    val bmp = sheet ?: return
+
+    // ---- 2. 帧下标 → 绘制期裁剪 ----
     val index = videoshot.frameIndexAt(positionSeconds)
     if (index < 0) return
-    val (ox, oy) = videoshot.frameOrigin(index)
 
-    // 轨道可用宽度（外层 Box 的宽度）与气泡水平位置
+    // ⚠️ Coil 的实际解码尺寸未必正好等于 wantW/wantH（它按采样率取整），
+    // 所以缩放系数必须**按实际位图算**，不能拿 wantW 除。
+    val scale = bmp.width.toFloat() / (videoshot.cols * videoshot.frameWidth).toFloat()
+
+    // 只有帧下标变化时才重建 painter（同一帧内移动指针不重建）
+    val painter = remember(bmp, index, scale) {
+        val (ox, oy) = videoshot.frameOrigin(index)
+        BitmapPainter(
+            image = bmp,
+            srcOffset = IntOffset(
+                (ox * scale).toInt().coerceIn(0, (bmp.width - 1).coerceAtLeast(0)),
+                (oy * scale).toInt().coerceIn(0, (bmp.height - 1).coerceAtLeast(0)),
+            ),
+            srcSize = IntSize(
+                (videoshot.frameWidth * scale).toInt().coerceAtLeast(1),
+                (videoshot.frameHeight * scale).toInt().coerceAtLeast(1),
+            ),
+        )
+    }
+
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-        val trackW = maxWidth
-        val previewWPx = with(density) { previewW.toPx() }
-        val trackWPx = with(density) { trackW.toPx() }
+        val trackWPx = with(density) { maxWidth.toPx() }
         val rawX = fraction * trackWPx - previewWPx / 2f
         val clampedX = rawX.coerceIn(0f, (trackWPx - previewWPx).coerceAtLeast(0f))
 
-        Column(
+        Image(
+            painter = painter,
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
             modifier = Modifier
-                // 向上偏移一个气泡高 + 8dp，浮在进度条上方
-                .offset(x = with(density) { clampedX.toDp() })
-                .offset(y = -(previewH + Space.x2)),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(videoshot.sheetUrl)
-                    // ⚠️ Coil 2.x 是 `transformations(vararg)`（**复数**）；
-                    // 写成单数 `transform(...)` 会 Unresolved reference。
-                    .transformations(
-                        com.example.biliv3.util.CropToFrame(
-                            x = ox, y = oy,
-                            w = videoshot.frameWidth, h = videoshot.frameHeight,
-                        ),
-                    )
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.FillBounds,
-                modifier = Modifier
-                    .width(previewW)
-                    .height(previewH)
-                    .clip(RoundedCornerShape(Radius.badge))
-                    .background(colors.bgHover)
-                    .border(1.dp, colors.borderHairline, RoundedCornerShape(Radius.badge)),
-            )
-        }
+                .offset(
+                    x = with(density) { clampedX.toDp() },
+                    // 向上偏移一个气泡高 + 8dp，浮在进度条上方
+                    y = -(previewH + Space.x2),
+                )
+                .width(previewW)
+                .height(previewH)
+                .clip(RoundedCornerShape(Radius.badge))
+                .background(colors.bgHover)
+                .border(1.dp, colors.borderHairline, RoundedCornerShape(Radius.badge)),
+        )
     }
 }
 
