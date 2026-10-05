@@ -2228,13 +2228,28 @@ private fun DetailContent(
  * ⚠️ 状态栏图标颜色是**全局窗口属性**，必须在离开页面时**还原**，
  * 否则会把"浅色图标"泄漏给后续的浅色页面（那里需要深色图标）。
  */
+/**
+ * 顶部安全区的**副作用部分**：把状态栏图标切成浅色。
+ *
+ * ## 🔴 v1.5.2 拆分说明（修"顶部安全区没生效"）
+ *
+ * 原来这个函数**同时**做两件事：
+ * 1. 画一条状态栏高度的黑带
+ * 2. 把状态栏图标切成浅色
+ *
+ * 第 1 件是错的 —— 它被调在播放器 `Box` **之外**（同级兄弟），
+ * 而播放器画面后画 → **盖住黑带**。实测截图：状态栏图标直接压在画面上。
+ *
+ * 现在黑带移到 `PlayerArea` 的 `Box` **内部第一层**（最底），
+ * 且播放器内容加 `statusBarsPadding()` 真正下移。
+ * 本函数只保留第 2 件（全局窗口属性，与绘制位置无关）。
+ *
+ * ⚠️ 状态栏图标颜色是**全局窗口属性**，与"画在哪"无关，
+ * 所以它留在页面级调用是对的。
+ */
 @Composable
-private fun PlayerSafeAreaTop() {
-    val colors = BiliTheme.colors
+private fun PlayerStatusBarTint() {
     val view = androidx.compose.ui.platform.LocalView.current
-    val statusBarHeight = WindowInsets.statusBars
-        .asPaddingValues()
-        .calculateTopPadding()
 
     // 深色主题下状态栏图标**本来就该是浅色**（`values-night/themes.xml`
     // 的 `windowLightStatusBar=false`），所以这里其实无需切换。
@@ -2252,15 +2267,6 @@ private fun PlayerSafeAreaTop() {
         }
         controller?.isAppearanceLightStatusBars = false
         onDispose { }
-    }
-
-    if (statusBarHeight > 0.dp) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(statusBarHeight)
-                .background(colors.playerBackground),
-        )
     }
 }
 
@@ -2344,7 +2350,30 @@ private fun PlayerArea(
     /** 用户是否正在拖进度条（拖动中不跳片段）。 */
     var isUserSeeking by remember { mutableStateOf(false) }
 
-    PlayerSafeAreaTop()
+    // 🔴 v1.5.2 修「顶部安全区没生效」。
+    //
+    // ## 根因：画在了错误的位置
+    //
+    // 原来 `PlayerSafeAreaTop()` 调在下面那个 `Box` **之外** ——
+    // 它是同级的兄弟节点，而 `Box` 里的播放器画面会**盖在它上面**
+    // （后画的在上）。实测截图：状态栏时间/信号/电池直接压在视频画面上，
+    // 黑带完全看不见。
+    //
+    // ## 修法：安全区进 Box，且内容整体下移
+    //
+    // 只把黑带画在底层还不够 —— 视频画面仍会**顶到屏幕最上沿**，
+    // 被状态栏图标压住。所以还要给内容加 `statusBarsPadding()`：
+    // 安全区占住状态栏高度，画面从它下面开始。
+    //
+    // ⚠️ 这正是任务书要求的"根据实际 Window Insets 正确布局"，
+    // 而不是"加固定 dp 的顶部 padding"。`statusBarsPadding()` 读的是
+    // 系统真实 Insets（刘海/挖孔/手势条都算在内）。
+    val statusBarTop = WindowInsets.statusBars
+        .asPaddingValues()
+        .calculateTopPadding()
+
+    // 状态栏图标切浅色（全局窗口属性，与绘制位置无关）
+    PlayerStatusBarTint()
 
     // ---- 玻璃作用域：**只覆盖播放器区域** ----
     //
@@ -2359,11 +2388,28 @@ private fun PlayerArea(
     // 玻璃拟态的物理前提是：**玻璃必须压在东西上面**。
     com.example.biliv3.design.ProvideGlassBackdrop(backdrop = holder?.backdrop) {
     Box(modifier = modifier) {
+        // ---- 顶部安全区（Box 内第一层 = 最底层）----
+        //
+        // 必须在播放器内容**之前**画，否则被画面盖住。
+        // 用 `playerBackground`（纯黑）—— 与视频黑边一致，不产生色带。
+        if (statusBarTop > 0.dp) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(statusBarTop)
+                    .background(colors.playerBackground),
+            )
+        }
+
         when {
             playerError != null -> PlayerPlaceholder(
                 message = playerError,
                 onRetry = onRetryPlay,
-                modifier = Modifier.fillMaxSize(),
+                // 内容下移，避开状态栏
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding(),
             )
 
             playState is PlayState.Ready && player != null -> {
@@ -2377,7 +2423,11 @@ private fun PlayerArea(
                     // v1.3.0：听视频 / 黑胶时**不装配视频轨**（真省解码，
                     // 不是把画面藏起来 —— 见 §7.10-59）
                     mode = playbackMode,
-                    modifier = Modifier.fillMaxSize(),
+                    // ⚠️ 加 `statusBarsPadding()` —— 画面从安全区下方开始，
+                    // 不再被状态栏图标压住
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding(),
                 )
                 // 弹幕层：在画面之上、字幕之下（弹幕不遮挡字幕）
                 DanmakuLayer(
@@ -2492,29 +2542,30 @@ private fun PlayerArea(
             ) {
                 // 右上角按钮组：**无面板的幽灵图标**（v1.5.1 简化）。
                 //
-                // ## 历史（两次收窄，方向一致）
+                // ## 历史（三次收窄）
                 //
                 // 1. 最初走 `biliCard()` 玻璃 → v1.4.1 发现玻璃糊边缘、降对比度，
                 //    改成 `surfaceElevated` 实体面板 + 发丝描边
-                // 2. v1.5.1 用户仍反馈"占用空间不合理、像大块半透明面板" ——
-                //    **根因是那个面板本身**：5 个按钮 + 描边 + 内边距，
-                //    在视频画面右上角形成一大块不透明深色区域
+                // 2. v1.5.1 去掉面板底与描边，改独立圆钮；但**错把听视频与黑胶
+                //    合并成一个入口并绑到 `onOpenSettings`**（v1.5.2 已修回归）
+                // 3. v1.5.2（本轮）：用户要求"四个选项整体靠最右上角排列、
+                //    小尺寸统一图标、触摸区仍足够"
                 //
-                // ## 现在（判据：让画面成为主体）
+                // ## 现在（判据：画面是主体，控件是标点）
                 //
-                // - **去掉面板底与描边**：不再有"一块面板"，只剩 5 个独立图标
-                // - 图标自带半透明圆底（`overlayControl`，仅够辨认轮廓），
-                //   在亮画面/暗画面上都能看清，但**不形成连续色块**
-                // - 听视频 / 黑胶**合并为一个入口**：两者都是"换一种播放形态"，
-                //   原本并排两个图标在视觉上是多余的重复
-                //   （点开后在设置面板里二选一 —— 那里本来就是模式的归属地）
+                // - 无面板底、无描边 —— 不形成连续色块
+                // - 圆钮视觉 28dp + 图标 14dp（`Sizes.iconSm`），
+                //   触摸热区仍由 `PlayerChromeButton` 撑到 48dp
+                // - 间距压到 `Space.x1`（4dp）—— "整体靠最右上角排列"
+                // - **右对齐且紧贴右上角**：`Arrangement.End` + 最小外边距，
+                //   而不是居中或留大片空白
                 //
                 // 触摸热区仍保证 48dp（见 `PlayerChromeButton`）。
                 Row(
                     modifier = Modifier
                         .statusBarsPadding()
-                        .padding(Space.x2),
-                    horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                        .padding(horizontal = Space.x1, vertical = Space.x1),
+                    horizontalArrangement = Arrangement.spacedBy(Space.x1),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                         // 小窗入口：只在可播放时显示（没画面时进 PiP 没意义）
@@ -2525,11 +2576,23 @@ private fun PlayerArea(
                                 onClick = { onEnterPip() },
                             )
 
-                            // 听视频 / 黑胶：**一个入口**（点击进播放设置面板）
+                            // 🔴 v1.5.2 修回归：v1.5.1 我把这两个按钮**合并**成一个，
+                            // 并把 onClick 错写成 `onOpenSettings` ——
+                            // 于是用户点「听视频」打开的是**设置面板**，
+                            // 听视频模式根本没进去（用户报告的正是这个）。
+                            //
+                            // 合并本身也是错的：听视频与黑胶是**两个不同的模式**，
+                            // 共用一个图标必然二义。现在恢复为两个独立入口，
+                            // 各自绑正确的回调（`onToggleAudioOnly` / `onOpenVinyl`）。
                             PlayerChromeButton(
                                 icon = Icons.Filled.Headphones,
-                                contentDescription = "播放模式（听视频 / 黑胶）",
-                                onClick = onOpenSettings,
+                                contentDescription = "听视频（只听不看）",
+                                onClick = onToggleAudioOnly,
+                            )
+                            PlayerChromeButton(
+                                icon = Icons.Filled.Album,
+                                contentDescription = "黑胶唱片模式",
+                                onClick = onOpenVinyl,
                             )
                         }
 

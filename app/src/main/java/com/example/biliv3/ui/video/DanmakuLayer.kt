@@ -100,10 +100,62 @@ fun DanmakuLayer(
 
     // 当前活跃弹幕（进入屏幕后尚未消失的）
     val active = remember { mutableListOf<ActiveDanmaku>() }
-    // 已投放的弹幕索引（避免重复投放）
-    var cursor by remember(danmaku) { mutableStateOf(0) }
+
+    // ---------------------------------------------------------------------
+    // 🔴 v1.5.2 修「弹幕加载到了但屏幕上看不见」
+    //
+    // ## 根因：把 List **引用**当成了 key
+    //
+    // 原来是：
+    // ```kotlin
+    // var cursor by remember(danmaku) { mutableStateOf(0) }
+    // val laneFreeAt = remember(danmaku) { LongArray(MAX_LANES) }
+    // LaunchedEffect(player, danmaku, enabled, ...) { ... }
+    // ```
+    //
+    // `danmaku` 是 `List<DanmakuItem>` —— Compose 的 `remember(key)` /
+    // `LaunchedEffect(key)` 用 **`equals`** 比较。`List.equals` 是
+    // **逐元素深比较**，看起来没问题……
+    //
+    // 但上游 `ensureDanmakuLoaded` 每次轮询都执行：
+    // ```kotlin
+    // _danmaku.value = (current + next).sortedBy { it.progressMs }
+    // ```
+    // 而 `DanmakuItem` 是 **data class** —— 深比较会走完 201 个元素。
+    // 真正致命的是**预取**：`next`（seg 2）一开始是空、后来可能变成非空，
+    // 于是列表内容变化 → key 变化 → **effect 重启** →
+    // `cursor` 归零、`laneFreeAt` 清空、`active` 里正在飞行的弹幕
+    // 与新的轨道状态**对不上**。
+    //
+    // 表现就是：日志里 `cur=201 total=201 enabled=true`（数据完全正常），
+    // 但屏幕上一条都看不到 —— 因为每轮轮询都把投放状态推倒重来。
+    //
+    // ## 修法：key 用**稳定指纹**，不用 List 本身
+    //
+    // 指纹 = 条数 + 首条 progressMs + 末条 progressMs。
+    // 同一批数据重复赋值时指纹不变 → 不重启 effect。
+    // 换了视频 / 换了分P / 真正追加了新分段时指纹才变。
+    //
+    // ⚠️ 不能用 `danmaku.hashCode()`：它同样是逐元素深比较，
+    // 开销大且**空列表与单元素列表的边界会抖动**。
+    // ---------------------------------------------------------------------
+    val danmakuKey = remember(danmaku) {
+        val n = danmaku.size
+        if (n == 0) {
+            "dm:0"
+        } else {
+            "dm:$n:${danmaku.first().progressMs}:${danmaku.last().progressMs}"
+        }
+    }
+
+    // 已投放的弹幕索引（避免重复投放）。
+    // ⚠️ key 用 `danmakuKey`（稳定指纹）而不是 `danmaku`（List 引用）——
+    // 否则每轮轮询都把 cursor 归零，弹幕反复从头投放。
+    var cursor by remember(danmakuKey) { mutableStateOf(0) }
     // 轨道占用结束时间（该轨道可再用的时间戳）
-    val laneFreeAt = remember(danmaku) { LongArray(MAX_LANES) }
+    val laneFreeAt = remember(danmakuKey) { LongArray(MAX_LANES) }
+    // `active` 也要跟着指纹重置 —— 否则换视频后旧弹幕残留占轨道
+    remember(danmakuKey) { active.clear() }
 
     // 触发重组用的"当前时间"
     var nowMs by remember { mutableStateOf(0L) }
@@ -116,7 +168,7 @@ fun DanmakuLayer(
      * 2. 移除已飞出屏幕的
      * 3. 更新 nowMs 触发重组（位置由 nowMs 算出）
      */
-    LaunchedEffect(player, danmaku, enabled, laneCount, size, blockModes, blockKeywords) {
+    LaunchedEffect(player, danmakuKey, enabled, laneCount, size, blockModes, blockKeywords) {
         if (laneCount <= 0 || danmaku.isEmpty()) return@LaunchedEffect
 
         val widthPx = size.width.toFloat()

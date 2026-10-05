@@ -974,23 +974,37 @@ private fun CommentRow(
                             .padding(start = COMMENT_AVATAR + Space.x2)
                             .fillMaxWidth(),
                     )
-                    // ⚠️ 去掉 `bgHover` 实底（问题 5 的根因）。
+                    // 🔴 v1.5.2 修「回复左边有两条线」。
                     //
-                    // 首版给回复区铺了一层 `bgHover` 灰底 + 圆角，
-                    // 在已是 `bgCard` 的评论卡片上又叠一块色块 ——
-                    // 形成"卡中卡"，视觉上非常突兀，用户反馈"回复区域很突出"。
+                    // ## 根因：嵌套层各画了一条，且位置重合
                     //
-                    // 改为：**不铺底**，只靠左侧一条 2dp 竖线做层级提示。
-                    // 这比整块色底轻得多，也符合"缩进清晰但不抢眼"的要求。
-                    .drawBehind {
-                        val x = 2.dp.toPx()
-                        drawLine(
-                            color = replyGuideColor,
-                            start = Offset(x, 0f),
-                            end = Offset(x, size.height),
-                            strokeWidth = Space.trackHeight.toPx(),
-                        )
-                    }
+                    // `drawBehind` 画的是**本行回复区**的左侧竖线。
+                    // 但内嵌回复行**自己也可能有 `replies`** —— 于是：
+                    //   - 父评论的回复区 → 画第 1 条
+                    //   - 其中某条回复再展开自己的回复区 → 画第 2 条
+                    //
+                    // 而上面 `isReply` 分支把缩进去掉了（`fillMaxWidth()`），
+                    // 两层的线 x 坐标几乎相同 → 视觉上就是**并排两条**。
+                    //
+                    // ## 修法：只有**顶层**回复区画线
+                    //
+                    // 判据：一条线代表"以下是子级内容"。这个信息由**最外层**
+                    // 那一条完整表达；嵌套层再画，既不增加信息，又制造双线。
+                    //
+                    // 嵌套层的层级改由**字号 + 缩进**表达（见 `isReply` 的
+                    // 正文样式），不依赖再加一条线。
+                    .then(
+                        if (isReply) Modifier
+                        else Modifier.drawBehind {
+                            val x = 2.dp.toPx()
+                            drawLine(
+                                color = replyGuideColor,
+                                start = Offset(x, 0f),
+                                end = Offset(x, size.height),
+                                strokeWidth = Space.trackHeight.toPx(),
+                            )
+                        },
+                    )
                     .padding(start = Space.x3),
                 verticalArrangement = Arrangement.spacedBy(0.dp),
             ) {

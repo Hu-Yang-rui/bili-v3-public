@@ -7,6 +7,7 @@ import com.example.biliv3.data.FavoriteEntry
 import com.example.biliv3.data.HistoryEntry
 import com.example.biliv3.data.LibraryRepository
 import com.example.biliv3.data.model.VideoItem
+import com.example.biliv3.ui.component.userMessageFor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -142,6 +143,27 @@ class FavoriteViewModel(
     private val _loading = MutableStateFlow(false)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
+    /**
+     * 加载失败的原因（null = 没有失败）。
+     *
+     * ## 🔴 v1.5.2 新增：失败不能伪装成空（§7.8-44 同类错误）
+     *
+     * 原来这里是：
+     * ```kotlin
+     * val fs = runCatching { repo.favoriteFolders(repo.currentMid) }
+     *     .getOrDefault(emptyList())     // ← 失败变成空列表
+     * ```
+     *
+     * 于是**任何失败**（未登录 / mid 无效 / 网络断 / 风控）
+     * 都渲染成「还没有收藏夹」—— 一句**假的事实断言**。
+     * 用户报告"收藏功能失效"时看到的就是这句话，而账号实际有 6 个收藏夹。
+     *
+     * 现在：失败写 `error`，UI 优先显示错误态 + 可重试；
+     * 只有**真的**拉到空列表才显示「还没有收藏夹」。
+     */
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
     val isLoggedIn: Boolean get() = repo.isLoggedIn
 
     init {
@@ -152,9 +174,31 @@ class FavoriteViewModel(
         if (!isLoggedIn) return
         viewModelScope.launch {
             _loading.value = true
+            _error.value = null
 
-            val fs = runCatching { repo.favoriteFolders(repo.currentMid) }
-                .getOrDefault(emptyList())
+            // ⚠️ mid 无效要**明确报错**，不能静默返回空 ——
+            // `favoriteFolders` 对 `mid <= 0` 是直接 return emptyList()，
+            // 那条路径在 UI 上必须与"真的没有收藏夹"区分开。
+            val mid = repo.currentMid
+            if (mid <= 0L) {
+                _folders.value = emptyList()
+                _previews.value = emptyMap()
+                _error.value = "登录信息不完整，请重新登录"
+                _loading.value = false
+                return@launch
+            }
+
+            val result = runCatching { repo.favoriteFolders(mid) }
+            if (result.isFailure) {
+                _folders.value = emptyList()
+                _previews.value = emptyMap()
+                _error.value = userMessageFor(
+                    result.exceptionOrNull() ?: IllegalStateException("收藏夹加载失败"),
+                )
+                _loading.value = false
+                return@launch
+            }
+            val fs = result.getOrDefault(emptyList())
             _folders.value = fs
 
             // 并发拉每个夹的前 3 条预览

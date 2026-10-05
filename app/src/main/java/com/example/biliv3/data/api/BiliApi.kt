@@ -468,6 +468,33 @@ class BiliApi(
      *
      * 未登录返回 `-101`，此时返回全 false 而不是抛错 ——
      * 未登录用户看详情页是正常场景，不该显示错误。
+     *
+     * ## 🔴 v1.5.2 修：「收藏了却显示未收藏」（用户报告）
+     *
+     * ### 根因：`favorite` 是 **JSON boolean**，不是数字
+     *
+     * 实测（真实账号直连 `x/web-interface/archive/relation`）：
+     * ```json
+     * { "attention": false, "favorite": true, "like": false, "coin": 0 }
+     * ```
+     *
+     * - `favorite` → **布尔** `true` / `false`
+     * - `like`     → **数字** `0` / `1`
+     * - `coin`     → **数字**（枚数）
+     *
+     * 原实现统一用 `d.optInt("favorite", 0) == 1` ——
+     * `JSONObject.optInt` 遇到 **boolean** 会**返回默认值 0**（不抛错、不转换），
+     * 于是 `0 == 1` 恒为 false → **收藏状态永远显示"未收藏"**，
+     * 而 `like` 恰好是数字所以点赞正常。
+     *
+     * 这正是"点赞能显示、收藏永远不行"的原因 —— 两者字段类型不同，
+     * 却被当成同一种解析。
+     *
+     * ### 修法：按**实际类型**分别解析
+     *
+     * 用 `opt` 拿原始值再判类型，兼容 boolean 与数字两种形态
+     * （B 站历史上确实在不同接口/版本间摇摆过）。
+     * **不要**再用 `optInt` 读布尔字段。
      */
     suspend fun relation(bvid: String): InteractionState {
         val json = try {
@@ -484,7 +511,8 @@ class BiliApi(
         return InteractionState(
             liked = d.optInt("like", 0) == 1,
             coined = d.optInt("coin", 0) > 0,
-            favored = d.optInt("favorite", 0) == 1,
+            // ⚠️ `favorite` 是布尔 —— 必须用 optBoolLoose，不能用 optInt
+            favored = d.optBoolLoose("favorite"),
         )
     }
 
@@ -991,4 +1019,34 @@ class BiliException(val code: Int, override val message: String) : Exception(mes
                 }
             }
         }
+}
+
+/**
+ * 容错读一个**布尔**字段。
+ *
+ * ## 为什么必须有它（v1.5.2 修的真实 bug）
+ *
+ * B 站同一个语义的字段在不同接口里类型不一致：
+ *
+ * | 字段 | 实际类型 |
+ * |---|---|
+ * | `relation.favorite` | **布尔** `true` / `false` |
+ * | `relation.like` | 数字 `0` / `1` |
+ * | `relation.coin` | 数字（枚数） |
+ *
+ * 用 `optInt` 读**布尔**字段时，`JSONObject` 会**静默返回默认值**
+ * （不抛错、也不转换）→ `optInt("favorite", 0) == 1` 恒为 false
+ * → 「收藏了却永远显示未收藏」，而 `like` 恰好是数字所以点赞正常。
+ *
+ * 这个助手按**实际类型**分支：布尔直接用，数字按 `!= 0` 判，
+ * 字符串兼容 `"1"` / `"true"`。任何其它形态一律 false（不猜）。
+ */
+private fun JSONObject.optBoolLoose(key: String): Boolean {
+    if (!has(key) || isNull(key)) return false
+    return when (val v = opt(key)) {
+        is Boolean -> v
+        is Number -> v.toInt() != 0
+        is String -> v == "1" || v.equals("true", ignoreCase = true)
+        else -> false
+    }
 }

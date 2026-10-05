@@ -40,8 +40,8 @@ android {
         applicationId = "com.example.biliv3"
         minSdk = 26
         targetSdk = 35
-        versionCode = 35
-        versionName = "1.5.1"
+        versionCode = 36
+        versionName = "1.5.2"
     }
 
     signingConfigs {

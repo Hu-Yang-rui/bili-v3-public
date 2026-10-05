@@ -208,6 +208,14 @@ fun FavoriteScreen(
     onVideoClick: (String) -> Unit,
     onLoginRequired: () -> Unit,
     onRetry: () -> Unit,
+    /**
+     * 加载失败原因（null = 没有失败）。v1.5.2 新增。
+     *
+     * ⚠️ 必须与"真的没有收藏夹"分开渲染 —— 否则任何失败
+     * （未登录 / mid 无效 / 网络断 / 风控）都会显示成
+     * 「还没有收藏夹」这句**假的事实断言**（§7.8-44 同类错误）。
+     */
+    error: String? = null,
     modifier: Modifier = Modifier,
 ) {
     LibraryScaffold(
@@ -218,9 +226,18 @@ fun FavoriteScreen(
         when {
             !isLoggedIn -> LoginRequiredPanel(onLoginRequired)
             loading && folders.isEmpty() -> LoadingPanel()
+            // 🔴 v1.5.2：错误态**优先于空态** —— 失败不能显示成「还没有收藏夹」
+            error != null && folders.isEmpty() -> EmptyState(
+                title = "收藏夹加载失败",
+                terminalStyle = true,
+                description = error,
+                actionLabel = "重试",
+                onAction = onRetry,
+                modifier = Modifier.fillMaxSize(),
+            )
             folders.isEmpty() -> EmptyState(
                 title = "还没有收藏夹",
-                      terminalStyle = true,
+                terminalStyle = true,
                 description = "在视频页点「收藏」加入",
                 actionLabel = "刷新",
                 onAction = onRetry,

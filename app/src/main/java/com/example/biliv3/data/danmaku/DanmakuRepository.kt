@@ -8,6 +8,7 @@ import com.example.biliv3.data.subtitle.pbMessages
 import com.example.biliv3.data.subtitle.pbString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.CacheControl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
@@ -151,6 +152,42 @@ class DanmakuRepository(
     /**
      * 拉一片弹幕。
      *
+     * ## 🔴 v1.5.2 修「官方有弹幕、BiliV3 完全没有」的真实 bug
+     *
+     * ### 根因：HTTP **304 Not Modified** 被当成失败
+     *
+     * 实测日志（用户给的案例视频）：
+     * ```
+     * W BiliDanmaku: 弹幕 HTTP 304
+     * ```
+     *
+     * 原代码：
+     * ```kotlin
+     * if (!resp.isSuccessful) { return emptyList() }   // ← 304 落这里
+     * ```
+     * `Response.isSuccessful` 是 `code in 200..299` —— **304 不在其中**，
+     * 于是弹幕被静默丢弃，表现为「这个视频没有弹幕」。
+     *
+     * ### 为什么会出现 304
+     *
+     * OkHttp 默认带 HTTP 缓存。`seg.so` 的响应含 `ETag` / `Last-Modified`，
+     * 于是第二次请求会带 `If-None-Match` / `If-Modified-Since`；
+     * 服务端判定未变 → 回 **304 且 body 为空**。
+     *
+     * ⚠️ 关键：OkHttp 只有在缓存条目**完整可用**时才会用缓存顶上；
+     * 而 `seg.so` 的响应头不含可用的 `Cache-Control`/`Expires` 缓存策略，
+     * 缓存条目被判为"不可直接用"，于是**把 304 原样交给调用方** ——
+     * 调用方又把它当失败 → 空弹幕。
+     *
+     * ### 修法：弹幕请求**强制走网络**
+     *
+     * `CacheControl.FORCE_NETWORK` —— 弹幕是**强时效、强互动**数据
+     * （同一时间片随时可能新增），本来就不该被 HTTP 缓存拦。
+     * 加上它之后服务端直接返回 200 + 完整 body。
+     *
+     * 同时把 304 显式当**成功但无新数据**处理（防御性）：
+     * 万一将来仍收到 304，也不该报错。
+     *
      * @param segmentIndex 分片序号，从 1 开始（每片 6 分钟）
      */
     suspend fun segment(cid: Long, segmentIndex: Int): List<DanmakuItem> = withContext(Dispatchers.IO) {
@@ -161,10 +198,20 @@ class DanmakuRepository(
             .url(url)
             .header("User-Agent", UA)
             .header("Referer", "https://www.bilibili.com/")
+            // 🔴 强制走网络：不带 If-None-Match / If-Modified-Since，
+            // 避免服务端回 304 空 body（见上面的 KDoc）
+            .cacheControl(CacheControl.FORCE_NETWORK)
             .build()
 
         val bytes = try {
             client.newCall(req).execute().use { resp ->
+                // ⚠️ 304 单独放行：它是"内容未变"，不是失败。
+                // 正常情况下加了 FORCE_NETWORK 就不会再收到它，
+                // 这里保留是**防御**（代理 / 中间层可能仍改写）。
+                if (resp.code == 304) {
+                    Log.w(TAG, "弹幕 HTTP 304（强制网络后仍出现，已按空处理）")
+                    return@withContext emptyList()
+                }
                 if (!resp.isSuccessful) {
                     Log.w(TAG, "弹幕 HTTP ${resp.code}")
                     return@withContext emptyList()

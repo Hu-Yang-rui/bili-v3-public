@@ -56,12 +56,67 @@ class AuthStore(context: Context) : AuthState {
             prefs.edit().putString(KEY_COOKIE, value).apply()
         }
 
-    /** 登录用户的 mid。0 表示未登录。 */
+    /**
+     * 登录用户的 mid。0 表示未登录。
+     *
+     * ## 🔴 v1.5.2 修：`mid` 缺失时必须从 Cookie 的 `DedeUserID` 兜底
+     *
+     * ### 根因（用户报告「我的收藏」显示「还没有收藏夹」）
+     *
+     * `importCookie()` 会**主动删除** `KEY_MID` —— 那是 v1.5.0 为了修
+     * 「显示 A 的头像昵称、请求带 B 的凭据」而加的正确防护。
+     *
+     * 但 `mid` 原来**只从 `prefs` 读** —— 导入 Cookie 后 `KEY_MID` 被清，
+     * `mid` 恒为 0，而 Cookie 里明明有 `DedeUserID`。
+     *
+     * 后果（`LibraryRepository.favoriteFolders` 第 219 行）：
+     * ```
+     * if (!isLoggedIn || mid <= 0) return emptyList()   // ← 静默返回空
+     * ```
+     * → 「我的收藏」永远显示「还没有收藏夹」，
+     * 而账号实际有 6 个收藏夹（脚本直连验证）。
+     *
+     * ### 修法：`DedeUserID` 是**凭据本身**，不是缓存
+     *
+     * `DedeUserID` 与 `SESSDATA` 同在 Cookie 里、同一份导入来源 ——
+     * 它属于"凭据"，不属于"身份缓存"（`userName` / `userFace` 才是缓存，
+     * 那两个必须靠 `nav` 重新拉）。
+     *
+     * 所以这里按**凭据优先级**读：prefs 有就用（扫码登录写入的），
+     * 没有就从 Cookie 解析。两者都不行才是 0。
+     *
+     * ⚠️ 不从 Cookie 写回 prefs —— 保持"prefs 只存扫码登录结果"的语义，
+     * 避免"删了 Cookie 但 mid 还在"的不一致。
+     */
     override var mid: Long
-        get() = prefs.getLong(KEY_MID, 0L)
+        get() {
+            val stored = prefs.getLong(KEY_MID, 0L)
+            if (stored > 0L) return stored
+            return midFromCookie()
+        }
         private set(value) {
             prefs.edit().putLong(KEY_MID, value).apply()
         }
+
+    /**
+     * 从当前 Cookie 的 `DedeUserID` 解析 mid。
+     *
+     * 找不到 / 解析失败返回 0（**不抛错** —— 未登录是正常状态）。
+     *
+     * ⚠️ 只做字符串切分，不打印 Cookie 内容（§7.16-94 凭据红线）。
+     */
+    private fun midFromCookie(): Long {
+        val raw = prefs.getString(KEY_COOKIE, "").orEmpty()
+        if (raw.isEmpty()) return 0L
+        for (part in raw.split(';')) {
+            val p = part.trim()
+            if (!p.startsWith("DedeUserID=")) continue
+            val v = p.substringAfter('=').trim()
+            // DedeUserID 一定是纯数字；带后缀的 DedeUserID__ckMd5 不会被命中
+            return v.toLongOrNull() ?: 0L
+        }
+        return 0L
+    }
 
     override var userName: String
         get() = prefs.getString(KEY_NAME, "").orEmpty()

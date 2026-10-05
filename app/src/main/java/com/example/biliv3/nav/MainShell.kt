@@ -1387,6 +1387,8 @@ fun MainShell(
                 val folders by vm.folders.collectAsStateWithLifecycle()
                 val previews by vm.previews.collectAsStateWithLifecycle()
                 val loading by vm.loading.collectAsStateWithLifecycle()
+                    // 加载失败原因（v1.5.2）—— 失败不能显示成「还没有收藏夹」
+                    val favError by vm.error.collectAsStateWithLifecycle()
 
                 val favSnackbar = remember { SnackbarHostState() }
 
@@ -1403,6 +1405,9 @@ fun MainShell(
                         onVideoClick = { bvid -> navController.navigate(Routes.video(bvid)) },
                         onLoginRequired = { navController.navigate(Routes.LOGIN) },
                         onRetry = vm::retry,
+                            // v1.5.2：失败原因要传给 UI ——
+                            // 否则加载失败会渲染成「还没有收藏夹」（假的事实断言）
+                            error = favError,
                     )
                     SnackbarHost(
                         hostState = favSnackbar,
