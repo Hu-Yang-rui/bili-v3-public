@@ -1,5 +1,18 @@
 package com.example.biliv3.ui.video
 
+import androidx.compose.runtime.mutableIntStateOf
+import coil.transform.Transformation
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.border
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.example.biliv3.data.Videoshot
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -104,6 +117,7 @@ import kotlin.math.abs
  * 触摸目标通过外层 `gestureHeight` 保证 ≥ 44dp（可点区域不受绘制高度影响）。
  */
 @Composable
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 fun PlayerControls(
     player: ExoPlayer,
     isFullscreen: Boolean,
@@ -123,6 +137,26 @@ fun PlayerControls(
      * 否则会和用户的 seek 打架（表现为"拖不动 / 位置乱跳"）。
      */
     onSeekingChanged: (Boolean) -> Unit = {},
+    /**
+     * 进度条拖动预览用的精灵图（v1.5.3）。
+     *
+     * `null` = 该视频**没有**预览资源 → 拖动时只显示时间文字（优雅降级）。
+     * 实测并非所有视频都有（未生成预览的视频返回空 `image`）。
+     */
+    videoshot: Videoshot? = null,
+    /**
+     * 播放位置变化回调（**整秒**，秒）。v1.5.3 新增。
+     *
+     * ## 为什么从这里上报，而不是外部自己轮询
+     *
+     * `PlayerControls` 本来就在轮询 `player.currentPosition` 刷新时间轴 ——
+     * 复用它已有的循环**零额外成本**。若外部再起一条协程读同一个
+     * `player`，就是重复轮询同一个值。
+     *
+     * ⚠️ 只在**整秒变化**时回调：章节高亮的精度需求是秒级，
+     * 每 200ms 回调一次会让详情页（子组件很多）无谓重组。
+     */
+    onPositionTick: (Int) -> Unit = {},
 ) {
     val colors = BiliTheme.colors
     var isPlaying by remember { mutableStateOf(player.isPlaying) }
@@ -131,6 +165,8 @@ fun PlayerControls(
 
     // 拖动进度条时用本地值，避免与播放进度更新打架（否则滑块会"跳回去"）
     var isDragging by remember { mutableStateOf(false) }
+    // 上次上报过的整秒位置（v1.5.3）—— 避免同一秒重复回调
+    var lastReportedSecond by remember { mutableIntStateOf(-1) }
     // 单一入口：赋值的同时上报，避免多处赋值漏上报（空降助手依赖它）
     val setDragging: (Boolean) -> Unit = { v ->
         if (isDragging != v) {
@@ -206,6 +242,15 @@ fun PlayerControls(
             if (!isDragging) {
                 position = player.currentPosition
                 duration = player.duration.coerceAtLeast(0)
+
+                // 上报**整秒**位置（章节高亮用，v1.5.3）。
+                // 只在秒数真的变了才回调 —— 轮询是 200ms 一次，
+                // 每次都回调会让详情页无谓重组 5 倍次数。
+                val sec = (position / 1000L).toInt()
+                if (sec != lastReportedSecond) {
+                    lastReportedSecond = sec
+                    onPositionTick(sec)
+                }
             }
             delay(POSITION_POLL_MS)
         }
@@ -539,6 +584,23 @@ fun PlayerControls(
                             .fillMaxSize()
                             .padding(horizontal = Space.x1),
                     )
+
+                    // ---- 拖动时的画面预览（v1.5.3）----
+                    //
+                    // ⚠️ 预览**只在拖动中出现** —— 平时不占任何空间、
+                    // 也不加载图片（`videoshot` 是懒拉的，见 VM）。
+                    //
+                    // 位置：气泡左边缘跟随拖动点，但**夹在轨道范围内** ——
+                    // 否则拖到两端时气泡会超出屏幕被裁掉。
+                    if (isDragging && videoshot != null && duration > 0) {
+                        val tSec = (dragFraction * duration / 1000f).toInt()
+                        SeekPreview(
+                            videoshot = videoshot,
+                            positionSeconds = tSec,
+                            fraction = dragFraction,
+                            modifier = Modifier.align(Alignment.TopStart),
+                        )
+                    }
                 }
 
                 Spacer(Modifier.width(Space.x2))
@@ -551,6 +613,85 @@ fun PlayerControls(
                     weight = FontWeight.Normal,
                 )
             }
+        }
+    }
+}
+
+/**
+ * 拖动进度条时的**画面预览**气泡（v1.5.3）。
+ *
+ * ## 实现要点（都由实测的接口形态决定）
+ *
+ * 1. **精灵图裁剪**：`videoshot.image` 是一张 10×10 平铺的大图，
+ *    不是逐帧图片。用 `BitmapPainter(srcOffset, srcSize)` 裁出单帧 ——
+ *    直接当整图渲染会得到"几十帧叠在一起"的乱图。
+ *
+ * 2. **按时间就近取帧**：`videoshot.seconds` 不是均匀间隔
+ *    （实测开头 `[0, 0, 5, 10, ...]` 有重复），
+ *    所以走 [Videoshot.frameIndexAt] 而不是 `t / step`。
+ *
+ * 3. **位置夹取**：气泡左边缘 = `fraction * 轨道宽 - 气泡宽/2`，
+ *    但必须**夹在 [0, 轨道宽 - 气泡宽]** ——
+ *    否则拖到最左/最右时气泡超出屏幕被裁掉半截。
+ *
+ * 4. **图片加载失败不报错**：`AsyncImage` 失败时保持占位色块，
+ *    不弹提示（预览是增强功能，失败不该打断拖动）。
+ */
+@Composable
+private fun SeekPreview(
+    videoshot: Videoshot,
+    positionSeconds: Int,
+    fraction: Float,
+    modifier: Modifier = Modifier,
+) {
+    val colors = BiliTheme.colors
+    val density = LocalDensity.current
+
+    // 预览宽度：屏宽的 30%（够看清画面，又不会挡住整条轨道）
+    val config = LocalConfiguration.current
+    val previewW = (config.screenWidthDp * 0.30f).dp
+    val previewH = previewW * (videoshot.frameHeight.toFloat() / videoshot.frameWidth.toFloat())
+
+    val index = videoshot.frameIndexAt(positionSeconds)
+    if (index < 0) return
+    val (ox, oy) = videoshot.frameOrigin(index)
+
+    // 轨道可用宽度（外层 Box 的宽度）与气泡水平位置
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val trackW = maxWidth
+        val previewWPx = with(density) { previewW.toPx() }
+        val trackWPx = with(density) { trackW.toPx() }
+        val rawX = fraction * trackWPx - previewWPx / 2f
+        val clampedX = rawX.coerceIn(0f, (trackWPx - previewWPx).coerceAtLeast(0f))
+
+        Column(
+            modifier = Modifier
+                // 向上偏移一个气泡高 + 8dp，浮在进度条上方
+                .offset(x = with(density) { clampedX.toDp() })
+                .offset(y = -(previewH + Space.x2)),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(videoshot.sheetUrl)
+                    // ⚠️ Coil 2.x 是 `transformations(vararg)`（**复数**）；
+                    // 写成单数 `transform(...)` 会 Unresolved reference。
+                    .transformations(
+                        com.example.biliv3.util.CropToFrame(
+                            x = ox, y = oy,
+                            w = videoshot.frameWidth, h = videoshot.frameHeight,
+                        ),
+                    )
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier
+                    .width(previewW)
+                    .height(previewH)
+                    .clip(RoundedCornerShape(Radius.badge))
+                    .background(colors.bgHover)
+                    .border(1.dp, colors.borderHairline, RoundedCornerShape(Radius.badge)),
+            )
         }
     }
 }

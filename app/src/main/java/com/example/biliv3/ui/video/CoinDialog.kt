@@ -1,5 +1,14 @@
 package com.example.biliv3.ui.video
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.semantics.semantics
+import com.example.biliv3.design.tokens.Motion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -116,19 +125,21 @@ fun CoinDialog(
                 modifier = Modifier
                     .padding(horizontal = Space.x6)
                     .fillMaxWidth()
-                    // ⚠️ 弹层必须用 `surfaceElevated`，不能用 `bgCard`。
+                    // 🔴 v1.5.3 重做：**透明轻量浮层**（用户要求"保留视频背景"）
                     //
-                    // `bgCard` 是**普通卡片**的色（#171B22）。弹层压在半透明遮罩上，
-                    // 若与背景里的卡片同色，就"浮不起来" —— 看起来像
-                    // 页面里本来就有的一个卡片，而不是盖在上面的一层。
+                    // ## 上一版的问题
                     //
-                    // 深色下的分层手段是**提亮**（投影不可见），
-                    // 所以弹层要比卡片再亮一档（#232A35）。
-                    .biliCard(
-                        shape = RoundedCornerShape(Radius.panel),
-                        color = colors.surfaceElevated,
-                    )
-                    // 弹层本体不穿透到遮罩
+                    // 用 `biliCard(color = surfaceElevated)` 铺了一块**不透明面板** ——
+                    // 投币发生在视频播放中，一整块 #232A35 会把画面糊掉，
+                    // 用户看不到自己正在投币的那个视频。
+                    //
+                    // ## 现在
+                    //
+                    // - **不铺底**：只有内容本身浮在画面上（遮罩已足够压暗背景）
+                    // - 内容靠**间距 + 字重**分组，不靠容器
+                    // - 保持 `scrimPanel` 遮罩（否则文字在亮画面上读不清）
+                    //
+                    // 这与 §5.1「无卡片」一致：投币面板是**操作**不是内容容器。
                     .clickable(enabled = false) {}
                     .padding(vertical = Space.x5),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -149,6 +160,29 @@ fun CoinDialog(
                         onClick = { selected = 2 },
                     )
                 }
+
+                Spacer(Modifier.height(Space.x4))
+
+                // ---- 🔴 v1.5.3：小人提硬币 + 明确投出数量 ----
+                //
+                // 用户要求："中间设计一个简洁的小人提着用户所选硬币的视觉元素，
+                // 并根据所选硬币数量或类型及时更新状态"。
+                //
+                // 这里用**自绘几何**（不引第三方图 / 不用 emoji）：
+                // 一个圆头 + 躯干的小人，手臂垂下提着 `selected` 枚硬币。
+                // 硬币数量**跟着选择实时变**（不是静态装饰）。
+                CoinCarrier(count = selected)
+
+                Spacer(Modifier.height(Space.x2))
+
+                Text(
+                    text = "将投出 $selected 枚硬币",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontSize = FontSize.label,
+                        fontWeight = FontWeight.Medium,
+                        color = colors.accentCoinBright,
+                    ),
+                )
 
                 Spacer(Modifier.height(Space.x4))
 
@@ -225,6 +259,133 @@ fun CoinDialog(
                         modifier = Modifier.size(Sizes.iconXl),
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * 「小人提硬币」——投币数量指示图形（v1.5.3）。
+ *
+ * ## 为什么自绘而不是用图标/emoji
+ *
+ * 1. **数量要动态**：`count` 枚硬币要真的画 `count` 个，
+ *    Material 图标是固定字形，做不到"跟着选择变"。
+ * 2. §5.1 明确禁止 emoji 当结构图标。
+ * 3. 自绘只有几行 Canvas，比引一张 PNG 更轻、且天然适配深色主题。
+ *
+ * ## 形状（简洁几何，不用细节）
+ *
+ * ```
+ *    ●        ← 头（圆）
+ *   ─┼─       ← 躯干 + 双臂
+ *    │
+ *   ╱ ╲       ← 腿
+ *    ◉◉       ← 手里提着的硬币（数量 = count）
+ * ```
+ *
+ * 硬币带**外描边**，在深色遮罩上也看得清；数量变化时有缩放动画
+ * （只服务反馈，不装饰 —— §5.1 原则 4）。
+ */
+@Composable
+private fun CoinCarrier(count: Int) {
+    val colors = BiliTheme.colors
+    // 数量变化时的轻微缩放：给"我改了选择"一个即时反馈
+    val scale by animateFloatAsState(
+        targetValue = if (count > 1) 1.06f else 1f,
+        animationSpec = tween(Motion.FADE_MS, easing = Motion.standard),
+        label = "coinCarrierScale",
+    )
+
+    val figure = colors.textSecondarySafe
+    val coin = colors.accentCoinBright
+
+    Row(
+        modifier = Modifier
+            .height(CARRIER_H)
+            .scale(scale),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        // 小人
+        Canvas(
+            modifier = Modifier
+                .width(CARRIER_FIGURE_W)
+                .height(CARRIER_H),
+        ) {
+            val w = size.width
+            val h = size.height
+            val stroke = CARRIER_STROKE.toPx()
+            val cx = w / 2f
+            val headR = h * 0.16f
+
+            // 头
+            drawCircle(
+                color = figure,
+                radius = headR,
+                center = Offset(cx, headR),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke),
+            )
+            // 躯干（竖线）
+            val torsoTop = headR * 2f + stroke
+            val torsoBottom = h * 0.62f
+            drawLine(
+                color = figure,
+                start = Offset(cx, torsoTop),
+                end = Offset(cx, torsoBottom),
+                strokeWidth = stroke,
+                cap = StrokeCap.Round,
+            )
+            // 双臂（横线）
+            drawLine(
+                color = figure,
+                start = Offset(cx - w * 0.22f, torsoTop + h * 0.10f),
+                end = Offset(cx + w * 0.22f, torsoTop + h * 0.10f),
+                strokeWidth = stroke,
+                cap = StrokeCap.Round,
+            )
+            // 双腿
+            val legY = torsoBottom
+            drawLine(
+                color = figure,
+                start = Offset(cx, legY),
+                end = Offset(cx - w * 0.20f, h),
+                strokeWidth = stroke,
+                cap = StrokeCap.Round,
+            )
+            drawLine(
+                color = figure,
+                start = Offset(cx, legY),
+                end = Offset(cx + w * 0.20f, h),
+                strokeWidth = stroke,
+                cap = StrokeCap.Round,
+            )
+        }
+
+        Spacer(Modifier.width(Space.x3))
+
+        // 手里提着的硬币：数量 = 用户当前选择
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(Space.x1),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            repeat(count) { i ->
+                Canvas(
+                    modifier = Modifier
+                        .size(CARRIER_COIN)
+                        // ⚠️ 用 index 作 key 是安全的：列表长度只会是 1 或 2，
+                        // 且顺序固定（不是动态列表）。
+                        .semantics { },
+                ) {
+                    val r = size.minDimension / 2f - CARRIER_STROKE.toPx()
+                    drawCircle(color = coin, radius = r)
+                    drawCircle(
+                        color = colors.onAccentCoin.copy(alpha = 0.55f),
+                        radius = r * 0.45f,
+                    )
+                }
+                // i 只用于让编译器知道是不同实例；视觉上不做差异
+                if (i == 0 && count > 1) Spacer(Modifier.width(Space.micro))
             }
         }
     }
@@ -330,6 +491,12 @@ private const val DEFAULT_COIN_COUNT = 2
 /** 弹窗内主文字色。 */
 
 /** 弹窗内次要文字色（余额、提示）。 */
+
+/** 小人提硬币图形的尺寸（v1.5.3）。 */
+private val CARRIER_H = 44.dp
+private val CARRIER_FIGURE_W = 26.dp
+private val CARRIER_COIN = 12.dp
+private val CARRIER_STROKE = 1.5.dp
 
 private val CARD_W = 84.dp
 private val CARD_H = 92.dp

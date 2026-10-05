@@ -43,6 +43,7 @@ import com.example.biliv3.data.model.PlayInfo
  * 同一时刻只应有一个播放器（一个视频在播）。`acquire()` 复用已有实例，
  * 只在需要时重建，避免"每个视频页各建一个"导致的多路解码器。
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlayerHolder(private val context: Context) {
 
     /**

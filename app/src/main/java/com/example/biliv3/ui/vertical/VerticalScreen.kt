@@ -120,6 +120,7 @@ import kotlinx.coroutines.delay
  * 通用语言，零学习成本。
  */
 @Composable
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 fun VerticalScreen(
     state: VerticalUiState,
     holder: PlayerHolder,

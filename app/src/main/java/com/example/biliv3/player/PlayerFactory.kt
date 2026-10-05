@@ -34,6 +34,7 @@ import com.example.biliv3.data.model.PlayInfo
  *
  * 注意：这里的 DataSource 是**媒体专用**的，与 API 请求的 OkHttp 客户端无关。
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 object PlayerFactory {
 
     /**

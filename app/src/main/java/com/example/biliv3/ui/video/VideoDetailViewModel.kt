@@ -80,6 +80,8 @@ class VideoDetailViewModel(
     private val interactions: InteractionRepository? = null,
     private val subtitleRepo: SubtitleRepository? = null,
     private val danmakuRepo: DanmakuRepository? = null,
+    /** 进度条拖动预览（v1.5.3）。null = 测试/预览模式。 */
+    private val videoshotRepo: com.example.biliv3.data.VideoshotRepository? = null,
     private val commentRepo: CommentRepository? = null,
     private val authHeader: String = "",
     /**
@@ -392,7 +394,12 @@ class VideoDetailViewModel(
                         // 同上：两个请求各自静默失败（缺失就显示 0，
                         // 与 VideoDetail 的默认值一致）
                         val fans = runCatching { repo.ownerFans(detail.ownerMid) }.getOrDefault(0)
-                        val viewers = runCatching { repo.viewerCount(detail.aid, detail.cid) }.getOrDefault(0)
+                        // 🔴 v1.5.3：一次请求取回「在看人数 + 章节」——
+                        // 两者本来就在同一个 `player/v2` 响应里
+                        // （`online_count` / `view_points`），分两次拉纯属浪费。
+                        val meta = runCatching { repo.playerMeta(detail.aid, detail.cid) }
+                            .getOrDefault(com.example.biliv3.data.PlayerMeta())
+                        val viewers = meta.online
                         val cur = _state.value
                         if (cur is DetailUiState.Content) {
                             _state.value = cur.copy(
@@ -402,6 +409,10 @@ class VideoDetailViewModel(
                                 ),
                             )
                         }
+                        // 章节单独存 StateFlow —— 它要参与"章节列表"与
+                        // "当前位置属于哪一章"，塞进 VideoDetail 会让那个
+                        // data class 承担不属于它的职责。
+                        _chapters.value = meta.chapters
                     }
                 }
                 .onFailure { e ->
@@ -534,6 +545,84 @@ class VideoDetailViewModel(
     private fun resetDanmaku() {
         loadedSegment = 0
         _danmaku.value = emptyList()
+    }
+
+    /**
+     * 当前视频的章节（v1.5.3）。
+     *
+     * ## ⚠️ 空列表是**常态**，不是失败
+     *
+     * 实测扫了排行榜 + 热门共 **60 个视频，`view_points` 全为空数组** ——
+     * 章节是 UP 主投稿时**手动添加**的，属少数视频。
+     *
+     * 所以 UI 侧必须把「空」显示成**诚实的空态**（"该视频没有章节"），
+     * 既不能造假数据，也不能把空当成加载失败。
+     */
+    private val _chapters = MutableStateFlow<List<com.example.biliv3.data.VideoChapter>>(emptyList())
+    val chapters: StateFlow<List<com.example.biliv3.data.VideoChapter>> = _chapters.asStateFlow()
+
+    /** 当前播放位置落在哪一章（null = 不在任何章节内 / 没有章节）。 */
+    fun chapterAt(positionSeconds: Int): com.example.biliv3.data.VideoChapter? =
+        _chapters.value.firstOrNull { it.contains(positionSeconds) }
+
+    /**
+     * 跳转到指定章节（空降）。
+     *
+     * ⚠️ 与「自动跳过片段」不同 —— 这是**用户主动点击**，
+     * 所以不受 `sponsorBlockEnabled` 开关约束，也不做二次确认。
+     *
+     * @param chapterIndex `chapters` 里的下标
+     * @param player 当前播放器（null 时只更新 UI 不 seek）
+     */
+    fun jumpToChapter(
+        chapterIndex: Int,
+        player: androidx.media3.exoplayer.ExoPlayer?,
+    ) {
+        val ch = _chapters.value.getOrNull(chapterIndex) ?: return
+        runCatching { player?.seekTo(ch.fromSeconds * 1000L) }
+    }
+
+    /** 切换分P 时重置章节（不同 cid 章节不同）。 */
+    private fun resetChapters() {
+        _chapters.value = emptyList()
+    }
+
+    // ---------------- 进度条拖动预览（v1.5.3） ----------------
+
+    /**
+     * 当前视频的预览精灵图。
+     *
+     * `null` = 还没拉到 / 该视频没有预览资源 —— UI 两种情况都降级为
+     * "只显示时间文字"，不伪造画面。
+     *
+     * ⚠️ 与弹幕不同，**不按进度懒加载** —— 整张精灵图一次拉完
+     * （实测约 1.5 MB，包含全部 68 帧），拖动时才裁帧。
+     * 分次拉反而会在拖动中产生 IO 抖动。
+     */
+    private val _videoshot = MutableStateFlow<com.example.biliv3.data.Videoshot?>(null)
+    val videoshot: StateFlow<com.example.biliv3.data.Videoshot?> = _videoshot.asStateFlow()
+
+    /** 已拉过预览的 cid（换分P 时 cid 变 → 要重拉）。 */
+    private var videoshotCid = 0L
+
+    /**
+     * 拉当前分P 的进度条预览。
+     *
+     * 失败 / 无资源都静默保持 null —— 预览是增强功能，
+     * 弹错误反而打断拖动。
+     */
+    private fun loadVideoshot(cid: Long) {
+        val repo = videoshotRepo ?: return
+        if (cid <= 0L || cid == videoshotCid) return
+        videoshotCid = cid
+        // 换分P 先把旧图清掉，否则会短暂显示**上一个分P**的预览帧
+        _videoshot.value = null
+
+        viewModelScope.launch {
+            val shot = repo.fetch(bvid, cid)
+            // 竞态防护：这期间可能又切了分P
+            if (videoshotCid == cid) _videoshot.value = shot
+        }
     }
 
     // ---------------- 评论操作 ----------------
@@ -1052,9 +1141,10 @@ class VideoDetailViewModel(
         if (index == _currentPage.value) return
 
         _currentPage.value = index
-        // 分P 变了 → cid 变了 → 弹幕/片段都不同，必须重置
+        // 分P 变了 → cid 变了 → 弹幕/片段/章节都不同，必须重置
         resetDanmaku()
         resetSkipSegments()
+        resetChapters()
         fetchPlayInfo(cur.detail, index)
     }
 
@@ -1365,7 +1455,11 @@ class VideoDetailViewModel(
         viewModelScope.launch {
             _playState.value = PlayState.Loading
             runCatching { repo.playInfo(detail.bvid, cid, quality) }
-                .onSuccess { _playState.value = PlayState.Ready(it) }
+                .onSuccess {
+                    _playState.value = PlayState.Ready(it)
+                    // 取流成功 → 顺手拉进度条预览（同一 cid，失败静默）
+                    loadVideoshot(cid)
+                }
                 .onFailure {
                     _playState.value = PlayState.Failed(userMessageFor(it))
                 }

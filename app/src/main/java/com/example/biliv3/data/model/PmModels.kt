@@ -47,15 +47,62 @@ data class PmSession(
 data class PmMessage(
     val msgKey: Long,
     val senderId: Long,
-    /** 已解析出的纯文本内容。 */
+    /** 已解析出的纯文本内容（图片消息为空）。 */
     val text: String,
     /** 时间（Unix 秒）。 */
     val timestamp: Long,
     /** 自己发的（用于左右气泡对齐）。 */
     val isMine: Boolean,
+    /**
+     * 消息类型（接口原样保留）。v1.5.3 新增。
+     *
+     * ## 实测取值（真实账号，扫 20 个会话共 148 条）
+     *
+     * | 值 | 含义 | content 结构 |
+     * |---|---|---|
+     * | `1` | 文字 | `{"content":"你好"}` |
+     * | `2` | **图片** | `{"url":"https://message.biliimg.com/...jpg","height":1138,"width":850}` |
+     * | `10` | 系统通知 | 登录提醒等 |
+     *
+     * ⚠️ 官方还有 `5`（撤回）/ `6`（分享卡片）/ `7`（视频卡片）等，
+     * 但**本次样本里没出现** —— 不猜，遇到未知类型按"不支持"处理并明示。
+     */
+    val msgType: Int = 1,
+    /**
+     * 图片消息的 URL（`msgType == 2` 时有效）。v1.5.3 新增。
+     *
+     * 实测域名 `message.biliimg.com`，**必须走 `CoverUrls` 统一处理**
+     * （补 https: 前缀），否则 Coil 加载失败。
+     */
+    val imageUrl: String = "",
+    /** 图片原始宽高（用于按比例占位，避免加载时布局跳动）。 */
+    val imageWidth: Int = 0,
+    val imageHeight: Int = 0,
 ) {
-    /** 是否系统/卡片类消息（无纯文本可显示）。 */
-    val isUnsupported: Boolean get() = text.isEmpty()
+    /**
+     * 是否**真正不支持**的消息（既无文本也无图）。
+     *
+     * ⚠️ 原实现是 `text.isEmpty()` —— 这会把**图片消息也判成不支持**
+     * （图片消息的 text 本来就是空的）。修法：按 `msgType` 判，
+     * 并且**只有既没文本又没图**才算不支持。
+     */
+    val isUnsupported: Boolean get() = text.isEmpty() && imageUrl.isEmpty()
+
+    /** 是否为图片消息。 */
+    val isImage: Boolean get() = msgType == 2 && imageUrl.isNotEmpty()
+
+    /**
+     * 图片按比例算出的显示宽高比（宽/高）。
+     *
+     * 拿不到尺寸时返回 `4f/3f`（B 站图片常见比例），
+     * 保证 UI 有确定的占位高度、不会加载后跳动。
+     */
+    val imageAspect: Float
+        get() = if (imageWidth > 0 && imageHeight > 0) {
+            imageWidth.toFloat() / imageHeight.toFloat()
+        } else {
+            4f / 3f
+        }
 }
 
 /** 私信会话列表 + 分页。 */

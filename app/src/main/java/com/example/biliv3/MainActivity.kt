@@ -55,6 +55,7 @@ import com.example.biliv3.nav.MainShell
  *    **自动**进小窗，不需要我们拦截 —— 这是官方推荐的体验。
  *    低版本只能靠用户点按钮触发 [enterPip]。
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class MainActivity : ComponentActivity() {
 
     /**

@@ -1,5 +1,6 @@
 package com.example.biliv3.ui.message
 
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -563,6 +564,32 @@ private fun MessageBubble(message: PmMessage) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (message.isMine) Arrangement.End else Arrangement.Start,
     ) {
+        // 🔴 v1.5.3：**图片消息单独渲染**（原实现只画文本 →
+        // 图片消息的 text 为空 → 显示"[暂不支持的消息类型]"）。
+        //
+        // 图片气泡**不加内边距、不铺色底** —— 图片本身就是内容，
+        // 再套一层色底会出现"图外面一圈粉边"，很脏。
+        // 只保留圆角与最大宽度约束。
+        if (message.isImage) {
+            // 图片宽度固定为屏宽的 62%（留出与对方气泡对齐的空间），
+            // 高度按原图比例算 —— 这样加载前就占好位，不会"图一出来布局跳一下"。
+            //
+            // ⚠️ 比例夹在 0.4~3.0：极端长图/宽图会把气泡拉成一条线或一堵墙。
+            val maxW = (LocalConfiguration.current.screenWidthDp * 0.62f).dp
+            val h = (maxW.value / message.imageAspect.coerceIn(0.4f, 3f)).dp
+            AsyncImage(
+                model = message.imageUrl,
+                contentDescription = "图片消息",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .width(maxW)
+                    .height(h)
+                    .clip(bubbleShape)
+                    .background(colors.bgHover),
+            )
+            return@Row
+        }
+
         Box(
             modifier = Modifier
                 // 气泡最宽占 78%：留出对比空间，避免"满屏都是自己的话"
@@ -573,7 +600,13 @@ private fun MessageBubble(message: PmMessage) {
                 .padding(horizontal = Space.x3, vertical = Space.x2),
         ) {
             Text(
-                text = if (message.isUnsupported) "[暂不支持的消息类型]" else message.text,
+                // ⚠️ 未知类型要**说清是什么**，不是笼统的"不支持" ——
+                // 用户看到 type 号才知道该反馈什么（§11.1 的"明示"要求）。
+                text = if (message.isUnsupported) {
+                    "[暂不支持的消息类型 ${message.msgType}]"
+                } else {
+                    message.text
+                },
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = FontSize.body,
                     lineHeight = FontSize.bodyLine,

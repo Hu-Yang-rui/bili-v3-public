@@ -131,6 +131,38 @@ object CoverUrls {
      * 仅当 host 以 `.hdslb.com` 结尾且以 `i` + 数字开头时改写，
      * 不动其它域名（避免误伤第三方图床或将来换 CDN）。
      */
+    /**
+     * 把任意接口给的图片地址**归一化成可直接加载的 URL**。
+     *
+     * ## 为什么需要它（v1.5.3）
+     *
+     * 不同接口给的图片地址形态不一致，实测见过三种：
+     * - `//i0.hdslb.com/xxx.jpg` —— **协议相对**（`cover` 接口常见）
+     * - `http://i1.hdslb.com/xxx.jpg` —— **明文 http**
+     * - `https://message.biliimg.com/xxx.jpg` —— 已经是对的
+     *
+     * 直接丢给 Coil 加载 `//` 开头的地址会失败（不是合法 URL），
+     * 明文 `http` 在 `targetSdk 28+` 会被系统 cleartext 策略拦掉。
+     *
+     * ## 与 [cover] / [avatar] 的分工
+     *
+     * 那两个是**带尺寸参数**的封面/头像专用（会拼 `@480w_270h_1c`）。
+     * 私信图片**不需要也不能**加尺寸后缀（原图就是原图），
+     * 所以单独开这一个只做「补协议 + 归一 host」的函数。
+     *
+     * ⚠️ 空串进空串出（调用方据此判"没有图"）。
+     */
+    fun normalize(raw: String): String {
+        val url = raw.trim()
+        if (url.isEmpty()) return url
+        val withScheme = when {
+            url.startsWith("//") -> "https:$url"
+            url.startsWith("http://") -> "https://" + url.removePrefix("http://")
+            else -> url
+        }
+        return normalizeHost(withScheme)
+    }
+
     private fun normalizeHost(url: String): String {
         val idx = url.indexOf("://")
         if (idx < 0) return url

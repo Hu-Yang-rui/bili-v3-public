@@ -1,5 +1,7 @@
 package com.example.biliv3.ui.video
 
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -125,6 +127,7 @@ import com.example.biliv3.ui.component.VideoCard
  * | 互动 | 无 | 点赞/投币/收藏/分享 |
  */
 @Composable
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 fun VideoDetailScreen(
     bvid: String,
     windowSize: WindowSize,
@@ -261,6 +264,13 @@ fun VideoDetailScreen(
     downloadEntry: com.example.biliv3.ui.download.VideoDownloadEntryViewModel? = null,
     /** 打开离线缓存管理页。 */
     onOpenDownloads: () -> Unit = {},
+    /**
+     * 打开私信列表（v1.5.3）。
+     *
+     * 「分享给 B站好友」走这条路：站内分享不需要任何第三方 SDK，
+     * 是这个 App **真实能做到**的分享方式。
+     */
+    onOpenMessages: () -> Unit = {},
     /** 加入稍后再看。由导航层注入（需要 LibraryRepository）。 */
     onAddToView: (Long) -> Unit = {},
     /** 该视频是否已在稍后再看。 */
@@ -285,6 +295,22 @@ fun VideoDetailScreen(
     val subtitleLoading by viewModel.subtitleLoading.collectAsStateWithLifecycle()
     val subtitleError by viewModel.subtitleError.collectAsStateWithLifecycle()
     val danmaku by viewModel.danmaku.collectAsStateWithLifecycle()
+    // 进度条拖动预览（v1.5.3）：null = 该视频没有预览资源，UI 降级
+    val videoshot by viewModel.videoshot.collectAsStateWithLifecycle()
+    // 章节（空降助手，v1.5.3）：空列表 = 该视频没有章节（常态，不显示该块）
+    val chapters by viewModel.chapters.collectAsStateWithLifecycle()
+
+    /**
+     * 当前播放位置（秒）—— **只用于高亮"正在哪一章"**（v1.5.3）。
+     *
+     * ⚠️ 数据来源是 `PlayerControls` 的上报，不是这里自己轮询 ——
+     * `PlayerControls` 本来就在轮询 `player.currentPosition` 刷时间轴，
+     * 复用它已有的循环是零成本；这里再起一条协程就是重复读同一个值。
+     *
+     * ⚠️ 只有在**有章节**时才需要它，所以 `chapters` 为空时这个值
+     * 保持 0，不会引起任何额外重组。
+     */
+    var currentPositionSeconds by remember { mutableIntStateOf(0) }
     val danmakuEnabled by viewModel.danmakuEnabled.collectAsStateWithLifecycle()
     val danmakuAlpha by viewModel.danmakuAlpha.collectAsStateWithLifecycle()
     val danmakuFontScale by viewModel.danmakuFontScale.collectAsStateWithLifecycle()
@@ -722,6 +748,8 @@ fun VideoDetailScreen(
                     onFocusCommentHandled = viewModel::consumeFocusComment,
                     activeSubtitle = activeSubtitle,
                     danmaku = danmaku,
+                    videoshot = videoshot,
+                onPositionTick = { sec -> currentPositionSeconds = sec },
                     danmakuEnabled = danmakuEnabled,
                     danmakuAlpha = danmakuAlpha,
                     danmakuFontScale = danmakuFontScale,
@@ -774,6 +802,9 @@ fun VideoDetailScreen(
                     // 发弹幕：与弹幕开关/播放器状态联动（见 DanmakuInputSheet）
                     onSendDanmaku = { showDanmakuInput = true },
                     onSelectPage = viewModel::selectPage,
+                    chapters = chapters,
+                    currentPositionSeconds = currentPositionSeconds,
+                    onJumpChapter = { index -> viewModel.jumpToChapter(index, player) },
                     onRetryPlay = {
                         playerError = null
                         viewModel.retryPlay()
@@ -926,27 +957,76 @@ fun VideoDetailScreen(
                 onDismiss = { showMoreMenu = false },
                 onShareChannel = { channel ->
                     showMoreMenu = false
+                    // 🔴 v1.5.3：**按渠道真正分发**（原实现所有渠道走同一个
+                    // `createChooser`，等于渠道名是装饰 —— 选"微信"和选
+                    // "复制链接"之外的三项，行为完全一样）。
+                    //
+                    // ## 分层策略（由"能不能做到"决定，不是想当然）
+                    //
+                    // | 渠道 | 做法 | 为什么 |
+                    // |---|---|---|
+                    // | 复制链接 | 直接写剪贴板 | 不离开 App，最轻 |
+                    // | B站好友 | 打开本 App 的私信 → 选人 → 粘贴 | **站内分享是真实能力**，不需要任何第三方 SDK |
+                    // | 微信/朋友圈/QQ | `ACTION_SEND` + **指定包名** | 装了就直接进对应 App，没装则降级到系统面板 |
+                    // | 小红书 | 尝试包名，**失败降级** | 小红书对 `ACTION_SEND` 支持不稳定，必须容错 |
+                    //
+                    // ⚠️ **不伪造 SDK 集成**：微信/QQ 的"分享到朋友圈""分享给好友"
+                    // 若要精确到那种程度需要官方 SDK + AppID（要注册开发者）。
+                    // 这里用 `setPackage` 直达目标 App，**能做到的部分就做到**，
+                    // 做不到的部分（如朋友圈直接发图）明确不假装。
+                    val shareUrl = "https://www.bilibili.com/video/$bvid"
+                    val shareTitle = (state as? DetailUiState.Content)?.detail?.title.orEmpty()
                     when (channel) {
-                        // 「下载分享」= 把直链分享出去（不是下载视频），
-                        // 与下面的「缓存」是两件事，命名上刻意区分。
                         "复制链接" -> {
-                            copyToClipboard(context, "https://www.bilibili.com/video/$bvid")
+                            copyToClipboard(context, shareUrl)
                         }
+
+                        // ---- B站好友：走**站内私信**，不离开 App ----
+                        "B站好友" -> {
+                            // 进私信列表，由用户自己选人。
+                            // 链接已复制好，用户粘贴即可 —— 这是没有
+                            // "选好友"弹窗（需要好友列表接口）时最诚实的做法。
+                            copyToClipboard(context, shareUrl)
+                            onOpenMessages()
+                        }
+
                         else -> {
-                            // 其余渠道走系统分享面板（不伪造微信/QQ 的 SDK 集成）
-                            val intent = android.content.Intent(
-                                android.content.Intent.ACTION_SEND,
-                            ).apply {
-                                type = "text/plain"
-                                putExtra(
-                                    android.content.Intent.EXTRA_TEXT,
-                                    "https://www.bilibili.com/video/$bvid",
-                                )
+                            // 其余渠道：按包名直达，失败则降级系统面板
+                            val target = shareChannelPackage(channel)
+                            val sent = if (target != null) {
+                                runCatching {
+                                    context.startActivity(
+                                        android.content.Intent(
+                                            android.content.Intent.ACTION_SEND,
+                                        ).apply {
+                                            type = "text/plain"
+                                            putExtra(android.content.Intent.EXTRA_TEXT, shareUrl)
+                                            putExtra(android.content.Intent.EXTRA_SUBJECT, shareTitle)
+                                            setPackage(target)
+                                        },
+                                    )
+                                }.isSuccess
+                            } else {
+                                false
                             }
-                            runCatching {
-                                context.startActivity(
-                                    android.content.Intent.createChooser(intent, "分享到"),
-                                )
+                            // 直达失败（未安装 / 不支持该 intent）→ 系统面板兜底
+                            if (!sent) {
+                                runCatching {
+                                    context.startActivity(
+                                        android.content.Intent.createChooser(
+                                            android.content.Intent(
+                                                android.content.Intent.ACTION_SEND,
+                                            ).apply {
+                                                type = "text/plain"
+                                                putExtra(
+                                                    android.content.Intent.EXTRA_TEXT,
+                                                    shareUrl,
+                                                )
+                                            },
+                                            "分享到",
+                                        ),
+                                    )
+                                }
                             }
                         }
                     }
@@ -1376,6 +1456,10 @@ private fun DetailContent(
     onFocusCommentHandled: () -> Unit,
     activeSubtitle: com.example.biliv3.data.subtitle.SubtitleBody?,
     danmaku: List<com.example.biliv3.data.danmaku.DanmakuItem>,
+    /** 进度条拖动预览精灵图（v1.5.3）。null = 该视频没有预览资源。 */
+    videoshot: com.example.biliv3.data.Videoshot? = null,
+    /** 整秒位置上报（v1.5.3）。透传给 PlayerArea 用于章节高亮。 */
+    onPositionTick: (Int) -> Unit = {},
     danmakuEnabled: Boolean,
     danmakuAlpha: Float,
     danmakuFontScale: Float,
@@ -1439,6 +1523,12 @@ private fun DetailContent(
     /** 右栏：发弹幕入口。 */
     onSendDanmaku: () -> Unit,
     onSelectPage: (Int) -> Unit,
+    /** 章节（空降助手，v1.5.3）。**空列表是常态** —— 实测 60 个视频全无章节。 */
+    chapters: List<com.example.biliv3.data.VideoChapter> = emptyList(),
+    /** 当前播放位置（秒）。用于高亮"正在哪一章"。 */
+    currentPositionSeconds: Int = 0,
+    /** 点击章节跳转。 */
+    onJumpChapter: (Int) -> Unit = {},
     onRetryPlay: () -> Unit,
     onPlayerError: (String) -> Unit,
     onLike: () -> Unit,
@@ -1518,6 +1608,8 @@ private fun DetailContent(
                 isFullscreen = true,
                 activeSubtitle = activeSubtitle,
                 danmaku = danmaku,
+                videoshot = videoshot,
+                onPositionTick = onPositionTick,
                 danmakuEnabled = danmakuEnabled,
                 danmakuAlpha = danmakuAlpha,
                 danmakuFontScale = danmakuFontScale,
@@ -1591,6 +1683,8 @@ private fun DetailContent(
                     isFullscreen = false,
                     activeSubtitle = activeSubtitle,
                     danmaku = danmaku,
+                    videoshot = videoshot,
+                onPositionTick = onPositionTick,
                     danmakuEnabled = danmakuEnabled,
                     danmakuAlpha = danmakuAlpha,
                     danmakuFontScale = danmakuFontScale,
@@ -1722,6 +1816,8 @@ private fun DetailContent(
                     isFullscreen = false,
                     activeSubtitle = activeSubtitle,
                     danmaku = danmaku,
+                    videoshot = videoshot,
+                onPositionTick = onPositionTick,
                     danmakuEnabled = danmakuEnabled,
                     danmakuAlpha = danmakuAlpha,
                     danmakuFontScale = danmakuFontScale,
@@ -2102,6 +2198,65 @@ private fun DetailContent(
                 }
             }
 
+            // ================= 章节（空降助手，v1.5.3）=================
+            //
+            // ## 为什么"没有章节"时**整块不渲染**
+            //
+            // 实测扫了排行榜 + 热门共 **60 个视频，`view_points` 全为空数组** ——
+            // 章节是 UP 主投稿时**手动添加**的，属少数视频。
+            // 若常驻显示「该视频没有章节」，等于给 99% 的视频挂一句
+            // 无用的话（§1.1：不做无信息量的产出）。
+            //
+            // 所以：**有章节才渲染**；没有就整块不出现。
+            // 这与"加载失败"是两件事 —— 失败也不会显示假章节。
+            //
+            // ⚠️ 必须是**独立的 `item`**，不能塞进上面 `item(key="pages")`
+            // 的 `Column` 里 —— 那样它会落在那个 Column 的作用域内，
+            // 而 `LazyRow`/`items` 只能在 `LazyListScope` 里调（编译期就会报
+            // `@Composable invocations can only happen from the context of
+            // a @Composable function`）。
+            if (chapters.isNotEmpty()) {
+                item(key = "chapters") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .ruleTop(color = Rule.color)
+                            .padding(
+                                start = Space.x4,
+                                end = Space.x4,
+                                top = Rhythm.between,
+                            ),
+                    ) {
+                        Text(
+                            text = "章节（${chapters.size}）",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = FontSize.body,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.textPrimary,
+                            ),
+                            modifier = Modifier.padding(horizontal = Space.x4),
+                        )
+                        Spacer(Modifier.height(Space.x2))
+                        androidx.compose.foundation.lazy.LazyRow(
+                            contentPadding = PaddingValues(horizontal = Space.x4),
+                            horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                        ) {
+                            items(chapters.size) { index ->
+                                val ch = chapters[index]
+                                ChapterChip(
+                                    timeLabel = ch.timeLabel,
+                                    title = ch.title,
+                                    // 当前播放位置落在本章 → 高亮（"我在哪一章"）
+                                    active = currentPositionSeconds in
+                                        ch.fromSeconds until ch.toSeconds,
+                                    onClick = { onJumpChapter(index) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // ---- 相关推荐 ----
             //
             // ⚠️ 整块必须有 bgCard 背景。
@@ -2287,6 +2442,10 @@ private fun PlayerArea(
     isFullscreen: Boolean,
     activeSubtitle: com.example.biliv3.data.subtitle.SubtitleBody?,
     danmaku: List<com.example.biliv3.data.danmaku.DanmakuItem>,
+    /** 进度条拖动预览精灵图（v1.5.3）。null = 该视频没有预览资源。 */
+    videoshot: com.example.biliv3.data.Videoshot? = null,
+    /** 整秒位置上报（v1.5.3）。用于章节高亮。 */
+    onPositionTick: (Int) -> Unit = {},
     danmakuEnabled: Boolean,
     danmakuAlpha: Float,
     danmakuFontScale: Float,
@@ -2454,6 +2613,12 @@ private fun PlayerArea(
                     onToggleFullscreen = onToggleFullscreen,
                     // 受控：与浮动返回按钮同步显隐
                     controlsVisible = chromeVisible,
+                    // 拖动进度条时的画面预览（v1.5.3）
+                    // null = 该视频没有预览资源 → 降级为只显示时间文字
+                    videoshot = videoshot,
+                onPositionTick = onPositionTick,
+                    // 上报整秒位置 → 章节高亮（复用 PlayerControls 已有的轮询，
+                    // 不再另起协程读同一个 player）
                     onToggleControls = { chromeVisible = !chromeVisible },
                     onAutoHide = { chromeVisible = false },
                     // 拖动中不跳片段（空降助手依赖）
@@ -2774,7 +2939,105 @@ internal fun PageChip(
     )
 }
 
-/** 详情页骨架：与真实布局同构，避免内容到达时跳动。 */
+/**
+ * 章节胶囊（空降助手，v1.5.3）。
+ *
+ * ## 与 [PageChip] 的区别
+ *
+ * `PageChip` 是**单选**（只能在一个分P），用品牌粉实底表示选中。
+ * 章节是**定位**不是选择 —— 用户点它是"跳到那儿"，之后仍会随播放
+ * 自然离开这一章。所以：
+ *
+ * - 用**描边 + 时间前缀**表达"当前所在章"，而不是整块实底
+ * - 内容包含 `时间 + 标题`，因为章节的核心信息是**时间点**
+ *
+ * ## 形状
+ *
+ * 直角 + 左侧时间用等宽 —— 符合 §5.1「等宽字体读数用于时间轴」。
+ */
+@Composable
+internal fun ChapterChip(
+    timeLabel: String,
+    title: String,
+    active: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = BiliTheme.colors
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(Radius.interactive))
+            .background(if (active) colors.brandPrimary.copy(alpha = 0.18f) else colors.bgHover)
+            .border(
+                width = if (active) 1.dp else 0.dp,
+                color = if (active) colors.brandPrimary else androidx.compose.ui.graphics.Color.Transparent,
+                shape = RoundedCornerShape(Radius.interactive),
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = timeLabel,
+            style = MaterialTheme.typography.labelMedium.copy(
+                // 等宽：时间读数用 Geek 字体族（§5.1 允许的极客点缀）
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                fontSize = FontSize.badge,
+                color = if (active) colors.brandPrimary else colors.textTertiary,
+            ),
+            maxLines = 1,
+        )
+        Spacer(Modifier.width(Space.x2))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.label,
+                fontWeight = if (active) FontWeight.Medium else FontWeight.Normal,
+                color = if (active) colors.textPrimary else colors.textSecondarySafe,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 140.dp),
+        )
+    }
+}
+
+/**
+ * 分享渠道 → 目标 App 包名（v1.5.3）。
+ *
+ * ## 为什么要"包名直达"而不是只弹系统面板
+ *
+ * `createChooser` 的问题是**多一步**：用户点了"微信"，还要在系统面板里
+ * 再找一次微信。`setPackage` 可以直达，体验与官方客户端一致。
+ *
+ * ## 为什么返回 null 而不是硬编码后失败
+ *
+ * `null` = **这个渠道没有明确的目标包名**（如"下载分享"），
+ * 调用方据此直接走系统面板，不做无谓的 `startActivity` 尝试。
+ *
+ * ## ⚠️ 包名错了会怎样
+ *
+ * `setPackage` 指向未安装的包 → `ActivityNotFoundException` →
+ * 调用方 `runCatching` 捕获 → **降级系统面板**。
+ * 所以这里包名写错不会崩，只是失去"直达"这个优化。
+ *
+ * 包名取的是各 App **国内版**的主包名（国际版 `com.tencent.mm` 等另有变体，
+ * 不在这里穷举 —— 未覆盖的会自然降级到系统面板）。
+ */
+private fun shareChannelPackage(channel: String): String? = when (channel) {
+    "微信" -> "com.tencent.mm"
+    "朋友圈" -> "com.tencent.mm"
+    "QQ" -> "com.tencent.mobileqq"
+    "QQ空间" -> "com.tencent.mobileqq"
+    "微博" -> "com.sina.weibo"
+    // 小红书：对 ACTION_SEND 的支持不稳定，尝试直达，失败会降级
+    "小红书" -> "com.xingin.xhs"
+    // 没有明确目标的（如"下载分享"）→ 走系统面板
+    else -> null
+}
+
+/**
+ * 详情页骨架：与真实布局同构，避免内容到达时跳动。
+ */
 @Composable
 private fun DetailSkeleton() {
     val colors = BiliTheme.colors

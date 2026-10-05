@@ -26,6 +26,7 @@ class VideoDetailViewModelFactory(
     private val interactionRepo: InteractionRepository? = null,
     private val subtitleRepo: SubtitleRepository? = null,
     private val danmakuRepo: com.example.biliv3.data.danmaku.DanmakuRepository? = null,
+    private val videoshotRepo: com.example.biliv3.data.VideoshotRepository? = null,
     private val commentRepo: com.example.biliv3.data.CommentRepository? = null,
     /** 空降助手（第三方可跳过片段）。传 null 时该功能整体不启用。 */
     private val sponsorBlockRepo: com.example.biliv3.data.SponsorBlockRepository? = null,
@@ -51,6 +52,7 @@ class VideoDetailViewModelFactory(
             interactions = interactionRepo,
             subtitleRepo = subtitleRepo,
             danmakuRepo = danmakuRepo,
+            videoshotRepo = videoshotRepo,
             commentRepo = commentRepo,
             sponsorBlockRepo = sponsorBlockRepo,
             authHeader = authHeader,

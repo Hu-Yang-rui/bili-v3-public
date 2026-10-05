@@ -1,5 +1,6 @@
 package com.example.biliv3.ui.message
 
+import com.example.biliv3.data.model.PmMessagePage
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.biliv3.data.PmRepository
@@ -119,12 +120,47 @@ class ChatViewModel(
                         messages = page.messages,
                         loading = false,
                     )
+                    // 🔴 v1.5.3：拉完消息**立刻回报已读** ——
+                    // 否则服务端未读数不变，红点永远不消（用户报告的正是这个）。
+                    //
+                    // ⚠️ 用 maxSeqno（= 最新一条的序列号）而不是 ackSeqno：
+                    // 我们要表达的是"这个会话我全看了"。
+                    // `PmMessagePage` 只给了 minSeqno（用于上拉历史），
+                    // 所以从消息列表里取最大的 msgKey 当 ack。
+                    markReadUpTo(page)
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         loading = false,
                         error = userMessageFor(e),
                     )
+                }
+        }
+    }
+
+    /**
+     * 回报已读到最新一条。
+     *
+     * ## 为什么单独抽出来（v1.5.3）
+     *
+     * 进入会话、以及**收到新消息后**都要回报 —— 后者原本没人做，
+     * 于是"在会话里待着收到新消息"仍会留下未读。
+     *
+     * ## ⚠️ 失败不阻断、也不假装成功
+     *
+     * 已读是**尽力而为**的副作用：失败时消息照常显示，
+     * 但**不写任何"已读"的本地状态** —— 下次进页面重拉会自然纠正。
+     * 这正是任务书要求的"不要假装服务端已读"。
+     */
+    private fun markReadUpTo(page: PmMessagePage) {
+        // 取最大 msgKey（服务端序列号单调递增）
+        val maxSeq = page.messages.maxOfOrNull { it.msgKey } ?: 0L
+        if (maxSeq <= 0L) return
+        viewModelScope.launch {
+            repo.markRead(talkerId, maxSeq)
+                .onFailure { e ->
+                    // 只记日志：这是后台副作用，不该弹错打断阅读
+                    android.util.Log.w("BiliPm", "标记已读失败: ${e.message}")
                 }
         }
     }

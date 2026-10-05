@@ -108,6 +108,39 @@ android {
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
+
+    /**
+     * lint 纳入门禁（v1.5.3）。
+     *
+     * ## 为什么现在才开
+     *
+     * 之前 lint 有 **35 errors** 从未被发现 —— 因为 §1 的构建门禁
+     * 只跑 `testDebugUnitTest / assembleDebug / assembleRelease`，
+     * 不含 `lintDebug`。而 `abortOnError` 默认是开的，
+     * 只是**没人跑**，所以那些错误一直存在。
+     *
+     * v1.5.3 把 35 个清到 **0 个**（30 条 Media3 `@UnstableApi` 类级
+     * `@OptIn` + 2 条 `themes.xml` 的 `tools:targetApi` +
+     * `remember` 返回 Unit + 组合期读 `StateFlow.value`），
+     * 现在可以开成硬门禁。
+     *
+     * ⚠️ 只把 **error** 当门禁（`abortOnError = true`），
+     * warning 不阻断 —— 剩下 21 条 warning 是依赖版本提示、
+     * `Modifier` 参数顺序这类**建议**，逐条修收益低且噪音大。
+     * 但 warning 会照常输出，新增时肉眼可见。
+     *
+     * ⚠️ 新增代码若引入 error（最典型的是用 Media3 非稳定 API 忘了
+     * `@OptIn`），**构建会直接失败** —— 这是有意的。
+     */
+    lint {
+        abortOnError = true
+        // 只关心 error；warning 不阻断构建
+        warningsAsErrors = false
+        // release 构建也跑 lint（默认只对 debug 跑）
+        checkReleaseBuilds = true
+        // 报告里保留完整信息，便于排查
+        checkDependencies = false
+    }
 }
 
 dependencies {

@@ -36,6 +36,7 @@ import com.google.common.util.concurrent.MoreExecutors
  * 这是刻意的取舍 —— 完全单一实例需要把详情页也改成 `MediaController`，
  * 会重写整条播放链路（违反"不推翻现有架构"）。
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class MediaSessionBridge(private val context: Context) {
 
     private var controllerFuture: ListenableFuture<MediaController>? = null

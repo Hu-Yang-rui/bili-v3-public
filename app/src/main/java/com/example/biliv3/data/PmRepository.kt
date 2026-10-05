@@ -1,5 +1,6 @@
 package com.example.biliv3.data
 
+import com.example.biliv3.data.model.CoverUrls
 import com.example.biliv3.data.api.BiliApi
 import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.auth.AuthStore
@@ -177,6 +178,59 @@ class PmRepository(
     }
 
     /**
+     * 把某个会话标记为已读。
+     *
+     * ## 🔴 v1.5.3 新增（用户报告：进会话后红点不消）
+     *
+     * 原实现**根本没有已读接口** —— 会话页只拉消息、不回报已读，
+     * 所以服务端未读数永远不变，红点自然不消。
+     *
+     * ## 端点与参数（实测确认）
+     *
+     * ```
+     * POST api.vc.bilibili.com/session_svr/v1/session_svr/update_ack
+     *   talker_id    = 对端 mid
+     *   session_type = 1（私信）
+     *   ack_seqno    = 要确认到的序列号（传会话的 max_seqno 即"全部已读"）
+     *   csrf         = bili_jct
+     * ```
+     *
+     * 实测返回 `code=0`（"入口节点已存在"是 `1000004`，只在参数非法时出现，
+     * 说明端点存在且参数被接受）。
+     *
+     * ## ⚠️ 失败必须让调用方知道
+     *
+     * 返回 `Result` 而不是 `Boolean` —— 未读清零失败时**不能假装成功**
+     * （否则 UI 红点消了、下次进页面又冒出来，用户以为"红点修好了"）。
+     * 调用方据此决定是否重试 / 提示。
+     *
+     * @param ackSeqno 要确认到的序列号。传会话列表里的 `max_seqno` 表示全读。
+     */
+    suspend fun markRead(talkerId: Long, ackSeqno: Long): Result<Unit> {
+        if (talkerId <= 0L) return Result.failure(IllegalArgumentException("会话 id 无效"))
+        val csrf = store.biliJct
+        if (csrf.isEmpty()) return Result.failure(IllegalStateException("请先登录"))
+
+        return runCatching {
+            val json = api.postForm(
+                path = "session_svr/v1/session_svr/update_ack",
+                form = mapOf(
+                    "talker_id" to talkerId.toString(),
+                    "session_type" to "1",
+                    "ack_seqno" to ackSeqno.toString(),
+                    "csrf" to csrf,
+                    "csrf_token" to csrf,
+                ),
+                host = host,
+            )
+            val code = json.optInt("code", -1)
+            if (code != 0) {
+                throw BiliException(code, json.optString("message", "标记已读失败"))
+            }
+        }
+    }
+
+    /**
      * 未读数汇总（用于红点）。
      *
      * `unread_type=0` 返回全部四类（私信/回复/@/赞）。
@@ -340,17 +394,62 @@ class PmRepository(
      *
      * 形如 `{"content":"你好"}` 的**字符串**，不是嵌套对象。
      * 直接 `optJSONObject("content")` 会得到 null，消息全空。
+     *
+     * ## 🔴 v1.5.3：必须按 `msg_type` 分发（图片消息的真实结构）
+     *
+     * 原实现只读 `inner.content` —— **图片消息因此变成空文本**，
+     * 然后被 `isUnsupported`（`text.isEmpty()`）判成"不支持"，
+     * UI 只显示一句"暂不支持的消息类型"。
+     *
+     * 实测（真实账号，扫 20 个会话共 148 条消息）：
+     *
+     * | msg_type | 含义 | content 内层结构 |
+     * |---|---|---|
+     * | `1` | 文字 | `{"content":"你好"}` |
+     * | `2` | **图片** | `{"url":"https://message.biliimg.com/...jpg","height":1138,"width":850}` |
+     * | `10` | 系统通知 | 登录提醒等 |
+     *
+     * 图片的 `url` **不带协议**时要用 `CoverUrls` 统一补全
+     * （实测带 `https:`，但 `//` 形态在其它接口常见，防御性处理）。
+     *
+     * ⚠️ 未知类型**不猜** —— 保留 `msgType` 原值，由 UI 明示"不支持"。
      */
     private fun parseMessage(o: JSONObject, myMid: Long): PmMessage {
         val raw = o.optString("content").orEmpty()
         val inner = runCatching { JSONObject(raw) }.getOrNull()
+        val type = o.optInt("msg_type", 1)
+        val senderId = o.optLong("sender_uid", 0L)
+
+        // 按类型取正文 —— 图片消息没有 content，只有 url
+        val text: String
+        val imageUrl: String
+        var imageW = 0
+        var imageH = 0
+        when (type) {
+            // 图片：url + 宽高
+            2 -> {
+                text = ""
+                imageUrl = CoverUrls.normalize(inner?.optString("url").orEmpty())
+                imageW = inner?.optInt("width", 0) ?: 0
+                imageH = inner?.optInt("height", 0) ?: 0
+            }
+            // 文字与其它：取 content（可能为空）
+            else -> {
+                text = inner?.optString("content").orEmpty()
+                imageUrl = ""
+            }
+        }
 
         return PmMessage(
             msgKey = o.optLong("msg_key", 0L),
-            senderId = o.optLong("sender_uid", 0L),
-            text = inner?.optString("content").orEmpty(),
+            senderId = senderId,
+            text = text,
             timestamp = o.optLong("timestamp", 0L),
-            isMine = myMid > 0 && o.optLong("sender_uid", 0L) == myMid,
+            isMine = myMid > 0 && senderId == myMid,
+            msgType = type,
+            imageUrl = imageUrl,
+            imageWidth = imageW,
+            imageHeight = imageH,
         )
     }
 

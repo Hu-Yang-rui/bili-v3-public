@@ -214,7 +214,7 @@ fun VideoPlayerSurface(
  * `setSurface` 必须在 **player 已 attach 到主线程** 之后。
  * `ExoPlayer` 要求所有调用在同一线程（这里是主线程，Compose 也是主线程，OK）。
  */
-@OptIn(UnstableApi::class)
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private class TextureSurfaceBinder(
     private var player: ExoPlayer,
     private val view: android.view.TextureView,

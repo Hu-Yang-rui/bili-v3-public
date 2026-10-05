@@ -1,5 +1,6 @@
 package com.example.biliv3
 
+import com.example.biliv3.data.VideoshotRepository
 import android.content.Context
 import com.example.biliv3.data.BangumiRepository
 import com.example.biliv3.data.CommentRepository
@@ -168,6 +169,14 @@ val pmRepository: PmRepository = PmRepository(api, authStore)
 
     /** 历史 / 稍后再看 / 收藏夹。全部需要登录。 */
     val libraryRepository: LibraryRepository = LibraryRepository(api, authStore)
+
+    /**
+     * 进度条拖动预览（`x/player/videoshot`）。
+     *
+     * 实测并非所有视频都有预览资源（未生成的返回空 `image`）——
+     * 拉不到时返回 null，UI 优雅降级为只显示时间。
+     */
+    val videoshotRepository: VideoshotRepository = VideoshotRepository(api)
 
     /**
      * 收藏状态全局广播。

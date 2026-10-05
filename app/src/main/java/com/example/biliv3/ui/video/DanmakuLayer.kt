@@ -98,8 +98,8 @@ fun DanmakuLayer(
         else maxOf(1, ((size.height * displayArea) / laneHeightPx).toInt())
     }
 
-    // 当前活跃弹幕（进入屏幕后尚未消失的）
-    val active = remember { mutableListOf<ActiveDanmaku>() }
+    // 当前活跃弹幕（进入屏幕后尚未消失的）。
+    // ⚠️ 定义见下方 `danmakuKey` 之后 —— 它必须用指纹作 key（换视频清空）。
 
     // ---------------------------------------------------------------------
     // 🔴 v1.5.2 修「弹幕加载到了但屏幕上看不见」
@@ -154,8 +154,17 @@ fun DanmakuLayer(
     var cursor by remember(danmakuKey) { mutableStateOf(0) }
     // 轨道占用结束时间（该轨道可再用的时间戳）
     val laneFreeAt = remember(danmakuKey) { LongArray(MAX_LANES) }
-    // `active` 也要跟着指纹重置 —— 否则换视频后旧弹幕残留占轨道
-    remember(danmakuKey) { active.clear() }
+    // `active` 也要跟着指纹重置 —— 否则换视频后旧弹幕残留占轨道。
+    //
+    // 🔴 v1.5.3 修 lint（`RememberReturnType`）：
+    // 原来写 `remember(danmakuKey) { active.clear() }` —— 用 `remember`
+    // 的**返回值**做副作用。lint 正确指出这有问题：`remember` 语义是
+    // "缓存一个值"，不是"注册副作用"，且 lambda 返回 Unit 无意义。
+    //
+    // 正解：把 `active` **本身**用 `danmakuKey` 作 key ——
+    // 指纹变化时 Compose 自动丢弃旧列表、重建新列表，
+    // 这正是我们要的"换视频清空活跃弹幕"，且不需要任何副作用语句。
+    val active = remember(danmakuKey) { mutableListOf<ActiveDanmaku>() }
 
     // 触发重组用的"当前时间"
     var nowMs by remember { mutableStateOf(0L) }

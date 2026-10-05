@@ -1,5 +1,6 @@
 package com.example.biliv3.ui.component
 
+import androidx.compose.material.icons.outlined.Email
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -227,8 +228,18 @@ private data class ShareChannel(
  * 不随我们的主题变化，但仍集中定义以免散落。
  */
 private val SHARE_CHANNELS = listOf(
+    // 🔴 v1.5.3：新增「B站好友」并置首 ——
+    //
+    // 它是**唯一一个不需要第三方 App、不需要 SDK 就能真正完成分享**的渠道：
+    // 复制链接 + 打开站内私信，用户自己选好友粘贴。
+    //
+    // 放在第一位是因为它**一定能用**；下面几个依赖对端 App 是否安装。
+    ShareChannel("B站好友", Icons.Outlined.Email, DarkColors.channelCopyLink),
     ShareChannel("微信", Icons.Outlined.FavoriteBorder, DarkColors.channelWechat),
     ShareChannel("朋友圈", Icons.Outlined.QrCode, DarkColors.channelMoments),
+    // ⚠️ 「下载分享」这个标签名容易被理解成"把视频下载下来"，
+    // 实际是"把直链分享出去"。改名风险：老用户会找不到。
+    // 折中：保留标签，但在渠道处理里明确它是"分享直链"（见 VideoDetailScreen）。
     ShareChannel("下载分享", Icons.Outlined.Download, DarkColors.channelDownload),
     ShareChannel("复制链接", Icons.Outlined.Share, DarkColors.channelCopyLink),
 )

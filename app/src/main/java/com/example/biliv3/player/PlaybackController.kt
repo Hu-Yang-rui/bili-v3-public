@@ -46,6 +46,7 @@ import kotlinx.coroutines.launch
  * 本类**不创建 ExoPlayer**。所有播放都经过 `holder`，
  * 满足任务书「禁止创建第二套 Player」。
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlaybackController(
     private val context: Context,
     val holder: PlayerHolder,

@@ -10,6 +10,21 @@ import com.example.biliv3.data.model.VideoPage
 import org.json.JSONObject
 
 /**
+ * `x/player/v2` 里我们关心的两项（v1.5.3）。
+ *
+ * 合并成一个数据类是为了**一次请求取回两项** ——
+ * 「在看人数」与「章节」本来就在同一个响应里（`online_count` / `view_points`），
+ * 分两次拉纯属浪费一次往返。
+ *
+ * @param online 在看人数（未取到为 0）
+ * @param chapters 章节（没有则空列表 —— **这是常态**，实测 60 个视频全为空）
+ */
+data class PlayerMeta(
+    val online: Int = 0,
+    val chapters: List<VideoChapter> = emptyList(),
+)
+
+/**
  * 视频详情与取流。
  *
  * ## 两个接口的调用时机不同
@@ -110,23 +125,44 @@ class VideoRepository(
     }
 
     /**
-     * 当前在看人数。
+     * `player/v2` 里我们关心的两项：在看人数 + 章节。
      *
-     * 来自 `x/player/v2` 的 `data.online_count`（实测可用）。
-     * 未取到返回 0，UI 据此不显示该项。
+     * ## 🔴 v1.5.3：合并成一个请求
+     *
+     * 「在看人数」和「章节」来自**同一个** `x/player/v2` 响应
+     * （`data.online_count` 与 `data.view_points`）。
+     * 原实现只有 `viewerCount`，加章节时若再发一次请求就是**白白多一次往返**。
+     *
+     * 所以合并成这一个函数，一次拉回两项。UI 侧各取所需。
+     *
+     * @return `online` = 在看人数（未取到 0）；`chapters` = 章节（没有则空列表）
      */
-    suspend fun viewerCount(aid: Long, cid: Long): Int {
-        if (aid <= 0 || cid <= 0) return 0
+    suspend fun playerMeta(aid: Long, cid: Long): PlayerMeta {
+        if (aid <= 0 || cid <= 0) return PlayerMeta()
         return runCatching {
             val json = api.getRaw(
                 path = Endpoints.PLAYER_V2,
                 query = mapOf("aid" to aid.toString(), "cid" to cid.toString()),
                 signed = false,
             )
-            if (json.optInt("code", -1) != 0) return@runCatching 0
-            json.optJSONObject("data")?.optInt("online_count", 0) ?: 0
-        }.getOrDefault(0)
+            if (json.optInt("code", -1) != 0) return@runCatching PlayerMeta()
+            val d = json.optJSONObject("data") ?: return@runCatching PlayerMeta()
+            PlayerMeta(
+                online = d.optInt("online_count", 0),
+                chapters = ChapterParser.parse(d),
+            )
+        }.getOrDefault(PlayerMeta())
     }
+
+    /**
+     * 当前在看人数。
+     *
+     * 来自 `x/player/v2` 的 `data.online_count`（实测可用）。
+     * 未取到返回 0，UI 据此不显示该项。
+     *
+     * ⚠️ 需要人数**和章节**时用 [playerMeta]，不要调两次（同一次响应）。
+     */
+    suspend fun viewerCount(aid: Long, cid: Long): Int = playerMeta(aid, cid).online
 
     /**
      * 取流。

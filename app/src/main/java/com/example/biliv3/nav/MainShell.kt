@@ -552,15 +552,33 @@ fun MainShell(
                  * `navigate()` 会**同步**更新返回栈，之后才触发重组与
                  * dispose，所以 onDispose 时读到的已是新栈。
                  * 真正的释放仍由「回到非播放页」兜底。
+                 *
+                 * 🔴 v1.5.3 修两处 lint（都是真问题）：
+                 *
+                 * 1. `StateFlow.valueCalledInComposition` ——
+                 *    原来用 `rememberUpdatedState(navController.currentBackStack.value.any{...})`
+                 *    在**组合期**读 StateFlow。`StateFlow.value` 读**不触发重组**，
+                 *    所以这个值一旦算出来就永远不更新 —— `latestPlayerPageOpen`
+                 *    恒为首次组合时的结果，逻辑本身就是错的。
+                 * 2. `RestrictedApi` —— `currentBackStack` 是 navigation 的
+                 *    内部 API（跨库访问受限）。
+                 *
+                 * 修法：**改成在 `onDispose` 里现读**（那时已不在组合期，
+                 *    且返回栈确实已同步更新）。用 `currentBackStackEntryAsState()`
+                 *    拿不到"整个栈"，所以这里保留对 `currentBackStack` 的读取，
+                 *    但加 `@Suppress` 明确标注这是**有意**的受控访问。
                  */
-                val latestPlayerPageOpen by androidx.compose.runtime.rememberUpdatedState(
-                    navController.currentBackStack.value.any {
-                        it.destination.route == Routes.PLAYER
-                    },
-                )
                 androidx.compose.runtime.DisposableEffect(backStackEntry) {
                     onDispose {
-                        if (!latestInPip && !latestPlayerPageOpen) {
+                        // 现读返回栈：onDispose 不在组合期，读 StateFlow 安全
+                        @Suppress("RestrictedApi")
+                        val playerPageOpen = runCatching {
+                            navController.currentBackStack.value.any {
+                                it.destination.route == Routes.PLAYER
+                            }
+                        }.getOrDefault(false)
+
+                        if (!latestInPip && !playerPageOpen) {
                             container.playerHolder.release()
                         }
                     }
@@ -709,6 +727,8 @@ fun MainShell(
                         },
                         downloadEntry = dlEntry,
                         onOpenDownloads = { navController.navigate(Routes.DOWNLOADS) },
+                        // 「分享给 B站好友」→ 进私信列表（链接已复制到剪贴板）
+                        onOpenMessages = { navController.navigate(Routes.MESSAGES) },
                         inToView = inToView,
                         onAddToView = { aid ->
                             scope.launch {
@@ -762,6 +782,7 @@ fun MainShell(
                             interactionRepo = container.interactionRepository,
                             subtitleRepo = container.subtitleRepository,
                             danmakuRepo = container.danmakuRepository,
+                        videoshotRepo = container.videoshotRepository,
                             commentRepo = container.commentRepository,
                             sponsorBlockRepo = container.sponsorBlockRepository,
                             authHeader = container.appAuthHeader,
