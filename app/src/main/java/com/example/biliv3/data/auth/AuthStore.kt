@@ -304,8 +304,24 @@ class AuthStore(context: Context) : AuthState {
  * 那个是内存态（或依赖 `CookieManager`），进程重启就丢，
  * 而登录态必须**跨重启保持**（`AGENTS.md` §3.2
  * 验收标准：「重启 App 仍是登录态」）。
+ *
+ * ## 🔴 为什么收的是"提供者"而不是 `AuthStore` 本身（v1.6.2 启动优化）
+ *
+ * 构造 `AuthStore` 要访问 Android Keystore 并解密整个偏好文件，**实测 193ms**。
+ * 若 CookieJar 在构造时就持有 `AuthStore` 实例，就会在 `AppContainer`
+ * 初始化时**强制求值**那个 lazy —— lazy 白做，启动照样慢 193ms。
+ *
+ * 收 `() -> AuthStore` 后，CookieJar 的构造变成零成本；
+ * 真正的 `AuthStore` 只在**首次请求**时才被求值（`invoke()` 落在
+ * [loadForRequest] / [saveFromResponse] 里，两者都由 OkHttp 在
+ * **IO 线程**调用，不在主线程）。
+ *
+ * ⚠️ **不要改回直接持有 `AuthStore`** —— 那会静默抵消 `AppContainer`
+ * 里 `authStore` 的 `by lazy`。
  */
-class AuthCookieJar(private val store: AuthStore) : CookieJar {
+class AuthCookieJar(private val storeProvider: () -> AuthStore) : CookieJar {
+
+    private val store: AuthStore get() = storeProvider()
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         if (cookies.isEmpty()) return

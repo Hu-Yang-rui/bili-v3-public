@@ -55,8 +55,28 @@ class AppContainer(context: Context) {
 
     private val appContext = context.applicationContext
 
-    /** 加密凭据存储（SESSDATA 走 Android Keystore）。 */
-    val authStore: AuthStore = AuthStore(appContext)
+    /**
+     * 加密凭据存储（SESSDATA 走 Android Keystore）。
+     *
+     * ## 🔴 `by lazy` —— v1.6.2 启动优化（实测省 ~150ms）
+     *
+     * 构造它要访问 Android Keystore 并解密整个偏好文件，**实测 148~193ms**，
+     * 是 `AppContainer` 里最慢的一项。原实现让它在
+     * `MainActivity.onCreate` **同步**执行，直接把冷启动顶上去。
+     *
+     * 但它的用途只有两个：给 OkHttp 的 `CookieJar` 提供凭据、
+     * 给少数写操作提供 `csrf` —— **都发生在首次网络请求时**，
+     * 不在启动路径上。改成 lazy 后启动不再等它。
+     *
+     * ⚠️ `lazy` 默认 `SYNCHRONIZED`，**必须保持** —— `loadForRequest`
+     * 由 OkHttp 在 IO 线程调用，且可能有并发请求同时首次触达。
+     * 不要改成 `LazyThreadSafetyMode.NONE`。
+     *
+     * ⚠️ **任何直接读 `authStore` 的字段都会强制求值** ——
+     * 新增依赖它的对象时，那个对象自己也要 `by lazy`，
+     * 否则这里就白 lazy 了（本项目已在 `danmakuRepository` 上踩过一次）。
+     */
+    val authStore: AuthStore by lazy { AuthStore(appContext) }
 
     /**
      * 多账号列表存储（同样加密）。
@@ -64,8 +84,9 @@ class AppContainer(context: Context) {
      * 与 [authStore] 分工：[authStore] 存"**当前**生效账号"，
      * 本类存"曾经登录过的**全部**账号"，供「切换账号」使用。
      */
-    val accountStore: com.example.biliv3.data.auth.AccountStore =
+    val accountStore: com.example.biliv3.data.auth.AccountStore by lazy {
         com.example.biliv3.data.auth.AccountStore(appContext)
+    }
 
     /**
      * 账号切换的全局广播。
@@ -77,15 +98,18 @@ class AppContainer(context: Context) {
         com.example.biliv3.data.auth.AccountSync()
 
     /** 账号切换器：多账号读写的唯一入口（保证"先存旧、再写新、后广播"顺序）。 */
-    val accountSwitcher: com.example.biliv3.data.auth.AccountSwitcher =
+    val accountSwitcher: com.example.biliv3.data.auth.AccountSwitcher by lazy {
         com.example.biliv3.data.auth.AccountSwitcher(authStore, accountStore, accountSync)
+    }
 
     /**
      * CookieJar：读写均落到 [AuthStore]，登录态跨重启保持。
      *
      * `AGENTS.md` §3.2 验收标准要求「重启 App 仍是登录态」。
      */
-    private val cookieJar = AuthCookieJar(authStore)
+    // ⚠️ 传 lambda 而不是 `authStore` 本身 —— 传实例会在启动时
+    // 强制求值上面那个 lazy，lazy 就白做了（见 AuthCookieJar 的 KDoc）。
+    private val cookieJar = AuthCookieJar { authStore }
 
     /** 全应用唯一的 OkHttp 客户端。 */
     private val client: OkHttpClient = OkHttpClient.Builder()
@@ -111,8 +135,14 @@ class AppContainer(context: Context) {
      */
     val homeRepository: HomeRepository = HomeRepository(api, liveRepository)
     val videoRepository: VideoRepository = VideoRepository(api)
-    val authRepository: AuthRepository = AuthRepository(api, authStore)
-    val searchHistoryStore: SearchHistoryStore = SearchHistoryStore(appContext)
+    val authRepository: AuthRepository by lazy { AuthRepository(api, authStore) }
+    /**
+     * 搜索历史（本地持久化）。
+     *
+     * ⚠️ `by lazy` —— 首次 `SharedPreferences` 读要 **83ms**，
+     * 而只有搜索页用得到。别在启动时付这个钱。
+     */
+    val searchHistoryStore: SearchHistoryStore by lazy { SearchHistoryStore(appContext) }
 
     /**
      * 应用设置（持久化）。
@@ -124,7 +154,9 @@ class AppContainer(context: Context) {
     val settingsStore: SettingsStore = SettingsStore(appContext)
 
     /** 互动仓库（点赞/投币/收藏/分享）。需要 AuthStore 取 csrf。 */
-    val interactionRepository: InteractionRepository = InteractionRepository(api, authStore)
+    val interactionRepository: InteractionRepository by lazy {
+        InteractionRepository(api, authStore)
+    }
 
     /**
      * 字幕 / AI 翻译仓库。
@@ -147,17 +179,16 @@ class AppContainer(context: Context) {
      * **不带 CookieJar** 的实例 → 请求无 cookie → 服务端返回
      * `-101 账号未登录` → 表现为"发弹幕点了没反应"。
      */
-    val danmakuRepository: DanmakuRepository = DanmakuRepository(
-        client = client,
-        store = authStore,
-    )
+    val danmakuRepository: DanmakuRepository by lazy {
+        DanmakuRepository(client = client, store = authStore)
+    }
 
     /** 评论仓库。x/v2/reply/wbi/main 实测未登录也可读(code=0)。 */
     /**
      * 评论仓库。读评论未登录可用；点赞/删除/回复需要登录态
      * （写操作要 csrf），所以传入 authStore。
      */
-    val commentRepository: CommentRepository = CommentRepository(api, authStore)
+    val commentRepository: CommentRepository by lazy { CommentRepository(api, authStore) }
 
 /**
  * 私信仓库。
@@ -165,10 +196,10 @@ class AppContainer(context: Context) {
  * ⚠️ 私信接口在 `api.vc.bilibili.com`（与主 API 不同域名），
  * 且发送需要 WBI 签名 —— 详见 PmRepository 的说明。
  */
-val pmRepository: PmRepository = PmRepository(api, authStore)
+val pmRepository: PmRepository by lazy { PmRepository(api, authStore) }
 
     /** 历史 / 稍后再看 / 收藏夹。全部需要登录。 */
-    val libraryRepository: LibraryRepository = LibraryRepository(api, authStore)
+    val libraryRepository: LibraryRepository by lazy { LibraryRepository(api, authStore) }
 
     /**
      * 进度条拖动预览（`x/player/videoshot`）。
@@ -344,14 +375,30 @@ val pmRepository: PmRepository = PmRepository(api, authStore)
             }
         }
 
-    /** 插件管理器。 */
-    val pluginManager: com.example.biliv3.plugin.PluginManager =
+    /**
+     * 插件管理器。
+     *
+     * ## 🔴 `by lazy` —— v1.6.2 启动优化
+     *
+     * 它的构造里有 `getSharedPreferences` + `restoreInstalled()`（扫插件目录、
+     * 读每个插件的清单）—— 都是**磁盘 IO**，而插件页是冷门入口，
+     * 绝大多数启动根本不会进。
+     *
+     * ⚠️ **"恢复已安装插件"必须仍然发生**（否则 App 重启后插件列表为空，
+     * 这是装机实测确认过的 bug）—— 所以它留在 `lazy` 块**内部**：
+     * 首次访问 `pluginManager` 时照样会 `restoreInstalled()`，
+     * 只是时机从"进程启动"推迟到"第一次真的要用插件"。
+     *
+     * ⚠️ **判据**：任何"恢复 / 预加载"逻辑放进 `lazy` 是安全的，
+     * 因为 `lazy` 保证**首次访问前一定执行完**；
+     * 但如果某个入口**绕过 `pluginManager` 直接读插件数据**，
+     * 就会读到未恢复的状态 —— 本项目所有插件访问都经过它。
+     */
+    val pluginManager: com.example.biliv3.plugin.PluginManager by lazy {
         com.example.biliv3.plugin.PluginManager(appContext, pluginHost).apply {
-            // ⚠️ 必须恢复已安装的插件 —— 否则 App 重启后插件列表为空
-            // （装机实测确认过这个 bug）。放在 AppContainer 初始化里，
-            // 保证任何入口进插件页时列表已经就绪。
             runCatching { restoreInstalled() }
         }
+    }
 
     /** 离线缓存索引（元数据）。 */
     val downloadStore: DownloadStore = DownloadStore(appContext)
@@ -371,12 +418,14 @@ val pmRepository: PmRepository = PmRepository(api, authStore)
         com.example.biliv3.data.PlaybackProgressStore(appContext)
 
     /** 用户主页（资料 / 投稿 / 关注）。 */
-    val spaceRepository: com.example.biliv3.data.SpaceRepository =
+    val spaceRepository: com.example.biliv3.data.SpaceRepository by lazy {
         com.example.biliv3.data.SpaceRepository(api, authStore)
+    }
 
     /** 动态流。需要登录。 */
-    val dynamicRepository: com.example.biliv3.data.DynamicRepository =
+    val dynamicRepository: com.example.biliv3.data.DynamicRepository by lazy {
         com.example.biliv3.data.DynamicRepository(api, authStore)
+    }
 
     /** 分区页（最新 / 热门）。 */
     val categoryRepository: com.example.biliv3.data.CategoryRepository =

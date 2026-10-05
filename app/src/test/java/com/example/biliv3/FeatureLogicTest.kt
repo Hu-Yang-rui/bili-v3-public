@@ -308,16 +308,44 @@ class FeatureLogicTest {
     )
 
     @Test
-    fun `起播后用真实分辨率而不是断点固定值`() {
-        // 回归：此前竖屏恒取 4:3，16:9 的视频被塞进 4:3 容器 → 大量黑边。
+    fun `横屏视频的容器至少 4 比 3 高 —— 否则竖屏手机上播放区域太小`() {
+        // 🔴 v1.6.2 行为变更（用户要求"播放区域扩大"）。
+        //
+        // ⚠️ 方向容易搞反：`aspectRatio = 宽/高`，**值越小容器越高**。
+        //   - 16:9 = 1.78 → 高 = 0.56×宽（1080 宽屏 = 608px 高）
+        //   - 4:3  = 1.33 → 高 = 0.75×宽（810px 高）← 更大
+        // 所以"扩大播放区域"= 取**更小**的比例值。
+        //
+        // 画面由 PlayerView 的 RESIZE_MODE_FIT 按原比例缩放，
+        // **不会变形**，只是上下黑边更宽。
         val r = playerAspectRatio(WindowSize.Mobile, info(1920, 1080))
-        assertThat(r).isWithin(0.001f).of(16f / 9f)
+        assertThat(r).isWithin(0.001f).of(4f / 3f)
+        // 判据：必须**小于** 16:9（即容器比原来更高）
+        assertThat(r).isLessThan(16f / 9f)
+    }
+
+    @Test
+    fun `比 4 比 3 更高的横屏视频保持原比例 —— 不被压矮`() {
+        // 4:3 本身不动
+        assertThat(playerAspectRatio(WindowSize.Mobile, info(1440, 1080)))
+            .isWithin(0.001f).of(4f / 3f)
+        // 更接近正方形（1.11 < 1.33）的视频已经比 4:3 更高，不该被改成 4:3
+        assertThat(playerAspectRatio(WindowSize.Mobile, info(1200, 1080)))
+            .isWithin(0.001f).of(1200f / 1080f)
     }
 
     @Test
     fun `竖版视频用 9 比 16 而不是被压成横版`() {
         val r = playerAspectRatio(WindowSize.Mobile, info(1080, 1920))
         assertThat(r).isWithin(0.001f).of(9f / 16f)
+    }
+
+    @Test
+    fun `竖版视频不被放大到 4 比 3 —— 否则会顶掉整屏`() {
+        // 竖版本来就高，再放大到 4:3 会把下面的简介/评论挤出屏幕。
+        // 判据：9:16 的视频必须**小于** 4:3。
+        val r = playerAspectRatio(WindowSize.Mobile, info(1080, 1920))
+        assertThat(r).isLessThan(4f / 3f)
     }
 
     @Test

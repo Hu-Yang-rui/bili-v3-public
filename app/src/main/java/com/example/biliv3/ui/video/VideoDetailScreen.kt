@@ -1237,7 +1237,21 @@ internal fun playerAspectRatio(
         val r = w.toFloat() / h.toFloat()
         // 兜底：极端比例（如接口脏数据 1×9999）会让容器塌掉或撑爆，
         // 限制在合理区间内，超出则视为不可信、回退断点值。
-        if (r.isFinite() && r in MIN_PLAYER_ASPECT..MAX_PLAYER_ASPECT) return r
+        if (r.isFinite() && r in MIN_PLAYER_ASPECT..MAX_PLAYER_ASPECT) {
+            // 🔴 v1.6.2「播放区域扩大」：
+            //   横屏视频（r >= 1）→ 容器**最多** 4:3。
+            //
+            //   ⚠️ 注意方向：`aspectRatio = 宽/高`，所以**值越小容器越高**。
+            //      16:9 = 1.78 → 高 = 0.56×宽（1080 宽屏只有 608px 高）
+            //      4:3  = 1.33 → 高 = 0.75×宽（810px 高）
+            //   要"放大"就必须取**较小**的值 → `minOf`，不是 `maxOf`。
+            //   （第一版写成 `maxOf`，被单测 `横屏视频的容器至少 4 比 3` 抓到。）
+            //
+            //   画面本身由 PlayerView 的 `RESIZE_MODE_FIT` 按原比例缩放，
+            //   **不会变形**，只是上下黑边更宽 —— 观感上就是"播放器更大"。
+            //   竖版视频（r < 1）→ 保持真实比例，本来就高，再放大顶掉整屏。
+            return if (r >= 1f) minOf(r, PLAYER_ASPECT_PORTRAIT) else r
+        }
     }
     return when (windowSize) {
         WindowSize.Mobile -> PLAYER_ASPECT_PORTRAIT
