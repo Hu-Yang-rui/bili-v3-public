@@ -143,6 +143,30 @@ android {
     }
 }
 
+/**
+ * Compose 编译器指标（**只在手动开启时产出**，不进常规构建）。
+ *
+ * 用法：
+ * ```
+ * ./gradlew :app:assembleRelease -PcomposeMetrics
+ * # 报告在 build/compose-metrics 与 build/compose-reports
+ * ```
+ *
+ * ⚠️ **为什么需要它**：Compose 的最大性能陷阱是「参数不稳定 → 不可跳过」——
+ * 父组件重组时，即使子组件参数没变也会被重新执行。这类问题**肉眼看不出**，
+ * 只能靠编译器报告指出哪些 composable 是 `restartable skippable`、
+ * 哪些参数被判定为 `unstable`。
+ *
+ * 本项目此前**从未开过**（所以「有没有不可跳过的热点」一直是未知数）。
+ * 默认关闭是为了不给日常构建增加 IO。
+ */
+if (project.hasProperty("composeMetrics")) {
+    composeCompiler {
+        metricsDestination.set(layout.buildDirectory.dir("compose-metrics"))
+        reportsDestination.set(layout.buildDirectory.dir("compose-reports"))
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
