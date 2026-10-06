@@ -62,7 +62,37 @@ if (-not (Test-Path $notesPath)) { throw "missing release notes: $notesPath" }
 # comment, so it never shows on the rendered release page).
 $rawNotes = [System.IO.File]::ReadAllText($notesPath, [System.Text.Encoding]::UTF8)
 
-# ---- changelog: derived from git so it can never drift or be forgotten ----
+# ---- changelog: hand-written highlights first, git log as fallback ----
+#
+# WHY hand-written highlights exist:
+#
+# The git-log-derived list is a flat dump of commit subjects. That works when a
+# release is a few small fixes, but it collapses when one commit carries several
+# features -- the whole release then renders as ONE long run-on line, which tells
+# the reader nothing. Commit subjects are written for reviewers (conventional
+# prefixes, scopes), not for users.
+#
+# So: a per-tag file may be supplied at tool/highlights/<tag>.md. When present it
+# IS the changelog. When absent, we fall back to the git-derived list below, so
+# nothing breaks for releases that do not need one.
+#
+# The file is UTF-8 and may contain Chinese, so it must live outside this script
+# (this .ps1 has to stay pure ASCII -- see the header).
+$highlightsPath = Join-Path $root ("tool\highlights\{0}.md" -f $tag)
+
+$changes = $null
+if (Test-Path $highlightsPath) {
+    $changes = [System.IO.File]::ReadAllText($highlightsPath, [System.Text.Encoding]::UTF8).Trim()
+    if ($changes) {
+        Write-Host ("changelog: using hand-written highlights ({0})" -f
+            ("tool/highlights/{0}.md" -f $tag))
+    } else {
+        $changes = $null
+        Write-Host ("changelog: highlights file is empty; falling back to git log")
+    }
+}
+
+# ---- changelog (fallback): derived from git so it can never drift ----
 #
 # The changelog is USER-FACING, so internal-only commits must not appear in it:
 # release scripting, doc maintenance, version bumps, build/CI chores. Users care
@@ -75,6 +105,7 @@ $rawNotes = [System.IO.File]::ReadAllText($notesPath, [System.Text.Encoding]::UT
 #
 # Native command output is decoded using [Console]::OutputEncoding; commit
 # subjects here are Chinese, so force UTF-8 first or they come back as '?'.
+if (-not $changes) {
 $prevEnc = [Console]::OutputEncoding
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 try {
@@ -147,6 +178,7 @@ try {
 } finally {
     [Console]::OutputEncoding = $prevEnc
 }
+}   # end: only when no hand-written highlights were supplied
 
 $notes = $rawNotes.Replace('{{TAG}}', $tag).
                     Replace('{{VERSION}}', $ver).
@@ -227,7 +259,18 @@ foreach ($a in $apks) {
         Write-Host ("uploaded: {0} ({1} MB)" -f $a, $sizeMb)
         Write-Host ("          {0}" -f $asset.browser_download_url)
     } catch {
-        Write-Host ("upload FAILED: {0} :: {1}" -f $a, $_.Exception.Message)
+        # GitHub returns 422 when an asset with the same name already exists.
+        # That is the NORMAL outcome of re-running this script to fix a release
+        # body -- the asset is already correct, nothing to do. Report it as a
+        # skip rather than a scary "FAILED", or the operator will think the
+        # release is broken and start deleting assets by hand.
+        $msg = $_.Exception.Message
+        if ($msg -match '422') {
+            Write-Host ("already uploaded, skipped: {0}" -f $a)
+            Write-Host ("  (delete the asset first if you really need to replace it)")
+        } else {
+            Write-Host ("upload FAILED: {0} :: {1}" -f $a, $msg)
+        }
     }
 }
 
