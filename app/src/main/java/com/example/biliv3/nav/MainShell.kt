@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -1065,13 +1066,15 @@ fun MainShell(
                     onOpenUser = { uid ->
                         if (uid > 0L) navController.navigate(Routes.space(uid))
                     },
-                    // 复制用户名：剪贴板操作在导航层做（页面不碰 Context）
-                    onCopyName = { name ->
-                        if (name.isNotEmpty()) {
-                            liveClipboard.setText(androidx.compose.ui.text.AnnotatedString(name))
-                            Toast.makeText(context, "已复制用户名", Toast.LENGTH_SHORT).show()
+                    // 复制用户名 / 复制弹幕内容（剪贴板操作在导航层做）
+                    onCopyName = { text ->
+                        if (text.isNotEmpty()) {
+                            liveClipboard.setText(androidx.compose.ui.text.AnnotatedString(text))
+                            Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
                         }
                     },
+                    // 未登录 → 引导登录（弹幕输入条）
+                    onLoginRequired = { navController.navigate(Routes.LOGIN) },
                     viewModel = viewModel(
                         key = "live-room-$roomId",
                         factory = com.example.biliv3.ui.live.LiveRoomVmFactory(
@@ -1083,6 +1086,8 @@ fun MainShell(
                             settingsStore = container.settingsStore,
                             // 权限判定（mid）与写操作（csrf）都需要它
                             authStore = container.authStore,
+                            // 「查看发送者」复用已有的用户资料仓库
+                            spaceRepo = container.spaceRepository,
                         ),
                     ),
                 )

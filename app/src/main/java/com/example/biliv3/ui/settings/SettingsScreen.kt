@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.biliv3.data.Settings
+import com.example.biliv3.data.SpeedTiers
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
 import com.example.biliv3.design.SectionMark
@@ -201,9 +202,15 @@ fun SettingsScreen(
 
             InlinePicker(
                 label = "默认倍速",
-                currentLabel = "${formatSpeedLabel(settings.defaultSpeed)}×",
-                options = SPEEDS.map {
-                    PickerOption(key = it, label = "${formatSpeedLabel(it)}×")
+                // ⚠️ 档位来自共享的 `SpeedTiers`（v1.6.5）——
+                // 与播放器弹层、直播读同一个定义，不再各写一份
+                currentLabel = "${SpeedTiers.label(settings.defaultSpeed)}×",
+                options = SpeedTiers.ALL.map {
+                    PickerOption(
+                        key = it.value,
+                        label = "${SpeedTiers.label(it.value)}×",
+                        description = if (it.verified) null else "可能音频失真",
+                    )
                 },
                 selectedKey = settings.defaultSpeed,
                 expanded = picker == SettingsPickerId.Speed,
@@ -595,6 +602,37 @@ fun SettingsScreen(
                     },
                 )
             }
+
+            // ================= 烂梗库 =================
+            //
+            // ## 为什么只在这里说明来源
+            //
+            // 内容是**本项目整理**的常用直播用语。写清楚来源，
+            // 避免被误认为是 B 站官方内容。
+            SectionMark(
+                index = 10,
+                title = "烂梗库",
+                modifier = Modifier.padding(top = Rhythm.section),
+            )
+
+            InfoRow(
+                label = "内置库",
+                value = "${com.example.biliv3.data.meme.MemeLibrary.BUILT_IN.size} 条（本项目整理）",
+            )
+            Text(
+                text = "内置内容为本项目整理的常用直播用语，不是 B 站官方内容。" +
+                    "可在直播间的聊天输入框左侧打开，支持搜索、复制与一键填入。",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = FontSize.badge,
+                    lineHeight = FontSize.labelLine,
+                    color = colors.textTertiary,
+                ),
+                modifier = Modifier.padding(
+                    start = Space.x4,
+                    end = Space.x4,
+                    top = Space.x1,
+                ),
+            )
 
             // ================= 开发者工具 · Cookie 管理 =================
             //
@@ -1203,9 +1241,7 @@ private fun ActionRow(
     }
 }
 
-/** `1.0` → `1`，`1.25` → `1.25`。 */
-private fun formatSpeedLabel(speed: Float): String =
-    if (speed == speed.toInt().toFloat()) speed.toInt().toString() else speed.toString()
+/** 倍速文案已移到 `SpeedTiers.label`（v1.6.5）—— 三处共用一个实现。 */
 
 // ---------------------------------------------------------------------------
 // 开发者工具：Cookie 管理
@@ -1332,7 +1368,8 @@ private fun CookieSection(
 // 档位常量
 // ---------------------------------------------------------------------------
 
-private val SPEEDS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+// ⚠️ 倍速档位已移到 `com.example.biliv3.data.SpeedTiers`（v1.6.5）——
+//    这里刻意不保留副本，避免与播放器弹层/直播漂移。
 
 private val DANMAKU_ALPHA_OPTIONS = listOf(0.3f, 0.5f, 0.7f, 0.9f, 1.0f)
 

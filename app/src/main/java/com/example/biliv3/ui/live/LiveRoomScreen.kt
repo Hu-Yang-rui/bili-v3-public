@@ -106,6 +106,8 @@ fun LiveRoomScreen(
     onOpenUser: (Long) -> Unit = {},
     /** 复制用户名（剪贴板操作在调用方做 —— 页面不碰 Context）。 */
     onCopyName: (String) -> Unit = {},
+    /** 未登录时引导登录（弹幕输入条用）。 */
+    onLoginRequired: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: LiveRoomViewModel,
 ) {
@@ -125,9 +127,17 @@ fun LiveRoomScreen(
     val toast by viewModel.toast.collectAsStateWithLifecycle()
     val pending by viewModel.pendingConfirm.collectAsStateWithLifecycle()
 
-    // 弹层状态：用户菜单 / 禁言时长
+    // 弹层状态：用户菜单 / 禁言时长 / 烂梗库 / 发送者资料
     var menuTarget by remember { mutableStateOf<LiveMessage?>(null) }
     var muteTarget by remember { mutableStateOf<LiveMessage?>(null) }
+    var showMemes by remember { mutableStateOf(false) }
+
+    // 发送与烂梗库状态（v1.6.5）
+    val draft by viewModel.draft.collectAsStateWithLifecycle()
+    val sending by viewModel.sending.collectAsStateWithLifecycle()
+    val sendError by viewModel.sendError.collectAsStateWithLifecycle()
+    val memes by viewModel.memes.collectAsStateWithLifecycle()
+    val senderState by viewModel.senderProfile.collectAsStateWithLifecycle()
 
     // 一次性提示
     val snackbar = remember { SnackbarHostState() }
@@ -341,11 +351,79 @@ fun LiveRoomScreen(
                 canModerate = perms.actions.isNotEmpty(),
                 isSelf = { uid -> viewModel.isSelf(uid) },
                 isKnownAdmin = { uid -> viewModel.isKnownAdmin(uid) },
-                onUserClick = { msg -> menuTarget = msg },
+                onUserClick = { msg ->
+                    // 点弹幕 → 打开用户菜单（已有）；
+                    // 「查看发送者」在菜单里进入（不改变原有交互）
+                    menuTarget = msg
+                },
                 onRetryChat = { viewModel.retryChat() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
+            )
+
+            // ---- 弹幕输入条（v1.6.5）----
+            LiveChatInputBar(
+                text = draft,
+                onTextChange = { viewModel.setDraft(it) },
+                canSend = viewModel.canSend,
+                sending = sending,
+                error = sendError,
+                onSend = { viewModel.sendDraft() },
+                onOpenMemes = { showMemes = true },
+                onLoginRequired = onLoginRequired,
+                modifier = Modifier.padding(horizontal = Space.x2),
+            )
+        }
+
+        // ---- 烂梗库（v1.6.5）----
+        if (showMemes) {
+            MemeLibrarySheet(
+                memes = memes,
+                // 能否直接发送：已登录才给「发送」按钮（不显示灰按钮）
+                canSend = viewModel.canSend,
+                sending = sending,
+                onDismiss = { showMemes = false },
+                onPick = { text ->
+                    viewModel.fillDraft(text)
+                    showMemes = false
+                },
+                onCopy = { text ->
+                    onCopyName(text)
+                },
+                onSend = { text ->
+                    viewModel.sendText(text)
+                    showMemes = false
+                },
+            )
+        }
+
+        // ---- 弹幕发送者资料（v1.6.5）----
+        senderState?.let { st ->
+            LiveSenderSheet(
+                state = st,
+                isKnownAdmin = viewModel.isKnownAdmin(st.base.uid),
+                isSelf = viewModel.isSelf(st.base.uid),
+                onDismiss = { viewModel.dismissSender() },
+                onRetry = { viewModel.loadSender(st.base) },
+                onOpenProfile = { uid ->
+                    viewModel.dismissSender()
+                    onOpenUser(uid)
+                },
+                onCopyName = { name ->
+                    viewModel.dismissSender()
+                    onCopyName(name)
+                },
+                onMention = { name ->
+                    // 项目不支持 @ 语义，这里只把名字填进输入框
+                    viewModel.fillDraft("$name ")
+                    viewModel.dismissSender()
+                },
+                onModerate = { msg ->
+                    viewModel.dismissSender()
+                    menuTarget = msg
+                },
+                canModerate = perms.actions.isNotEmpty(),
             )
         }
 
@@ -368,6 +446,19 @@ fun LiveRoomScreen(
                 onCopyName = { name ->
                     menuTarget = null
                     onCopyName(name)
+                },
+                // v1.6.5：弹幕级操作
+                onViewSender = { msg ->
+                    menuTarget = null
+                    viewModel.loadSender(msg)
+                },
+                onCopyText = { text ->
+                    menuTarget = null
+                    onCopyName(text)
+                },
+                onFillInput = { text ->
+                    menuTarget = null
+                    viewModel.fillDraft(text)
                 },
                 onRequestMute = {
                     menuTarget = null

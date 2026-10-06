@@ -70,6 +70,13 @@ class LiveRoomViewModel(
      * 所以未登录时管理入口直接不显示，而不是让用户点了再报错。
      */
     private val authStore: AuthStore? = null,
+    /**
+     * 用户资料仓库（v1.6.5，「查看弹幕发送者」用）。
+     *
+     * ⚠️ 复用**已有的** `SpaceRepository`（`x/web-interface/card`）——
+     * 不新建用户查询通道（需求明确要求）。
+     */
+    private val spaceRepo: com.example.biliv3.data.SpaceRepository? = null,
 ) : ViewModel() {
 
     // ---------------- 播放（v1.6.3 已有）----------------
@@ -148,6 +155,37 @@ class LiveRoomViewModel(
     /** 待确认的高风险操作（踢出 / 加黑名单）。null = 无。 */
     private val _pendingConfirm = MutableStateFlow<PendingConfirm?>(null)
     val pendingConfirm: StateFlow<PendingConfirm?> = _pendingConfirm.asStateFlow()
+
+    // ---------------- 弹幕发送（v1.6.5）----------------
+
+    /** 输入框内容。放在 VM 而不是 UI 的 `remember` —— 见下方 KDoc。 */
+    private val _draft = MutableStateFlow("")
+    val draft: StateFlow<String> = _draft.asStateFlow()
+
+    /** 发送在途（防连点）。 */
+    private val _sending = MutableStateFlow(false)
+    val sending: StateFlow<Boolean> = _sending.asStateFlow()
+
+    /** 上次发送失败原因（成功或用户继续输入时清空）。 */
+    private val _sendError = MutableStateFlow<String?>(null)
+    val sendError: StateFlow<String?> = _sendError.asStateFlow()
+
+    /** 能否发送（已登录）。 */
+    val canSend: Boolean get() = authStore?.isLoggedIn == true
+
+    // ---------------- 烂梗库（v1.6.5）----------------
+
+    /**
+     * 梗库条目（**内置，本项目整理**）。
+     *
+     * 纯本地常量，无需加载、不会失败 —— 所以这里**没有** loading/error 状态。
+     */
+    private val _memes = MutableStateFlow(com.example.biliv3.data.meme.MemeLibrary.BUILT_IN)
+    val memes: StateFlow<List<com.example.biliv3.data.meme.Meme>> = _memes.asStateFlow()
+
+    /** 正在查看的用户资料（弹幕发送者查询）。null = 未打开。 */
+    private val _senderProfile = MutableStateFlow<SenderProfileState?>(null)
+    val senderProfile: StateFlow<SenderProfileState?> = _senderProfile.asStateFlow()
 
     init {
         load()
@@ -499,6 +537,154 @@ class LiveRoomViewModel(
         _toast.value = null
     }
 
+    // ---------------------------------------------------------------------
+    // 弹幕发送（v1.6.5）
+    // ---------------------------------------------------------------------
+
+    /** 更新草稿。用户重新输入时清掉上次的失败提示。 */
+    fun setDraft(text: String) {
+        _draft.value = text
+        if (_sendError.value != null) _sendError.value = null
+    }
+
+    /**
+     * 发送当前草稿。
+     *
+     * ## 🔴 输入框**不在请求前清空**（§7.15-86）
+     *
+     * 清空必须由"发送成功"决定。否则失败时用户刚打的内容就没了 ——
+     * 而失败恰恰是最需要保留内容重试的时候。
+     *
+     * ## 🔴 绝不伪造成功
+     *
+     * 走 [LiveRepository.sendDanmaku]（真实的 `msg/send`），
+     * 结果按 7 类错误如实反馈。成功才清空 + 提示。
+     *
+     * ## 防并发
+     *
+     * `_sending` 在途时直接丢弃 —— 与房管操作同一约定（§7.22-141）。
+     * 弹幕发送尤其重要：连点两下会**真的发两条**（服务端不做去重）。
+     */
+    fun sendDraft() {
+        val text = _draft.value.trim()
+        if (text.isEmpty()) return
+        if (_sending.value) return
+
+        val csrf = authStore?.biliJct.orEmpty()
+        if (csrf.isEmpty()) {
+            _sendError.value = "请先登录"
+            return
+        }
+
+        _sending.value = true
+        _sendError.value = null
+
+        viewModelScope.launch {
+            val result = repo.sendDanmaku(
+                roomId = room.roomId,
+                text = text,
+                csrf = csrf,
+            )
+            _sending.value = false
+
+            when (result) {
+                is ModerationResult.Success -> {
+                    // 成功才清空
+                    _draft.value = ""
+                    _toast.value = "弹幕已发送"
+                }
+                is ModerationResult.Failure -> {
+                    // 失败：保留草稿，把原因显示在输入框下方
+                    _sendError.value = result.message
+                }
+            }
+        }
+    }
+
+    /** 直接把一段文本发出去（烂梗库的「发送」按钮）。 */
+    fun sendText(text: String) {
+        if (text.isBlank()) return
+        _draft.value = text
+        sendDraft()
+    }
+
+    /** 把一段文本填入输入框（烂梗库的「填入」，**不发送**）。 */
+    fun fillDraft(text: String) {
+        _draft.value = text
+        _sendError.value = null
+    }
+
+    // ---------------------------------------------------------------------
+    // 弹幕发送者查询（v1.6.5）
+    // ---------------------------------------------------------------------
+
+    /**
+     * 查询某条弹幕的发送者资料。
+     *
+     * ## 复用现有用户信息接口
+     *
+     * 走 [com.example.biliv3.data.SpaceRepository.profile]（`x/web-interface/card`）
+     * —— 项目已有的唯一用户资料接口，**不新建**查询通道。
+     *
+     * ## 🔴 失败显示明确错误，**不显示虚假资料**
+     *
+     * 需求原文：
+     * > 用户信息查询失败时显示明确错误，不要显示虚假的用户资料。
+     *
+     * 所以失败进 [SenderProfileState.Failed]，UI 显示错误 + 重试；
+     * **不会**退回显示"昵称未知 / 等级 0"这类看起来像真的的空数据。
+     *
+     * ## 不重复请求已存在的数据
+     *
+     * 需求原文：不要为了这个功能重复请求已经存在的数据。
+     *
+     * 弹幕本身**已经带来**了用户名 / 头像 / 粉丝牌 / 大航海 / 用户等级
+     * （见 `LiveMessage`）—— 这些**直接复用消息里的值**，
+     * 只为"接口才有的信息"（粉丝数、签名、等级）发一次请求。
+     */
+    fun loadSender(msg: LiveMessage) {
+        if (msg.uid <= 0L) {
+            _senderProfile.value = SenderProfileState.Failed(
+                base = msg,
+                message = "这条消息没有可查询的用户",
+            )
+            return
+        }
+
+        val spaceRepo = spaceRepo
+        if (spaceRepo == null) {
+            _senderProfile.value = SenderProfileState.Failed(
+                base = msg,
+                message = "用户资料模块不可用",
+            )
+            return
+        }
+
+        _senderProfile.value = SenderProfileState.Loading(msg)
+        viewModelScope.launch {
+            runCatching { spaceRepo.profile(msg.uid) }
+                .onSuccess { p ->
+                    _senderProfile.value = if (p == null) {
+                        // 接口成功但没这个人 —— 如实说，不编资料
+                        SenderProfileState.Failed(msg, "该用户不存在或资料不可见")
+                    } else {
+                        SenderProfileState.Loaded(msg, p)
+                    }
+                }
+                .onFailure { e ->
+                    _senderProfile.value = SenderProfileState.Failed(
+                        base = msg,
+                        message = userMessageFor(e),
+                    )
+                }
+        }
+    }
+
+    /** 关闭发送者资料浮层。 */
+    fun dismissSender() {
+        _senderProfile.value = null
+    }
+
     override fun onCleared() {
         super.onCleared()
         client.stop()
@@ -515,6 +701,40 @@ class LiveRoomViewModel(
         val target: LiveMessage,
         val action: LivePermissions.Action,
     )
+
+    /**
+     * 「查看发送者」的状态。
+     *
+     * ## 为什么分 [Loading] / [Loaded] / [Failed] 三态而不是"资料 + 错误"
+     *
+     * 三态互斥，用密封接口天然排除"既在加载又有资料"这种非法组合
+     * （与 `AiSummaryUiState` 同一思路）。
+     *
+     * ## ⚠️ [Failed] 也带 [base]（消息里已有的信息）
+     *
+     * 因为**弹幕本身已经带来了**用户名/头像/身份 —— 那些是**确定的**，
+     * 不该因为"接口查询失败"就一起不显示。
+     * 失败时显示"消息里的信息 + 查询失败原因"，而不是一片空白。
+     */
+    sealed interface SenderProfileState {
+        /** 消息里已有的基础信息（永远可用）。 */
+        val base: LiveMessage
+
+        /** 正在查询接口补充信息。 */
+        data class Loading(override val base: LiveMessage) : SenderProfileState
+
+        /** 查询成功。 */
+        data class Loaded(
+            override val base: LiveMessage,
+            val profile: com.example.biliv3.data.SpaceProfile,
+        ) : SenderProfileState
+
+        /** 查询失败（**不显示虚假资料**）。 */
+        data class Failed(
+            override val base: LiveMessage,
+            val message: String,
+        ) : SenderProfileState
+    }
 
     companion object {
         /**
@@ -552,8 +772,12 @@ class LiveRoomVmFactory(
     private val settingsStore: SettingsStore?,
     /** 账号存储：取 mid（身份判定）与 csrf（写操作必需）。 */
     private val authStore: AuthStore? = null,
+    /** 用户资料（「查看发送者」）。复用已有 SpaceRepository。 */
+    private val spaceRepo: com.example.biliv3.data.SpaceRepository? = null,
 ) : androidx.lifecycle.ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        LiveRoomViewModel(repo, room, holder, settingsStore, authStore) as T
+        LiveRoomViewModel(
+            repo, room, holder, settingsStore, authStore, spaceRepo,
+        ) as T
 }

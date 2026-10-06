@@ -94,6 +94,12 @@ fun LiveUserMenu(
     onAction: (LivePermissions.Action) -> Unit,
     onOpenProfile: (Long) -> Unit,
     onCopyName: (String) -> Unit,
+    /** 查看发送者资料（v1.6.5）。 */
+    onViewSender: (LiveMessage) -> Unit = {},
+    /** 复制弹幕内容（v1.6.5）。 */
+    onCopyText: (String) -> Unit = {},
+    /** 把文本填入输入框（v1.6.5）。 */
+    onFillInput: (String) -> Unit = {},
     /** 打开禁言时长选择。 */
     onRequestMute: () -> Unit,
 ) {
@@ -181,14 +187,29 @@ fun LiveUserMenu(
 
                 // ---- 通用项（所有人可见）----
                 MenuRow(
+                    label = "查看发送者",
+                    enabled = target.uid > 0L,
+                    onClick = { onViewSender(target) },
+                )
+                MenuRow(
                     label = "进入个人主页",
                     enabled = target.uid > 0L,
                     onClick = { onOpenProfile(target.uid) },
                 )
                 MenuRow(
+                    label = "复制弹幕内容",
+                    enabled = target.text.isNotEmpty(),
+                    onClick = { onCopyText(target.text) },
+                )
+                MenuRow(
                     label = "复制用户名",
                     enabled = target.uname.isNotEmpty(),
                     onClick = { onCopyName(target.uname) },
+                )
+                MenuRow(
+                    label = "填入输入框",
+                    enabled = target.uname.isNotEmpty(),
+                    onClick = { onFillInput("${target.uname} ") },
                 )
 
                 // ---- 管理项（**只有有权限时才渲染**）----

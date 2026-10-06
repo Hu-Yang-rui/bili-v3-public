@@ -470,6 +470,32 @@ object Endpoints {
 
     /** 移出黑名单。 */
     const val LIVE_BLOCK_DEL = "banned_service/v1/Silent/del_black"
+
+    /**
+     * **发送直播弹幕**（v1.6.5）。
+     *
+     * ## 🔴 实测：直播弹幕发送**不是**视频弹幕那个接口
+     *
+     * | 用途 | 接口 | 说明 |
+     * |---|---|---|
+     * | **直播**弹幕 | `msg/send`（本常量） | 实测返回「账号未登录」= **存在** |
+     * | **视频**弹幕 | `x/v2/dm/post`（主站域名） | 完全另一套 |
+     *
+     * 实测（2026-10-06，无凭据）：
+     * ```
+     * POST api.live.bilibili.com/msg/send           -> 账号未登录（存在，需登录）
+     * POST api.live.bilibili.com/msg/sendMsg        -> invalid request
+     * POST .../xlive/web-room/v1/dM/sendMsg         -> HTTP 404（不存在）
+     * ```
+     *
+     * ## ⚠️ 参数集未在登录态验证
+     *
+     * 按官方网页端形态：`msg` / `roomid` / `csrf` / `rnd` / `color` /
+     * `fontsize` / `mode` / `bubble`。
+     * **成功分支本项目未验证过**（没有可用的登录账号）。
+     * 所以 UI 只保证「失败时如实报错」，**绝不伪造发送成功**。
+     */
+    const val LIVE_SEND_MSG = "msg/send"
 }
 
 /**

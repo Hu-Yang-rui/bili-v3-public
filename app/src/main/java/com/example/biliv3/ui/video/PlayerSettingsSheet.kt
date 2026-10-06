@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.media3.exoplayer.ExoPlayer
+import com.example.biliv3.data.SpeedTiers
 import com.example.biliv3.data.model.PlayInfo
 import com.example.biliv3.data.subtitle.SubtitleBody
 import com.example.biliv3.data.subtitle.SubtitleTrack
@@ -278,12 +279,21 @@ fun PlayerSettingsSheet(
                 }
 
                 // ---- 倍速：同样折叠为一行选择器 ----
+                //
+                // ⚠️ 档位来自共享的 `SpeedTiers`（v1.6.5）——
+                // 不再在本文件里写死，否则与直播那侧必然漂移。
                 if (player != null) {
                     InlinePicker(
                         label = "倍速",
-                        currentLabel = "${formatSpeedLabel(speed)}×",
-                        options = SPEEDS.map {
-                            PickerOption(key = it, label = "${formatSpeedLabel(it)}×")
+                        currentLabel = "${SpeedTiers.label(speed)}×",
+                        options = SpeedTiers.ALL.map {
+                            PickerOption(
+                                key = it.value,
+                                label = "${SpeedTiers.label(it.value)}×",
+                                // 未确认可用的档位**标注出来**而不是隐藏
+                                // （隐藏会让用户以为"没有这个功能"）
+                                description = if (it.verified) null else "可能音频失真",
+                            )
                         },
                         selectedKey = speed,
                         expanded = picker == PickerKindId.Speed,
@@ -622,8 +632,13 @@ private fun SettingRow(
     }
 }
 
-/** 倍速档位。离散档位比滑块心智负担低。 */
-private val SPEEDS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+/**
+ * 倍速档位**已移到** `com.example.biliv3.data.SpeedTiers`（v1.6.5）。
+ *
+ * 这里刻意**不保留**一个本地的 `SPEEDS` 列表 —— 那正是漂移的来源
+ * （视频 6 档、直播另写一套、设置页第三套）。
+ * 现在三处读同一个定义。
+ */
 
 /**
  * 播放设置面板的遮罩。

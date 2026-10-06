@@ -440,10 +440,91 @@ class LiveRepository(
         ),
     )
 
+    // ---------------------------------------------------------------------
+    // 发送弹幕（v1.6.5）
+    // ---------------------------------------------------------------------
+
+    /**
+     * 发送一条直播弹幕。
+     *
+     * ## 🔴 与视频弹幕**不是**同一个接口
+     *
+     * | 用途 | 接口 |
+     * |---|---|
+     * | **直播**弹幕 | `msg/send`（`api.live.bilibili.com`）|
+     * | **视频**弹幕 | `x/v2/dm/post`（`api.bilibili.com`）|
+     *
+     * 实测 `msg/send` 返回「账号未登录」→ **存在且需要登录**
+     * （不是 404、不是 1000003）。
+     *
+     * ## ⚠️ 成功分支未验证
+     *
+     * 参数集按官方网页端形态写，但本项目**没有可用登录账号**验证成功分支。
+     * 所以：
+     * - 返回 [ModerationResult]，失败分类复用同一套（§7.22-138/142）
+     * - **绝不**把失败显示成成功
+     *
+     * ## 为什么复用 [ModerationResult]
+     *
+     * 它与"房管操作"共用同一套错误语义（未登录 / 权限不足 / 限流 / 网络…），
+     * 而发送弹幕的失败形态**完全一样**。新造一个结果类型只会让
+     * 错误处理出现第二套判断（本项目明确禁止）。
+     *
+     * @param text 弹幕正文（调用方需先做长度校验 —— 服务端也会校验）
+     * @param mode 弹幕模式：1=滚动 4=底部 5=顶部（与视频弹幕同一套枚举）
+     */
+    suspend fun sendDanmaku(
+        roomId: Long,
+        text: String,
+        csrf: String,
+        mode: Int = 1,
+        color: Int = 0xFFFFFF,
+        fontSize: Int = 25,
+    ): ModerationResult {
+        if (roomId <= 0L) {
+            return ModerationResult.Failure(
+                kind = ModerationResult.Failure.Kind.INVALID_TARGET,
+                message = "直播间无效",
+            )
+        }
+        if (text.isBlank()) {
+            return ModerationResult.Failure(
+                kind = ModerationResult.Failure.Kind.INVALID_TARGET,
+                message = "弹幕内容不能为空",
+            )
+        }
+
+        return try {
+            val json = api.postForm(
+                path = Endpoints.LIVE_SEND_MSG,
+                form = mapOf(
+                    "msg" to text,
+                    "roomid" to roomId.toString(),
+                    "csrf" to csrf,
+                    // rnd 是防重放随机数；官方网页端每次都带
+                    "rnd" to (System.currentTimeMillis() / 1000).toString(),
+                    "color" to color.toString(),
+                    "fontsize" to fontSize.toString(),
+                    "mode" to mode.toString(),
+                    // bubble=0：不带头像气泡（第三方客户端没有气泡资源）
+                    "bubble" to "0",
+                ),
+                host = Endpoints.LIVE_LIST_HOST,
+            )
+            val code = json.optInt("code", -1)
+            if (code == 0) {
+                ModerationResult.Success
+            } else {
+                // 发送失败的错误码与房管操作同源，复用同一映射
+                LiveErrorMapper.fromCode(code, json.optString("message"))
+            }
+        } catch (e: Exception) {
+            LiveErrorMapper.fromException(e)
+        }
+    }
+
     /**
      * 房管操作的公共执行 + **错误分类**。
-     *
-     * ## 🔴 绝不把失败当成功
      *
      * 需求第 9 条：不能"请求失败 → 当成成功 → UI 显示操作成功"。
      * 这里把每个业务码都翻成明确的 [ModerationResult]，
