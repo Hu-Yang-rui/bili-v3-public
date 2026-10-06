@@ -3,33 +3,55 @@ package com.example.biliv3.data
 import com.example.biliv3.data.api.BiliApi
 import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.api.Endpoints
+import com.example.biliv3.data.live.DanmakuHost
+import com.example.biliv3.data.live.LiveErrorMapper
+import com.example.biliv3.data.live.ModerationResult
 import org.json.JSONObject
 
 /**
- * 直播列表仓库。
- *
- * ## 为什么首版完全没有
- *
- * `Endpoints.LIVE_LIST` 常量**早就定义了**（`api.live.bilibili.com`），
- * 但从未被任何代码调用；首页右侧栏的「正在直播」模块里
- * `HomeRepository` 恒传 `emptyList()`，整块永不渲染。
- * 这是「直播」被判为完全缺失的直接原因。
+ * 直播仓库：列表 / 取流 / 入场上报 / 弹幕接入 / 房管操作。
  *
  * ## ⚠️ 直播接口在独立域名
  *
  * `api.live.bilibili.com`，不在 `api.bilibili.com` ——
  * 走错域名得到 404 或空 body。这是本项目接入直播最容易踩的坑。
  *
- * ## 范围
+ * ## 🔴 直播接口需要 **WBI 签名**（v1.6.4 实测）
  *
- * 只做**直播列表 + 直播间信息**。
- * 直播流播放（HTTP-FLV / HLS）需要另一套播放路径（ExoPlayer 的
- * FLV 扩展或 Media3 的 HLS），本项目当前只把「有哪些直播」呈现出来，
- * 点击进入后显示房间信息并给跳转系统浏览器的出口 ——
- * 不做半成品的播放（那是"点了没画面"的糟糕体验）。
+ * 这是本项目此前"直播只能读列表"的根因之一：
+ *
+ * ```
+ * getInfoByRoom  plain          -> -352
+ * getInfoByRoom  + buvid cookie -> -352
+ * getInfoByRoom  + buvid + WBI  -> 0   ✅
+ * getDanmuInfo   + buvid + WBI  -> 0   ✅
+ * ```
+ *
+ * `room_init` 不需要签名，所以它一直能通，**掩盖了这个问题** ——
+ * 让人误以为"直播接口都能匿名直连"。
+ *
+ * ## 房管操作的**能力边界**（如实记录）
+ *
+ * 实测（未登录探测，`banned_service` 下的端点全部返回 `65530 invalid request`
+ * 而非 `1000003 方法未找到`）→ **端点真实存在**。
+ * 但**是否可用取决于账号权限**，本项目无法在未登录状态验证，因此：
+ * - 客户端**不预判成功**，一律以服务端返回为准
+ * - 权限在数据层先拦一道（省一次注定失败的请求），**不替代**服务端裁决
+ * - 错误分类见 [LiveErrorMapper]
+ *
+ * ⚠️ 写 KDoc 时**不要出现「斜杠 + 星号」**（Kotlin 块注释会嵌套，
+ * 一旦出现就 Unclosed comment）。这里第一版写成了 `banned_service` 加通配，
+ * 结果整份文件编译失败 —— 见 `技术规范.md` §8。
  */
 class LiveRepository(
     private val api: BiliApi,
+    /**
+     * 设备指纹（`buvid3`）。
+     *
+     * 直播接口实测**需要**它：不带时更容易命中 `-352`。
+     * 由 `AppContainer` 从 `AuthStore` 取（未登录时也会有 —— 首次启动就下发了）。
+     */
+    private val buvidProvider: () -> String = { "" },
 ) {
 
     /**
@@ -246,6 +268,222 @@ class LiveRepository(
             json.optInt("code", -1) == 0
         }.getOrDefault(false)
     }
+
+    // ---------------------------------------------------------------------
+    // 弹幕接入（v1.6.4）
+    // ---------------------------------------------------------------------
+
+    /**
+     * 取弹幕 WebSocket 接入信息（`getDanmuInfo`）。
+     *
+     * ## 🔴 必须带 WBI 签名（实测）
+     *
+     * 不签名 → `-352`；签名 + buvid → `code=0`。
+     * 返回 `token` 与 `host_list`（实测 `wss_port=2245`）。
+     *
+     * ## 失败必须抛异常
+     *
+     * 返回空的 host 列表会让上层"静默连不上"，而用户只看到
+     * 聊天区一片空白 —— 分不清"没人说话"与"根本没连上"。
+     */
+    suspend fun danmakuInfo(roomId: Long): LiveDanmakuInfo {
+        if (roomId <= 0L) throw BiliException(-1, "直播间不存在")
+
+        val json = api.getLiveRaw(
+            path = Endpoints.LIVE_DANMU_INFO,
+            query = mapOf("id" to roomId.toString(), "type" to "0"),
+            buvid = buvidProvider(),
+        )
+
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            throw BiliException(code, json.optString("message", "弹幕服务不可用"))
+        }
+
+        val data = json.optJSONObject("data")
+            ?: throw BiliException(-1, "弹幕接入信息缺少 data")
+
+        val token = data.optString("token")
+        if (token.isEmpty()) throw BiliException(-1, "弹幕接入信息缺少 token")
+
+        val hosts = ArrayList<DanmakuHost>()
+        val arr = data.optJSONArray("host_list")
+        if (arr != null) {
+            for (i in 0 until arr.length()) {
+                val o = arr.optJSONObject(i) ?: continue
+                val host = o.optString("host")
+                val port = o.optInt("wss_port", 0)
+                if (host.isNotEmpty() && port > 0) hosts.add(DanmakuHost(host, port))
+            }
+        }
+        if (hosts.isEmpty()) throw BiliException(-1, "弹幕接入信息没有可用服务器")
+
+        return LiveDanmakuInfo(token = token, hosts = hosts)
+    }
+
+    /**
+     * 取直播间主播 uid（用于身份判定）。
+     *
+     * 用 `get_anchor_in_room` —— 实测**不需要 WBI 签名**（`code=0`），
+     * 比 `getInfoByRoom` 少一层依赖，失败面更小。
+     *
+     * 失败返回 0（**增强信息，不阻断**）：拿不到主播 uid 只会
+     * 少显示一个"主播"徽章，不该让整个直播间打不开。
+     */
+    suspend fun anchorUid(roomId: Long): Long {
+        if (roomId <= 0L) return 0L
+        return runCatching {
+            val json = api.getRaw(
+                path = Endpoints.LIVE_ANCHOR_IN_ROOM,
+                query = mapOf("roomid" to roomId.toString()),
+                signed = false,
+                host = Endpoints.LIVE_LIST_HOST,
+            )
+            if (json.optInt("code", -1) != 0) return@runCatching 0L
+            json.optJSONObject("data")
+                ?.optJSONObject("info")
+                ?.optLong("uid", 0L) ?: 0L
+        }.getOrDefault(0L)
+    }
+
+    // ---------------------------------------------------------------------
+    // 房管操作（v1.6.4）
+    // ---------------------------------------------------------------------
+
+    /**
+     * 禁言。
+     *
+     * ## 参数（端点实测存在；参数集按官方网页端形态）
+     *
+     * `room_id` / `tuid` / `mobile_app=web` / `hour` / `min` / `csrf`
+     *
+     * ## ⚠️ 禁言时长范围**未知**
+     *
+     * 本项目**无法在未登录状态探测**服务端接受的范围，
+     * 所以 UI **不写死**"支持 1 分钟"这类断言 —— 只提供常用档位，
+     * 真实边界由服务端裁决（越界会返回错误码，UI 如实显示）。
+     */
+    suspend fun mute(
+        roomId: Long,
+        targetUid: Long,
+        durationMinutes: Int,
+        csrf: String,
+    ): ModerationResult = moderation(
+        path = Endpoints.LIVE_MUTE,
+        form = mapOf(
+            "room_id" to roomId.toString(),
+            "tuid" to targetUid.toString(),
+            "mobile_app" to "web",
+            "hour" to (durationMinutes / 60).toString(),
+            "min" to (durationMinutes % 60).toString(),
+            "csrf" to csrf,
+        ),
+    )
+
+    /** 解除禁言。 */
+    suspend fun unmute(
+        roomId: Long,
+        targetUid: Long,
+        csrf: String,
+    ): ModerationResult = moderation(
+        path = Endpoints.LIVE_UNMUTE,
+        form = mapOf(
+            "room_id" to roomId.toString(),
+            "tuid" to targetUid.toString(),
+            "mobile_app" to "web",
+            "csrf" to csrf,
+        ),
+    )
+
+    /** 踢出直播间。 */
+    suspend fun kick(
+        roomId: Long,
+        targetUid: Long,
+        csrf: String,
+    ): ModerationResult = moderation(
+        path = Endpoints.LIVE_KICK,
+        form = mapOf(
+            "room_id" to roomId.toString(),
+            "tuid" to targetUid.toString(),
+            "mobile_app" to "web",
+            "csrf" to csrf,
+        ),
+    )
+
+    /** 加入黑名单。 */
+    suspend fun block(
+        roomId: Long,
+        targetUid: Long,
+        csrf: String,
+    ): ModerationResult = moderation(
+        path = Endpoints.LIVE_BLOCK_ADD,
+        form = mapOf(
+            "room_id" to roomId.toString(),
+            "tuid" to targetUid.toString(),
+            "mobile_app" to "web",
+            "csrf" to csrf,
+        ),
+    )
+
+    /** 移出黑名单。 */
+    suspend fun unblock(
+        roomId: Long,
+        targetUid: Long,
+        csrf: String,
+    ): ModerationResult = moderation(
+        path = Endpoints.LIVE_BLOCK_DEL,
+        form = mapOf(
+            "room_id" to roomId.toString(),
+            "tuid" to targetUid.toString(),
+            "mobile_app" to "web",
+            "csrf" to csrf,
+        ),
+    )
+
+    /**
+     * 房管操作的公共执行 + **错误分类**。
+     *
+     * ## 🔴 绝不把失败当成功
+     *
+     * 需求第 9 条：不能"请求失败 → 当成成功 → UI 显示操作成功"。
+     * 这里把每个业务码都翻成明确的 [ModerationResult]，
+     * 且**保留原始 message**（不吞）。
+     *
+     * ## 为什么不用 `runCatching{}.getOrDefault(Success)`
+     *
+     * 那正是项目踩过的"失败伪装成空/成功"的坑（§7.8-44）。
+     * 这里网络异常也走 [LiveErrorMapper.fromException]，
+     * 明确归为 NETWORK 失败。
+     */
+    private suspend fun moderation(
+        path: String,
+        form: Map<String, String>,
+    ): ModerationResult = try {
+        val json = api.postForm(
+            path = path,
+            form = form,
+            host = Endpoints.LIVE_LIST_HOST,
+        )
+        val code = json.optInt("code", -1)
+        if (code == 0) {
+            ModerationResult.Success
+        } else {
+            LiveErrorMapper.fromCode(code, json.optString("message"))
+        }
+    } catch (e: Exception) {
+        LiveErrorMapper.fromException(e)
+    }
+
+    /**
+     * 弹幕接入信息。
+     *
+     * @param token 认证 token（约 244~252 字符，实测）
+     * @param hosts 候选接入点；实测 `wss_port=2245`
+     */
+    data class LiveDanmakuInfo(
+        val token: String,
+        val hosts: List<DanmakuHost>,
+    )
 }
 
 /**

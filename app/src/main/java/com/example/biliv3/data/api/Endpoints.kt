@@ -394,6 +394,82 @@ object Endpoints {
     /** 直播列表。域名 `api.live.bilibili.com`。 */
     const val LIVE_LIST_HOST = "api.live.bilibili.com"
     const val LIVE_LIST = "xlive/web-interface/v1/second/getList"
+
+    // ---- 直播间弹幕 / 房管（v1.6.4）----
+
+    /**
+     * 弹幕 WebSocket 接入信息。
+     *
+     * ## 🔴 实测：**必须带 WBI 签名**（这是本项目此前的认知盲区）
+     *
+     * ```
+     * plain          -> -352
+     * + buvid cookie -> -352
+     * + buvid + WBI  -> code=0   ✅ token len=244~252
+     * ```
+     *
+     * 返回 `data.token` 与 `data.host_list`（实测 `wss_port=2245`）。
+     *
+     * ⚠️ 本项目此前以为"直播接口都能匿名直连" —— 那是因为只试过
+     * `room_init`（它确实不需要签名）。**别再用单个接口的通断
+     * 推断整个域的行为**。
+     */
+    const val LIVE_DANMU_INFO = "xlive/web-room/v1/index/getDanmuInfo"
+
+    /**
+     * 直播间主播 uid。
+     *
+     * 实测**不需要签名**（`code=0`），比 `getInfoByRoom` 少一层依赖。
+     * 用于身份判定（当前 mid == 主播 uid → 主播）。
+     */
+    const val LIVE_ANCHOR_IN_ROOM = "live_user/v1/UserInfo/get_anchor_in_room"
+
+    /**
+     * 直播间信息（含 `room_info.uid` = 主播）。
+     *
+     * ⚠️ 实测**需要 WBI 签名**，否则 `-352`。
+     * 优先用 [LIVE_ANCHOR_IN_ROOM]（不需要签名）。
+     */
+    const val LIVE_ROOM_INFO = "xlive/web-room/v1/index/getInfoByRoom"
+
+    // ---- 房管操作（v1.6.4）----
+    //
+    // ## 🔴 能力边界的实测记录（必须保留，否则以后会重复踩）
+    //
+    // 未登录探测结果（2026-10-06）：
+    //
+    // | 路径 | 结果 | 判读 |
+    // |---|---|---|
+    // | `banned_service/v1|v2/Silent/add_silent` | `65530 invalid request` | **存在**，被鉴权拒 |
+    // | `banned_service/v1|v2/Silent/del_silent` | 同上 | **存在** |
+    // | `banned_service/v1|v2/Silent/kick` | 同上 | **存在** |
+    // | `banned_service/v1|v2/Silent/add_black` | 同上 | **存在** |
+    // | `banned_service/v1|v2/Silent/del_black` | 同上 | **存在** |
+    // | `room/v1/Room/muteUser` / `kickUser` / `addAdmin` | `1000003 方法未找到` | **不存在** |
+    //
+    // 关键区分：`65530` = 方法存在但被拒；`1000003` = 方法根本不存在。
+    // 混用会让排查完全失去方向。
+    //
+    // ## ⚠️ 未验证的部分（如实说明）
+    //
+    // - **是否真的能成功**：需要主播/房管账号，本项目**没有**
+    // - **禁言时长范围**：未知，UI 不写死断言
+    // - **房管名单接口**：试了 10 个路径全部 NOT FOUND → **不做该 UI**
+
+    /** 禁言。 */
+    const val LIVE_MUTE = "banned_service/v2/Silent/add_silent"
+
+    /** 解除禁言。 */
+    const val LIVE_UNMUTE = "banned_service/v2/Silent/del_silent"
+
+    /** 踢出直播间。 */
+    const val LIVE_KICK = "banned_service/v2/Silent/kick"
+
+    /** 加入黑名单。 */
+    const val LIVE_BLOCK_ADD = "banned_service/v1/Silent/add_black"
+
+    /** 移出黑名单。 */
+    const val LIVE_BLOCK_DEL = "banned_service/v1/Silent/del_black"
 }
 
 /**

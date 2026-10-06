@@ -238,6 +238,78 @@ class BiliApi(
         return json
     }
 
+    /**
+     * **直播域**的 WBI 签名 GET（v1.6.4）。
+     *
+     * ## 🔴 为什么单独一个方法，不复用 [getRaw] 的 `signed`
+     *
+     * 直播域（`api.live.bilibili.com`）的签名要求与主站不同：
+     *
+     * | | 主站 `api.bilibili.com` | 直播域 |
+     * |---|---|---|
+     * | 签名 | 部分接口需要 | **`getDanmuInfo` / `getInfoByRoom` 需要** |
+     * | `buvid` | 有更好 | **实测必需**（不带更容易 `-352`） |
+     *
+     * 实测证据（2026-10-06）：
+     * ```
+     * getInfoByRoom  plain          -> -352
+     * getInfoByRoom  + buvid cookie -> -352
+     * getInfoByRoom  + buvid + WBI  -> code=0  ✅
+     * getDanmuInfo   + buvid + WBI  -> code=0  ✅ token len=244
+     * ```
+     *
+     * ## 为什么 `buvid` 要显式传而不是靠 CookieJar
+     *
+     * `AuthCookieJar` 会把 cookie 发到**任何**域名（它按请求 URL 的 host
+     * 构造 Cookie）。但直播域与主站是**不同 host**，靠 CookieJar 是否
+     * 带上取决于 OkHttp 的域名匹配 —— 依赖它等于把"能不能连上弹幕"
+     * 押在一个间接行为上。显式传更可靠，也更好排查。
+     *
+     * @param buvid 设备指纹（`AuthStore.buvid3`）；空串时不加该 cookie
+     */
+    suspend fun getLiveRaw(
+        path: String,
+        query: Map<String, String>,
+        buvid: String = "",
+        host: String = Endpoints.LIVE_LIST_HOST,
+    ): JSONObject = withContext(Dispatchers.IO) {
+        // 直播域一律签名 —— 实测不签就是 -352
+        val signed = Wbi.sign(params = query, keys = keys(), wts = Wbi.nowSeconds())
+        val url = buildString {
+            append("https://").append(host).append('/').append(path)
+            if (signed.isNotEmpty()) {
+                append('?').append(Wbi.toQueryString(signed))
+            }
+        }
+
+        val request = Request.Builder()
+            .url(url)
+            .apply {
+                BiliHeaders.api().forEach { (k, v) -> header(k, v) }
+                // ⚠️ Referer 必须是直播域，用主站 Referer 会被拒
+                header("Referer", "https://live.bilibili.com/")
+                header("Origin", "https://live.bilibili.com")
+                if (buvid.isNotEmpty()) header("Cookie", "buvid3=$buvid")
+            }
+            .build()
+
+        val body = try {
+            client.newCall(request).execute().use { resp ->
+                resp.body?.string() ?: throw BiliException(-1, "空响应")
+            }
+        } catch (e: BiliException) {
+            throw e
+        } catch (e: Exception) {
+            throw BiliException(-1, e.message ?: "网络请求失败")
+        }
+
+        try {
+            JSONObject(body)
+        } catch (e: Exception) {
+            throw BiliException(-1, "响应不是合法 JSON")
+        }
+    }
+
     // ---------------- 主页数据 ----------------
 
     /**

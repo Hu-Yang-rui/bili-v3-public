@@ -27,9 +27,12 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.exoplayer.ExoPlayer
 import coil.compose.AsyncImage
 import com.example.biliv3.data.LiveRoom
+import com.example.biliv3.data.live.LiveMessage
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
@@ -98,6 +102,10 @@ import com.example.biliv3.ui.video.attachPlayerSurface
 fun LiveRoomScreen(
     room: LiveRoom,
     onBack: () -> Unit,
+    /** 打开用户主页（聊天里点用户菜单 → 进入个人主页）。 */
+    onOpenUser: (Long) -> Unit = {},
+    /** 复制用户名（剪贴板操作在调用方做 —— 页面不碰 Context）。 */
+    onCopyName: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: LiveRoomViewModel,
 ) {
@@ -107,11 +115,38 @@ fun LiveRoomScreen(
     val error by viewModel.error.collectAsStateWithLifecycle()
     val player = viewModel.player
 
+    // 聊天（v1.6.4）
+    val messages by viewModel.messages.collectAsStateWithLifecycle()
+    val connState by viewModel.connState.collectAsStateWithLifecycle()
+
+    // 权限（数据层判定，UI 只消费）
+    val perms by viewModel.permissions.collectAsStateWithLifecycle()
+    val moderating by viewModel.moderating.collectAsStateWithLifecycle()
+    val toast by viewModel.toast.collectAsStateWithLifecycle()
+    val pending by viewModel.pendingConfirm.collectAsStateWithLifecycle()
+
+    // 弹层状态：用户菜单 / 禁言时长
+    var menuTarget by remember { mutableStateOf<LiveMessage?>(null) }
+    var muteTarget by remember { mutableStateOf<LiveMessage?>(null) }
+
+    // 一次性提示
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(toast) {
+        toast?.let {
+            snackbar.showSnackbar(it)
+            viewModel.consumeToast()
+        }
+    }
+
     // 直播全屏是纯画面 —— 状态栏图标切浅色（与视频详情页同一约定）
     LiveStatusBarTint()
 
+    // ⚠️ 用 Box 包一层：弹层（用户菜单 / 时长 / 确认）与 Snackbar
+    //    必须渲染在**页面内容之上**。与视频详情页踩过的坑同源 ——
+    //    浮层若不在根 Box 内，会被内容盖住或落到导航层之外。
+    Box(modifier = modifier.fillMaxSize()) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(colors.bgBase),
     ) {
@@ -293,32 +328,91 @@ fun LiveRoomScreen(
                 }
             }
 
-            RuleLine(
-                color = Rule.subtle,
-                modifier = Modifier.padding(top = Rhythm.between),
-            )
-
-            // ---- 弹幕说明：本项目**不接入**直播弹幕 ----
+            // ---- 聊天（v1.6.4）----
             //
-            // 直播弹幕走 WebSocket 长连接（`api.live.bilibili.com` 的
-            // `sub` 协议），与视频弹幕的 HTTP protobuf 分片是**两套东西**。
-            // 不写这句的话，用户会以为"弹幕怎么不显示"是 bug。
+            // 复用现有架构：WebSocket 在 Repository/Client 层，
+            // ViewModel 持有消息列表与权限，这里只负责渲染。
             //
-            // 宁可如实说明，也不做一个假的弹幕区（§1.6 不做无信息量的产出）。
-            Text(
-                text = "直播弹幕需要 WebSocket 长连接，本应用暂未接入；" +
-                    "画面与声音均为站内直连播放。",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    lineHeight = FontSize.bodySmLine,
-                    color = colors.textTertiary,
-                ),
-                modifier = Modifier.padding(top = Rhythm.between),
+            // ⚠️ 聊天区高度用 `weight(1f)` 吃掉剩余空间 —— 它必须能滚，
+            //    固定高度会让长消息被裁掉。
+            LiveChatPanel(
+                messages = messages,
+                connState = connState,
+                canModerate = perms.actions.isNotEmpty(),
+                isSelf = { uid -> viewModel.isSelf(uid) },
+                isKnownAdmin = { uid -> viewModel.isKnownAdmin(uid) },
+                onUserClick = { msg -> menuTarget = msg },
+                onRetryChat = { viewModel.retryChat() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
             )
-
-            Spacer(Modifier.height(Space.x8))
         }
-    }
+
+        // ---- 用户操作菜单（按权限动态）----
+        menuTarget?.let { target ->
+            LiveUserMenu(
+                target = target,
+                permissions = perms,
+                isKnownAdmin = viewModel.isKnownAdmin(target.uid),
+                moderating = moderating,
+                onDismiss = { menuTarget = null },
+                onAction = { action ->
+                    menuTarget = null
+                    viewModel.requestAction(target, action)
+                },
+                onOpenProfile = { uid ->
+                    menuTarget = null
+                    onOpenUser(uid)
+                },
+                onCopyName = { name ->
+                    menuTarget = null
+                    onCopyName(name)
+                },
+                onRequestMute = {
+                    menuTarget = null
+                    muteTarget = target
+                },
+            )
+        }
+
+        // ---- 禁言时长选择 ----
+        muteTarget?.let { target ->
+            LiveMuteDurationDialog(
+                targetName = target.uname,
+                busy = moderating != null,
+                onDismiss = { muteTarget = null },
+                onConfirm = { minutes ->
+                    muteTarget = null
+                    viewModel.requestMute(target, minutes)
+                },
+            )
+        }
+
+        // ---- 高风险操作二次确认（踢出 / 黑名单）----
+        pending?.let { p ->
+            LiveConfirmDialog(
+                actionLabel = LiveRoomViewModel.actionLabel(p.action),
+                targetName = p.target.uname,
+                busy = moderating != null,
+                onDismiss = { viewModel.cancelPending() },
+                onConfirm = { viewModel.confirmPending() },
+            )
+        }
+
+    }   // end Column
+
+    // ---- 一次性提示（操作成功 / 失败原因）----
+    //
+    // ⚠️ 必须在**根 Box 内**（Column 之外）—— 放进 Column 会占布局空间，
+    //    而且 `align` 只在 BoxScope 里可用。
+    SnackbarHost(
+        hostState = snackbar,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(bottom = Space.x8),
+    )
+    }   // end Box
 }
 
 /**

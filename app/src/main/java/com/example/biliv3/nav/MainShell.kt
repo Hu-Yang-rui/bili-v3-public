@@ -1041,6 +1041,10 @@ fun MainShell(
             ) { entry ->
                 val args = entry.arguments
                 val roomId = args?.getLong(Routes.LIVE_ROOM_ARG_ID) ?: 0L
+                // 剪贴板：用于聊天里的「复制用户名」。
+                // ⚠️ 必须在**本 composable 作用域**里取（设置页那个是另一个作用域）。
+                val liveClipboard =
+                    androidx.compose.ui.platform.LocalClipboardManager.current
                 // 列表里已有的信息带过来，省一次请求；缺失时字段为空，
                 // 页面用房间号兜底显示（不伪造数据）。
                 val room = com.example.biliv3.data.LiveRoom(
@@ -1057,6 +1061,17 @@ fun MainShell(
                 com.example.biliv3.ui.live.LiveRoomScreen(
                     room = room,
                     onBack = safeBack,
+                    // 聊天里点用户菜单 → 进个人主页（复用已有路由）
+                    onOpenUser = { uid ->
+                        if (uid > 0L) navController.navigate(Routes.space(uid))
+                    },
+                    // 复制用户名：剪贴板操作在导航层做（页面不碰 Context）
+                    onCopyName = { name ->
+                        if (name.isNotEmpty()) {
+                            liveClipboard.setText(androidx.compose.ui.text.AnnotatedString(name))
+                            Toast.makeText(context, "已复制用户名", Toast.LENGTH_SHORT).show()
+                        }
+                    },
                     viewModel = viewModel(
                         key = "live-room-$roomId",
                         factory = com.example.biliv3.ui.live.LiveRoomVmFactory(
@@ -1066,6 +1081,8 @@ fun MainShell(
                             holder = container.playerHolder,
                             // 「隐身入场」的消费者
                             settingsStore = container.settingsStore,
+                            // 权限判定（mid）与写操作（csrf）都需要它
+                            authStore = container.authStore,
                         ),
                     ),
                 )

@@ -123,9 +123,25 @@ class AppContainer(context: Context) {
     /** 全应用唯一的 API 客户端。 */
     val api: BiliApi = BiliApi(client)
 
-    /** 直播列表（独立域名 api.live.bilibili.com）。 */
+    /**
+     * 直播列表 / 取流 / 弹幕 / 房管（独立域名 `api.live.bilibili.com`）。
+     *
+     * ## 🔴 为什么传 `buvid` 提供者
+     *
+     * 实测（v1.6.4）：直播的 `getDanmuInfo` / `getInfoByRoom` **需要
+     * WBI 签名 + buvid**，缺任一项都返回 `-352`。
+     *
+     * 用 lambda 而不是直接传值：`buvid` 存在 `AuthStore`（加密存储）里，
+     * 而 `AuthStore` 是 `by lazy` 的 —— 直接取值会在启动时强制求值，
+     * 抵消 v1.6.2 的启动优化（实测省 157ms）。
+     *
+     * 这与 `cookieJar` 用 `{ authStore }` 是**同一个理由**。
+     */
     val liveRepository: com.example.biliv3.data.LiveRepository =
-        com.example.biliv3.data.LiveRepository(api)
+        com.example.biliv3.data.LiveRepository(
+            api,
+            buvidProvider = { runCatching { authStore.buvid3 }.getOrDefault("") },
+        )
 
     /**
      * 主页数据。
