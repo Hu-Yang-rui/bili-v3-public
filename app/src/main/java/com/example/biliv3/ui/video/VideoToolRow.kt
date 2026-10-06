@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Icon
@@ -75,6 +76,17 @@ fun VideoToolRow(
     onToggleDanmaku: () -> Unit,
     onSendDanmaku: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * AI 总结入口（v1.6.3）。
+     *
+     * `null` = 该功能不可用（未注入仓库），此时**不渲染**入口 ——
+     * 而不是渲染一个点了没反应的按钮（§1.6 死入口）。
+     *
+     * 放在工具条右栏（发弹幕旁边）的理由：它是"对这个视频做点什么"
+     * 这一类动作，与发弹幕同族；放左栏会与"简介/评论"的**视图切换**
+     * 语义混淆（那两个是切换，这个是动作）。
+     */
+    onOpenSummary: (() -> Unit)? = null,
 ) {
     val colors = BiliTheme.colors
 
@@ -110,11 +122,43 @@ fun VideoToolRow(
             )
         }
 
-        // ================= 右栏：发弹幕 + 开关 =================
+        // ================= 右栏：AI 总结 + 发弹幕 + 开关 =================
         Row(
             horizontalArrangement = Arrangement.spacedBy(Space.x2),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // ---- AI 总结入口（v1.6.3）----
+            //
+            // 用**品牌蓝**（`textLinkSafe`）而不是粉色：粉色在本项目里是
+            // "主行动/已选中"的语义，而 AI 总结是一个次级入口。
+            // 蓝色图标与全站"功能入口"的用色一致（§5.2：品牌蓝只做图标）。
+            if (onOpenSummary != null) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(Radius.pill))
+                        .background(colors.bgHover)
+                        .clickable(onClick = onOpenSummary)
+                        .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.AutoAwesome,
+                        contentDescription = null,
+                        tint = colors.textLinkSafe,
+                        modifier = Modifier.size(Sizes.iconSm),
+                    )
+                    Spacer(Modifier.width(Space.x1))
+                    Text(
+                        text = "AI 总结",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = FontSize.badge,
+                            color = colors.textSecondarySafe,
+                        ),
+                        maxLines = 1,
+                    )
+                }
+            }
+
             // 发弹幕入口：胶囊形，一眼看出可点
             Row(
                 modifier = Modifier

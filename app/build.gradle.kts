@@ -40,8 +40,8 @@ android {
         applicationId = "com.example.biliv3"
         minSdk = 26
         targetSdk = 35
-        versionCode = 39
-        versionName = "1.6.2"
+        versionCode = 40
+        versionName = "1.6.3"
     }
 
     signingConfigs {
@@ -203,6 +203,10 @@ dependencies {
     // 播放器（主页暂不用，详情页阶段启用）
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.exoplayer.dash)
+    // 直播（v1.6.3）：B 站直播只给 HTTP-FLV / HLS。
+    // ⚠️ 缺了它 `HlsMediaSource` 是 Unresolved reference ——
+    // 这就是此前"直播只能开浏览器"的直接原因（见 LiveViewModel 的历史说明）。
+    implementation(libs.androidx.media3.exoplayer.hls)
     implementation(libs.androidx.media3.ui)
     // 后台播放 / 系统媒体中心（v1.3.0）。⚠️ 必须显式声明：
     // media3-exoplayer 不传递依赖 media3-session，缺了会 Unresolved reference。

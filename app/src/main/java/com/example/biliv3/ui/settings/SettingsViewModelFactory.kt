@@ -20,6 +20,8 @@ import com.example.biliv3.data.auth.AuthStore
 class SettingsViewModelFactory(
     private val store: SettingsStore,
     private val authStore: AuthStore? = null,
+    /** 第三方 AI 配置（加密存储）。传 null 时 AI 区块显示不可用。 */
+    private val aiConfigStore: com.example.biliv3.data.ai.AiConfigStore? = null,
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -27,7 +29,9 @@ class SettingsViewModelFactory(
         if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
             return SettingsViewModel(store).also {
                 it.authStore = authStore
+                it.aiConfigStore = aiConfigStore
                 it.refreshCookieState()
+                it.refreshAiConfig()
             } as T
         }
         throw IllegalArgumentException("未知的 ViewModel: ${modelClass.name}")

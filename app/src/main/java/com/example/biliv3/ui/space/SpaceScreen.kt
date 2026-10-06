@@ -1,6 +1,7 @@
 package com.example.biliv3.ui.space
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -26,6 +27,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ManageSearch
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -118,6 +121,8 @@ fun SpaceScreen(
     val following by viewModel.following.collectAsStateWithLifecycle()
     val fans by viewModel.fans.collectAsStateWithLifecycle()
     val toast by viewModel.toast.collectAsStateWithLifecycle()
+    // 特别关注（本地书签，v1.6.3）—— 与真实关注态完全独立
+    val attended by viewModel.attended.collectAsStateWithLifecycle()
 
     var tab by remember { mutableStateOf(0) }
 
@@ -225,6 +230,10 @@ fun SpaceScreen(
                         isSelf = viewModel.isSelf,
                         isFollowing = following,
                         showFollowButton = !viewModel.isSelf,
+                        // 特别关注（本地书签）：与真实关注是两个独立的量
+                        attended = attended,
+                        showAttentionButton = viewModel.attentionAvailable,
+                        onAttentionClick = { viewModel.toggleAttention() },
                         onFollowClick = {
                             if (viewModel.isLoggedIn) {
                                 viewModel.toggleFollow()
@@ -346,6 +355,11 @@ private fun ProfileHeader(
     isSelf: Boolean,
     isFollowing: Boolean,
     showFollowButton: Boolean,
+    /** 是否已加入「特别关注」（本地书签，与 [isFollowing] 无关）。 */
+    attended: Boolean = false,
+    /** 是否渲染「特别关注」入口（存储未注入时不渲染）。 */
+    showAttentionButton: Boolean = false,
+    onAttentionClick: () -> Unit = {},
     onFollowClick: () -> Unit,
     onChatClick: () -> Unit,
     onAicuClick: () -> Unit,
@@ -481,6 +495,20 @@ private fun ProfileHeader(
                 )
             }
 
+            // ---- 特别关注（本地书签，v1.6.3）----
+            //
+            // ⚠️ 它**不是**真实关注：点击只写本地 DataStore，
+            // 不发任何请求（`LocalAttentionStore` 拿不到 BiliApi）。
+            //
+            // 放在这里而不是塞进"关注"按钮的长按菜单：隐藏入口
+            // 会让这个功能等于不存在（§1.6 死入口的同类问题）。
+            if (showAttentionButton && !isSelf) {
+                AttentionChip(
+                    attended = attended,
+                    onClick = onAttentionClick,
+                )
+            }
+
             // 查成分：第三方数据查询，不依赖 B 站登录态
             HeaderActionChip(
                 icon = Icons.AutoMirrored.Outlined.ManageSearch,
@@ -497,6 +525,77 @@ private fun ProfileHeader(
                 fontSize = FontSize.badge,
                 color = colors.textTertiary,
             ),
+        )
+    }
+}
+
+/**
+ * 「特别关注」入口胶囊（v1.6.3）。
+ *
+ * ## 🔴 为什么它必须与「关注」按钮长得**不一样**
+ *
+ * 需求要求"用户必须有明显的特殊标识"，而更根本的理由是：
+ * 如果它看起来与真实关注一样，用户会**以为已经关注了对方** ——
+ * 去 B 站网页端一看根本没关注，这是一个会持续误导人的假象。
+ *
+ * 所以：
+ * - 真实关注 = `BrandButton`（品牌粉实心 / 描边，加号语义）
+ * - 特别关注 = **书签图标 + 青色描边胶囊**（与"收藏/书签"同族语义）
+ *
+ * 两种形态在形状、图标、颜色三个维度都不同，不靠文字也能区分。
+ *
+ * ## 已加入 / 未加入
+ *
+ * - 未加入：描边 + 次要文字色（"可点"但不抢视觉）
+ * - 已加入：青色底 + 深色字 + 填充图标（明确"已选中"）
+ */
+@Composable
+private fun AttentionChip(
+    attended: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = BiliTheme.colors
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(Radius.interactive))
+            .background(
+                if (attended) colors.accentTerminalDim else colors.bgHover,
+            )
+            .then(
+                if (attended) {
+                    Modifier.border(
+                        width = 1.dp,
+                        color = colors.accentTerminal,
+                        shape = RoundedCornerShape(Radius.interactive),
+                    )
+                } else {
+                    Modifier
+                },
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = Space.x3, vertical = Space.x2),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            // 填充 = 已选中，轮廓 = 未选中（与全站"激活态"约定一致）
+            imageVector = if (attended) {
+                Icons.Filled.Bookmark
+            } else {
+                Icons.Outlined.BookmarkBorder
+            },
+            contentDescription = null,
+            tint = if (attended) colors.accentTerminal else colors.textSecondarySafe,
+            modifier = Modifier.size(Sizes.iconMd),
+        )
+        Spacer(Modifier.width(Space.x1))
+        Text(
+            text = if (attended) "已特别关注" else "特别关注",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = FontSize.body,
+                fontWeight = if (attended) FontWeight.Medium else FontWeight.Normal,
+                color = if (attended) colors.accentTerminal else colors.textSecondarySafe,
+            ),
+            maxLines = 1,
         )
     }
 }

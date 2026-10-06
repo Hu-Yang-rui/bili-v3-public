@@ -123,6 +123,28 @@ data class BiliColors(
     val stateSuccess: Color,
     val stateLive: Color,
 
+    // ---------------- 空降助手：进度条上的跳过区间 ----------------
+    /**
+     * 跳过区间在**进度条上**的标记色。
+     *
+     * ## 为什么单独立一个语义色，而不是复用现有色
+     *
+     * 进度条上已经有两种含义，不能借色：
+     * - [brandPrimary]（粉）= **已播**
+     * - [trackInactive]（半透明白）= **未播**
+     *
+     * 跳过区间是**第三种**信息（"这一段会被自动跳过"），借任何一个都会
+     * 变成误导：用粉会被读成"已播到这里"，用白会被读成"还没播"。
+     *
+     * 取 [accentTerminal]（终端青）是刻意的：它在本项目里的语义就是
+     * **"系统给出的技术标注"**（读数、参数、状态），而跳过区间正是
+     * 社区数据给出的时间标注，不是内容本身。面积也符合
+     * §5.1「极客元素是标点，不是正文」—— 它只是轨道上的几段细带。
+     */
+    val skipSegment: Color,
+    /** 播放位置**正处于**跳过区间内时的强调色（比 [skipSegment] 更亮）。 */
+    val skipSegmentActive: Color,
+
     // ---------------- 互动激活色 ----------------
     val accentCoin: Color,
     val accentFavorite: Color,
@@ -245,6 +267,15 @@ val DarkColors = BiliColors(
     stateError = Color(0xFFF87171),
     stateSuccess = Color(0xFF4ADE80),
     stateLive = Color(0xFFFF5C8A),
+
+    // 空降助手：进度条上的跳过区间（终端青系，与 accentTerminal 同族）
+    // ⚠️ 用 0xE6（90%）而不是全不透明：标记要压在 2dp 细轨道上，
+    //    全不透明会让这几段比轨道本身"重"，抢走播放进度这个主信息。
+    skipSegment = Color(0xE64FD1C5),
+    // 当前位置正处于跳过区间内 —— 提亮同族青色，做出"命中"反馈。
+    // ⚠️ 不要用 accentCoin 的金色：金色在本项目里已经绑定"硬币/投币"语义，
+    //    出现在进度条上会被读成"这一段有投币"，而不是"这一段会被跳过"。
+    skipSegmentActive = Color(0xFF9BF5EC),
 
     // 互动
     accentCoin = Color(0xFFFFC44D),

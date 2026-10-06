@@ -109,6 +109,16 @@ class VideoDetailViewModel(
     private val libraryRepo: com.example.biliv3.data.LibraryRepository? = null,
     /** 设置（「保存观看历史」开关的消费者）。 */
     private val settingsStore: com.example.biliv3.data.SettingsStore? = null,
+    /**
+     * AI 总结仓库（v1.6.3）。
+     *
+     * null = 该功能不可用（预览/测试环境），此时 UI 不渲染入口。
+     *
+     * ⚠️ 官方总结走它的共享 `BiliApi`（带 Cookie）；
+     * 第三方走它内部的**独立 client**（不挂 CookieJar）——
+     * 详见 `AiSummaryRepository` 的红线说明。
+     */
+    private val aiSummaryRepo: com.example.biliv3.data.ai.AiSummaryRepository? = null,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<DetailUiState>(DetailUiState.Loading)
@@ -624,6 +634,96 @@ class VideoDetailViewModel(
             if (videoshotCid == cid) _videoshot.value = shot
         }
     }
+
+    // ---------------- AI 总结（v1.6.3）----------------
+
+    /** AI 总结的 UI 状态（弹层订阅）。 */
+    private val _summaryState = MutableStateFlow<AiSummaryUiState>(AiSummaryUiState.Idle)
+    val summaryState: StateFlow<AiSummaryUiState> = _summaryState.asStateFlow()
+
+    /**
+     * 按 `bvid:cid` 缓存已生成的总结。
+     *
+     * ## 为什么缓存（需求："已经生成过总结可以缓存，避免不必要的重复请求"）
+     *
+     * 第三方总结要跑一次 LLM（几十秒 + 花钱）。用户关掉弹层再打开
+     * 是很自然的动作，每次都重跑既慢又浪费。
+     *
+     * ## 为什么只缓存在内存、不落盘
+     *
+     * 与 `PlaybackProgressStore`（需要跨重启）的取舍不同：总结是
+     * **当次观看的辅助信息**，且它的正确性依赖"当时的字幕与模型版本"。
+     * 存盘会让用户几天后看到一份基于旧字幕的总结，却以为是最新的。
+     *
+     * 换分P（cid 变）自然拿到不同的缓存条目 —— key 里带 cid 就是为了这个。
+     */
+    private val summaryCache = HashMap<String, com.example.biliv3.data.ai.VideoSummary>()
+
+    /** AI 总结是否可用（仓库已注入）。 */
+    val aiSummaryAvailable: Boolean get() = aiSummaryRepo != null
+
+    /**
+     * 取 AI 总结（官方优先 → 第三方）。
+     *
+     * ## 缓存命中时**立即**返回，不再请求
+     *
+     * 这是需求明确要求的"避免不必要的重复请求"。
+     */
+    fun loadSummary() {
+        val repo = aiSummaryRepo ?: return
+        val cur = _state.value
+        if (cur !is DetailUiState.Content) return
+
+        val cid = cur.detail.pages.getOrNull(_currentPage.value)?.cid ?: cur.detail.cid
+        val key = "$bvid:$cid"
+
+        // 命中缓存：直接给结果（不重新请求）
+        summaryCache[key]?.let {
+            _summaryState.value = AiSummaryUiState.Done(it)
+            return
+        }
+
+        viewModelScope.launch {
+            // 第一步：官方
+            _summaryState.value = AiSummaryUiState.Loading(AiSummaryUiState.Step.OFFICIAL)
+
+            // 第二步起交给仓库（它内部会决定走官方还是第三方）
+            _summaryState.value = AiSummaryUiState.Loading(AiSummaryUiState.Step.MODEL)
+
+            val r = repo.summarize(
+                bvid = bvid,
+                cid = cid,
+                upMid = cur.detail.ownerMid,
+                title = cur.detail.title,
+                desc = cur.detail.desc,
+            )
+
+            r.fold(
+                onSuccess = { s ->
+                    summaryCache[key] = s
+                    _summaryState.value = AiSummaryUiState.Done(s)
+                },
+                onFailure = { e ->
+                    val msg = e.message ?: "AI 总结失败"
+                    // 提示"需要配置"时给出配置入口（用户要能立刻行动）
+                    val needsConfig = !repo.thirdPartyUsable()
+                    _summaryState.value = AiSummaryUiState.Error(
+                        message = msg,
+                        needsConfig = needsConfig,
+                    )
+                },
+            )
+        }
+    }
+
+    /** 关闭总结弹层（保留缓存，下次打开立即出结果）。 */
+    fun resetSummaryState() {
+        _summaryState.value = AiSummaryUiState.Idle
+    }
+
+    /** 当前 AI 配置（给设置页/提示用）。 */
+    fun aiConfig(): com.example.biliv3.data.ai.AiConfig =
+        aiSummaryRepo?.config() ?: com.example.biliv3.data.ai.AiConfig()
 
     // ---------------- 评论操作 ----------------
 

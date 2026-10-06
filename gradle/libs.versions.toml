@@ -39,6 +39,9 @@ androidx-compose-foundation = { module = "androidx.compose.foundation:foundation
 
 androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 androidx-media3-exoplayer-dash = { module = "androidx.media3:media3-exoplayer-dash", version.ref = "media3" }
+# 直播播放（v1.6.3）：B 站直播只给 HTTP-FLV 与 HLS 两种协议。
+# HLS 走这个模块；FLV 由 media3-extractor 内置的 FlvExtractor 支持（progressive）。
+androidx-media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }
 androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
 # 后台播放 / 系统媒体中心（MediaSession + MediaSessionService + MediaController）
 androidx-media3-session = { module = "androidx.media3:media3-session", version.ref = "media3" }

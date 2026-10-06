@@ -20,6 +20,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.biliv3.data.SkipBarGeometry
+import com.example.biliv3.data.SkipSegment
 import com.example.biliv3.data.Videoshot
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -165,6 +167,24 @@ fun PlayerControls(
      * 每 200ms 回调一次会让详情页（子组件很多）无谓重组。
      */
     onPositionTick: (Int) -> Unit = {},
+    /**
+     * 空降助手的可跳过片段（v1.6.3）。
+     *
+     * ## 为什么画在进度条上，而不是只留提示条
+     *
+     * `SkippedBanner` 只在**跳过发生的那一瞬间**出现（5 秒后自动消失）。
+     * 用户拖动进度条时看不到"哪些区域会被跳过" —— 拖过去才发现
+     * 播放位置被自动拽走，主观上像"进度条不听话"。
+     *
+     * 画在轨道上后，**拖动前就能看见**整段广告/片头在哪。
+     *
+     * ⚠️ 传入的是**已按类别过滤并合并**的片段（见 `SponsorBlockRepository`），
+     * 这里只负责画，不再做任何过滤/合并 —— 否则会出现
+     * "设置里关了 intro，进度条上却还有 intro 色块"的不一致。
+     *
+     * 空列表 = 该视频没有片段（常态），此时**一个像素都不画**。
+     */
+    skipSegments: List<SkipSegment> = emptyList(),
 ) {
     val colors = BiliTheme.colors
     var isPlaying by remember { mutableStateOf(player.isPlaying) }
@@ -588,6 +608,9 @@ fun PlayerControls(
                             else -> 0f
                         },
                         dragging = isDragging,
+                        // 空降助手：把可跳过区间画在轨道上（v1.6.3）
+                        skipSegments = skipSegments,
+                        durationMs = duration,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = Space.x1),
@@ -771,6 +794,8 @@ private fun SeekPreview(
 private fun ProgressBar(
     fraction: Float,
     dragging: Boolean,
+    skipSegments: List<SkipSegment> = emptyList(),
+    durationMs: Long = 0L,
     modifier: Modifier = Modifier,
 ) {
     val colors = BiliTheme.colors
@@ -789,6 +814,44 @@ private fun ProgressBar(
             strokeWidth = TRACK_HEIGHT.toPx(),
             cap = androidx.compose.ui.graphics.StrokeCap.Round,
         )
+
+        // ---- 空降助手：可跳过区间（v1.6.3）----
+        //
+        // ## 绘制顺序：在"已播轨道"**之前**
+        //
+        // 已播部分（品牌粉）必须始终是**最上层**的读数 ——
+        // 它表达"我播到哪了"，比"这段会被跳过"更重要。
+        // 反过来画会让色块盖住进度，用户就分不清播到哪了。
+        //
+        // ## 为什么比轨道高
+        //
+        // 轨道只有 2dp，同高画上去几乎看不见（尤其在大屏上）。
+        // 这里用 SKIP_MARKER_H（5dp）做成"旗标"，两侧带圆角 ——
+        // 既醒目，又不至于把细轨道变成一条粗彩带。
+        //
+        // ## 几何全部交给 [SkipBarGeometry]（纯函数，有单测）
+        //
+        // 越界裁剪、最小宽度、时长未知这些**边界**在这里手写极易出错，
+        // 且错了不报错、只是标记画在错的位置。抽出去后用
+        // `SkipBarGeometryTest` 钉死，生产与测试调的是同一份实现。
+        if (durationMs > 0L && skipSegments.isNotEmpty()) {
+            val w = size.width
+            val markH = SKIP_MARKER_H.toPx()
+
+            for (span in SkipBarGeometry.spans(skipSegments, durationMs / 1000.0)) {
+                val seg = skipSegments[span.index]
+                val left = span.startFraction * w
+                val drawW = (span.widthFraction * w).coerceAtMost(w - left)
+                if (drawW <= 0f) continue
+
+                drawRoundRect(
+                    color = skipSegmentColor(colors, seg.category),
+                    topLeft = Offset(left, centerY - markH / 2f),
+                    size = androidx.compose.ui.geometry.Size(width = drawW, height = markH),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(markH / 2f),
+                )
+            }
+        }
 
         // 已播轨道
         val playedX = size.width * fraction.coerceIn(0f, 1f)
@@ -819,6 +882,39 @@ private fun ProgressBar(
         // radius 变量用于消除未使用警告外的可读性；实际画线用 strokeWidth
         check(radius >= 0f)
     }
+}
+
+/**
+ * 跳过片段的标记色（v1.6.3）。
+ *
+ * ## 🔴 全部取自现有令牌，不新增色值
+ *
+ * §5.2 要求"页面内零硬编码"，且**禁止第二套配色**。
+ * 所以这里只做**类别 → 已有令牌**的映射，不定义任何新颜色。
+ *
+ * ## 为什么按类别分色（需求："不同跳过区间需要能够清楚区分"）
+ *
+ * 全部用同一个颜色时，相邻的两个片段（如 `片头` 紧跟 `恰饭广告`）
+ * 会连成一片，用户无法判断这是"一段"还是"两段"。
+ *
+ * ## 与 `stateError` 的取舍（这是刻意的，不是随手挑的）
+ *
+ * `stateError`（`#F87171` 红）语义是"出错了"。这里用它标恰饭广告，
+ * 理由是：它是**用户最想避开**的一类，需要最强的视觉排斥感；
+ * 而进度条上的红色不会被误读成"播放失败"—— 那个位置没有任何
+ * 错误态的既有约定。其余类别一律走非警示色，避免整条轨道"全红"。
+ *
+ * ⚠️ 不用 `brandPrimary`：那是**已播进度**的专用色，
+ * 复用会让"已播"与"会被跳过"混成一个意思。
+ */
+private fun skipSegmentColor(
+    colors: com.example.biliv3.design.tokens.BiliColors,
+    category: String,
+): androidx.compose.ui.graphics.Color = when (category) {
+    "sponsor" -> colors.stateError
+    "selfpromo" -> colors.accentCoin
+    "intro", "outro", "preview" -> colors.accentTerminal
+    else -> colors.categoryAccent
 }
 
 /** 右上角小图标按钮。比中央按钮小一圈，降低视觉占用。 */
@@ -903,3 +999,15 @@ private val PROGRESS_TOUCH_HEIGHT = 28.dp
 /** 进度圆点静止 / 拖动时直径。 */
 private val DOT_REST = 8.dp
 private val DOT_DRAGGING = 12.dp
+
+/**
+ * 跳过片段标记的高度（v1.6.3）。
+ *
+ * 比轨道（[TRACK_HEIGHT] 2dp）高，否则在 2dp 细线上几乎看不见。
+ * 5dp 是"看得清"与"不把细轨道变成粗彩带"之间的取值。
+ *
+ * ⚠️ **最小宽度不在这里** —— 它属于"秒 → 轨道位置"的几何换算，
+ * 放在 [com.example.biliv3.data.SkipBarGeometry.MIN_WIDTH_FRACTION]，
+ * 那样才能被单测覆盖（`SkipBarGeometryTest`）。
+ */
+private val SKIP_MARKER_H = 5.dp

@@ -184,4 +184,76 @@ object PlayerFactory {
 
         return MergingMediaSource(videoSource, audioSource)
     }
+
+    /**
+     * 直播流装配（v1.6.3）—— **应用内播放**。
+     *
+     * ## 为什么直播不能复用 [buildMediaSource]
+     *
+     * `buildMediaSource` 是给 **DASH 点播**用的：它按 `MIME_AUDIO_MP4` /
+     * `MIME_VIDEO_MP4` 包 `ProgressiveMediaSource`，那套假设是
+     * "一个有限的 mp4 文件"。直播流有两个根本不同：
+     *
+     * | | 点播 DASH | 直播 |
+     * |---|---|---|
+     * | 时长 | 有限 | **无限**（永不 ENDED） |
+     * | 封装 | fMP4 | FLV / HLS 分片 |
+     * | 音视频 | **分离两条流** | **同一条流里复用** |
+     *
+     * 用 `MergingMediaSource` 去合直播流是错的：直播的 FLV/HLS 里
+     * **本身就有音轨**，再合一次会让音频重复或轨选择错乱。
+     * 所以直播只需要**一条** MediaSource。
+     *
+     * ## 协议选择：HLS 优先，FLV 兜底
+     *
+     * - **HLS**（`HlsMediaSource`）：分片天生适配直播，断线能续拉，
+     *   且 Media3 对它支持最完整。
+     * - **FLV**（`ProgressiveMediaSource` + 内置 `FlvExtractor`）：
+     *   能播，但被当成"渐进式文件"处理 —— 直播永不结束，
+     *   缓冲会持续增长，长时间观看内存压力大。**只作兜底**。
+     *
+     * ## ⚠️ 必须带 Referer
+     *
+     * 与点播同理（见类文档）：不带 `Referer: https://www.bilibili.com`
+     * 会被 CDN 403。直播 CDN 实测同样如此。
+     *
+     * @return `null` = 没有可播地址（调用方应显示空态而不是黑屏）
+     */
+    fun buildLiveMediaSource(
+        stream: com.example.biliv3.data.LiveStream,
+        dataSourceFactory: DataSource.Factory = mediaDataSource(),
+    ): androidx.media3.exoplayer.source.MediaSource? {
+        // ---- 首选 HLS ----
+        if (stream.hlsUrl.isNotEmpty()) {
+            return runCatching {
+                androidx.media3.exoplayer.hls.HlsMediaSource
+                    .Factory(dataSourceFactory)
+                    // 直播：允许 Media3 按清单里的 EXT-X-MEDIA-SEQUENCE 滚动，
+                    // 不把已播分片当成"错过"而报错
+                    .setAllowChunklessPreparation(true)
+                    .createMediaSource(
+                        MediaItem.Builder()
+                            .setUri(stream.hlsUrl)
+                            .setMimeType(MimeTypes.APPLICATION_M3U8)
+                            .build(),
+                    )
+            }.getOrNull()
+        }
+
+        // ---- 兜底 FLV ----
+        if (stream.flvUrl.isNotEmpty()) {
+            return runCatching {
+                ProgressiveMediaSource.Factory(dataSourceFactory)
+                    .createMediaSource(
+                        MediaItem.Builder()
+                            .setUri(stream.flvUrl)
+                            // 显式声明 FLV：Media3 的 FlvExtractor 会据此选用
+                            .setMimeType(MimeTypes.VIDEO_FLV)
+                            .build(),
+                    )
+            }.getOrNull()
+        }
+
+        return null
+    }
 }

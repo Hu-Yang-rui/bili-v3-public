@@ -141,6 +141,8 @@ fun VideoDetailScreen(
     focusRpid: String = "",
     /** 空降助手：是否启用自动跳过片段（来自设置）。 */
     sponsorBlockEnabled: Boolean = false,
+    /** 空降助手：可跳过区间画到进度条上（v1.6.3）。 */
+    skipSegments: List<com.example.biliv3.data.SkipSegment> = emptyList(),
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
     onVideoClick: (String) -> Unit = {},
@@ -247,8 +249,7 @@ fun VideoDetailScreen(
     focusCommentRpid: String? = null,
     /** 定位完成（滚动+高亮）后回调，上层清空定位目标。 */
     onFocusCommentHandled: () -> Unit = {},
-    /**
-     * 打开楼中楼详情页（oid, root, upMid）。
+    /** 打开楼中楼详情页（oid, root, upMid）。
      *
      * 与 [onViewAllReplies] 是同一个语义 —— 保留两个名字是为了
      * 让"详情页内部转发"与"外部注入"两处可读性更好；
@@ -279,6 +280,13 @@ fun VideoDetailScreen(
     resumePositionMs: Long = 0L,
     /** 续播提示是否已被用户消费（点"继续"或"从头"后置 true）。 */
     onResumeConsumed: () -> Unit = {},
+    /**
+     * 打开 AI 总结（v1.6.3）。
+     *
+     * 由导航层接到"打开设置页的 AI 配置"（当第三方未配置时）。
+     * 详情页本身只负责弹层。
+     */
+    onOpenAiSettings: () -> Unit = {},
     viewModel: VideoDetailViewModel = viewModel(
         key = "detail-$bvid",
         factory = VideoDetailViewModelFactory(bvid),
@@ -319,6 +327,9 @@ fun VideoDetailScreen(
     // 楼中楼就地分页（v1.5.1）：正在加载的 rpid 集合 —— 用于显示 loading 与防重复点击
     val replyLoading by viewModel.replyLoading.collectAsStateWithLifecycle()
     val coinBalance by viewModel.coinBalance.collectAsStateWithLifecycle()
+    // 空降助手：已过滤 + 已合并的可跳过片段（v1.6.3）。
+    // 用于把区间画到进度条上 —— 拖动前就能看见哪几段会被跳过。
+    val skipSegments by viewModel.skipSegments.collectAsStateWithLifecycle()
     val commentTotal by viewModel.commentTotal.collectAsStateWithLifecycle()
     val commentLoading by viewModel.commentLoading.collectAsStateWithLifecycle()
     val commentLoadingMore by viewModel.commentLoadingMore.collectAsStateWithLifecycle()
@@ -515,6 +526,14 @@ fun VideoDetailScreen(
      * 而互动栏里投币与点赞/收藏相邻，误触概率不低。
      */
     var showCoinDialog by remember { mutableStateOf(false) }
+
+    /**
+     * AI 总结弹层开关（v1.6.3）。
+     *
+     * 与其它弹层一样放在**根 Box 内**渲染 —— 保证覆盖在页面之上
+     * （与评论输入浮层踩过的坑同源）。
+     */
+    var showSummary by remember { mutableStateOf(false) }
 
     // 打开投币弹窗前先拉余额（弹窗要显示）。
     // 放这里而不是弹窗内部：弹窗是纯展示组件，不该自己发请求。
@@ -804,6 +823,17 @@ fun VideoDetailScreen(
                     onSelectPage = viewModel::selectPage,
                     chapters = chapters,
                     currentPositionSeconds = currentPositionSeconds,
+                    // 空降助手：可跳过区间画到进度条上（v1.6.3）
+                    skipSegments = skipSegments,
+                    // AI 总结入口（v1.6.3）。未注入仓库时为 null → 不渲染入口。
+                    onOpenSummary = if (viewModel.aiSummaryAvailable) {
+                        {
+                            showSummary = true
+                            viewModel.loadSummary()
+                        }
+                    } else {
+                        null
+                    },
                     onJumpChapter = { index -> viewModel.jumpToChapter(index, player) },
                     onRetryPlay = {
                         playerError = null
@@ -1186,6 +1216,28 @@ fun VideoDetailScreen(
             viewModel.clearSubtitleError()
         }
     }
+
+    // ---- AI 总结弹层（v1.6.3）----
+    //
+    // 与投币弹窗一样用 Dialog（独立 window，自带返回拦截）。
+    // 放在根 Box 之后渲染，保证它覆盖在页面之上。
+    if (showSummary) {
+        val summaryState by viewModel.summaryState.collectAsStateWithLifecycle()
+        AiSummarySheet(
+            state = summaryState,
+            onDismiss = {
+                showSummary = false
+                // 只清 UI 状态，**保留缓存** —— 下次打开立即出结果
+                viewModel.resetSummaryState()
+            },
+            onRetry = { viewModel.loadSummary() },
+            onOpenSettings = {
+                showSummary = false
+                viewModel.resetSummaryState()
+                onOpenAiSettings()
+            },
+        )
+    }
 }
 
 /**
@@ -1541,8 +1593,23 @@ private fun DetailContent(
     chapters: List<com.example.biliv3.data.VideoChapter> = emptyList(),
     /** 当前播放位置（秒）。用于高亮"正在哪一章"。 */
     currentPositionSeconds: Int = 0,
+    /**
+     * 空降助手：可跳过片段（v1.6.3）—— 画在进度条轨道上。
+     *
+     * ⚠️ 传的是 `viewModel.skipSegments`（**已按设置里的类别过滤、已合并**）。
+     * 不要在这里再过滤一次，否则会出现"设置里关了 intro，
+     * 进度条上却还有 intro 色块"的双重真相。
+     */
+    skipSegments: List<com.example.biliv3.data.SkipSegment> = emptyList(),
     /** 点击章节跳转。 */
     onJumpChapter: (Int) -> Unit = {},
+    /**
+     * AI 总结入口（v1.6.3）。`null` = 该功能不可用，不渲染入口。
+     *
+     * ⚠️ 必须可空 —— 传一个空 lambda 会让按钮看起来能点但没反应
+     * （§1.6 死入口）。渲染侧据 `null` 判断是否显示。
+     */
+    onOpenSummary: (() -> Unit)? = null,
     onRetryPlay: () -> Unit,
     onPlayerError: (String) -> Unit,
     onLike: () -> Unit,
@@ -1729,6 +1796,7 @@ private fun DetailContent(
                 danmakuEnabled = danmakuEnabled,
                 onToggleDanmaku = onToggleDanmaku,
                 onSendDanmaku = onSendDanmaku,
+                onOpenSummary = onOpenSummary,
                 modifier = Modifier.padding(horizontal = CARD_INSET),
             )
 
@@ -1866,6 +1934,7 @@ private fun DetailContent(
                 danmakuEnabled = danmakuEnabled,
                 onToggleDanmaku = onToggleDanmaku,
                 onSendDanmaku = onSendDanmaku,
+                onOpenSummary = onOpenSummary,
                 // ⚠️ 必须与其它卡片用同一个横向内缩量（见下方 CARD_INSET 说明）。
                 // 此前这里没有 padding，于是工具条是**通栏贴边**的，
                 // 而紧邻的 UP 信息卡是内缩的 —— 两张卡左右边缘不齐，
@@ -2504,6 +2573,8 @@ private fun PlayerArea(
     onPlayerError: (String) -> Unit,
     /** 空降助手：是否启用自动跳过片段。 */
     sponsorBlockEnabled: Boolean = false,
+    /** 空降助手：可跳过区间画到进度条上（v1.6.3）。 */
+    skipSegments: List<com.example.biliv3.data.SkipSegment> = emptyList(),
     /** 判定当前进度该不该跳（含去重）。 */
     skipTargetFor: (Double) -> Double? = { null },
     /** 进度条拖动状态变化。 */
@@ -2640,6 +2711,9 @@ private fun PlayerArea(
                         isUserSeeking = seeking
                         onSeekingChanged(seeking)
                     },
+                    // 空降助手：把可跳过区间画到轨道上（v1.6.3）。
+                    // 拖动进度条时能直接看见哪几段会被自动跳过。
+                    skipSegments = skipSegments,
                     modifier = Modifier.fillMaxSize(),
                 )
 

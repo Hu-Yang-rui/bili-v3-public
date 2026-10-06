@@ -81,6 +81,8 @@ class SettingsStore(
                 ?: SponsorBlockDefaults.CATEGORIES,
             sponsorBlockShowToast = p[KEY_SB_TOAST] ?: true,
             sponsorBlockAllowUndo = p[KEY_SB_UNDO] ?: true,
+            // ---- 直播 ----
+            liveIncognito = p[KEY_LIVE_INCOGNITO] ?: false,
             // ---- 通用 ----
             preferH264 = p[KEY_H264] ?: true,
             // ---- 外观 ----
@@ -145,6 +147,24 @@ class SettingsStore(
     suspend fun setSponsorBlockShowToast(v: Boolean) = edit { it[KEY_SB_TOAST] = v }
 
     suspend fun setSponsorBlockAllowUndo(v: Boolean) = edit { it[KEY_SB_UNDO] = v }
+
+    // ---------------- 直播 ----------------
+
+    /**
+     * 隐身入场。
+     *
+     * ## 默认值为什么是 `false`
+     *
+     * 与 `autoPip` 同一条理由：这是**新增能力**，默认必须保持改动前的
+     * 行为（改动前根本不发入场上报 —— 因为那时没有直播播放，
+     * 点条目直接开浏览器）。默认开会让"我什么都没改，怎么行为变了"。
+     *
+     * ## 消费者
+     *
+     * [com.example.biliv3.ui.live.LiveViewModel.openRoom] ——
+     * 开启时**不调用** `LiveRepository.reportEntry`。
+     */
+    suspend fun setLiveIncognito(v: Boolean) = edit { it[KEY_LIVE_INCOGNITO] = v }
 
     // ---------------- 外观 ----------------
 
@@ -241,6 +261,10 @@ class SettingsStore(
 
         private val KEY_SB_UNDO = androidx.datastore.preferences.core
             .booleanPreferencesKey("sponsor_block_undo")
+
+        // ---- 直播 ----
+        private val KEY_LIVE_INCOGNITO = androidx.datastore.preferences.core
+            .booleanPreferencesKey("live_incognito")
     }
 }
 
@@ -335,6 +359,26 @@ data class Settings(
 
     /** 跳过时是否弹撤销按钮（误标时可以退回）。 */
     val sponsorBlockAllowUndo: Boolean = true,
+
+    // ---- 直播 ----
+    /**
+     * 隐身入场（v1.6.3）。
+     *
+     * ## 它**真实控制**什么
+     *
+     * 开启后，进入直播间时**不调用** `roomEntryAction` 入场上报接口
+     * （实测该接口 `code=0` 可用，见 `Endpoints.LIVE_ENTRY_ACTION`）。
+     * 即：本应用不会产生"某某进入了直播间"的上报。
+     *
+     * ## 它**不**控制什么（必须如实告知用户）
+     *
+     * 本项目的直播条目点击后打开的是**系统浏览器**的官方直播间页面。
+     * 那个页面会自己发上报，**不受本应用控制**。
+     * 所以开关文案写的是"本应用不发送入场上报"，不是"完全隐身"。
+     *
+     * 默认 `false`（保持改动前的行为）。
+     */
+    val liveIncognito: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_SPEED = 1f

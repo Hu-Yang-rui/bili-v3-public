@@ -152,6 +152,51 @@ object Routes {
     const val LIVE = "live"
 
     /**
+     * 直播间（**应用内播放**，v1.6.3）。
+     *
+     * 此前直播条目点击是 `openExternalUrl("https://live.bilibili.com/{id}")` ——
+     * 因为当时缺 HLS/FLV 依赖，硬做会黑屏。v1.6.3 补上依赖后
+     * 改为站内播放，不再跳出应用。
+     *
+     * 参数只传 `roomId` + 标题/主播名/头像（列表里已有，带过去省一次请求）。
+     * 其余信息由直播间页自己取流时拿。
+     */
+    const val LIVE_ROOM_ARG_ID = "roomId"
+    const val LIVE_ROOM_ARG_TITLE = "title"
+    const val LIVE_ROOM_ARG_UNAME = "uname"
+    const val LIVE_ROOM_ARG_FACE = "face"
+    const val LIVE_ROOM_ARG_ONLINE = "online"
+    const val LIVE_ROOM_ARG_AREA = "area"
+    const val LIVE_ROOM =
+        "live/{$LIVE_ROOM_ARG_ID}?$LIVE_ROOM_ARG_TITLE={$LIVE_ROOM_ARG_TITLE}" +
+            "&$LIVE_ROOM_ARG_UNAME={$LIVE_ROOM_ARG_UNAME}" +
+            "&$LIVE_ROOM_ARG_FACE={$LIVE_ROOM_ARG_FACE}" +
+            "&$LIVE_ROOM_ARG_ONLINE={$LIVE_ROOM_ARG_ONLINE}" +
+            "&$LIVE_ROOM_ARG_AREA={$LIVE_ROOM_ARG_AREA}"
+
+    /**
+     * 构造直播间路由。
+     *
+     * ⚠️ 标题 / 主播名 / 头像都要 `Uri.encode` —— 直播标题里
+     * `?` `/` `&` 都很常见（"今晚直播！Q&A 环节"），不编码会把路径切坏。
+     */
+    fun liveRoom(
+        roomId: Long,
+        title: String = "",
+        uname: String = "",
+        face: String = "",
+        online: Int = 0,
+        area: String = "",
+    ): String = buildString {
+        append("live/$roomId")
+        append("?$LIVE_ROOM_ARG_TITLE=${android.net.Uri.encode(title)}")
+        append("&$LIVE_ROOM_ARG_UNAME=${android.net.Uri.encode(uname)}")
+        append("&$LIVE_ROOM_ARG_FACE=${android.net.Uri.encode(face)}")
+        append("&$LIVE_ROOM_ARG_ONLINE=$online")
+        append("&$LIVE_ROOM_ARG_AREA=${android.net.Uri.encode(area)}")
+    }
+
+    /**
      * 播放队列（v1.3.0）。
      *
      * 队列是**应用级**状态（在 `PlaybackController` 里），
@@ -241,6 +286,22 @@ const val SETTINGS = "settings"
      * 无参数：列表从加密存储读，页面自己管状态。
      */
     const val ACCOUNTS = "accounts"
+
+    /**
+     * 特别关注（**本地书签**，v1.6.3）。
+     *
+     * ## 🔴 它不是 B 站的关注列表
+     *
+     * 本项目**没有**接入 B 站关注列表接口（`Endpoints` 里不存在
+     * `relation/followings`），所以这里是一个**诚实的本地列表**：
+     * 只包含用户在本应用里手动标记过的 UP 主。
+     *
+     * 页面顶部有常驻说明写明这一点 —— 不能让用户以为
+     * "这里能看到我关注的所有人"（那会是一句假的事实断言）。
+     *
+     * 无参数：列表从本地 DataStore 读。
+     */
+    const val ATTENTION = "attention"
 }
 
 /**

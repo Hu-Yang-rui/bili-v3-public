@@ -1,0 +1,449 @@
+package com.example.biliv3.ui.video
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.example.biliv3.data.ai.SummarySection
+import com.example.biliv3.data.ai.SummarySource
+import com.example.biliv3.data.ai.VideoSummary
+import com.example.biliv3.design.BiliTheme
+import com.example.biliv3.design.RuleLine
+import com.example.biliv3.design.SectionMark
+import com.example.biliv3.design.tokens.FontSize
+import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.tokens.Rhythm
+import com.example.biliv3.design.tokens.Rule
+import com.example.biliv3.design.tokens.Sizes
+import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.ui.component.BrandButton
+import com.example.biliv3.ui.component.BrandButtonVariant
+import com.example.biliv3.ui.component.TerminalLoadingState
+
+/**
+ * AI 总结弹层（v1.6.3）。
+ *
+ * ## UI 完全复用现有语言（需求硬要求）
+ *
+ * | 需求 | 本实现 |
+ * |---|---|---|
+ * | 复用弹窗 | `Dialog` + `Radius.panel` + `surfaceElevated`（同 `PlayerSettingsSheet`） |
+ * | 无卡片 | 分组靠 `SectionMark` + `Rhythm` 间距，**不套容器** |
+ * | 当前字体/颜色 | 全部走 `FontSize` / `BiliTheme.colors`，零硬编码 |
+ * | 状态反馈 | `TerminalLoadingState` / `BrandButton`（与全站一致） |
+ *
+ * **没有为 AI 总结新造任何视觉体系** —— 它看起来就是本项目的一个普通弹层。
+ *
+ * ## 🔴 来源必须显式标注
+ *
+ * 官方总结与第三方总结的可信度完全不同。第三方是**用户自己配的模型
+ * 生成的**，可能出现幻觉；若与官方长得一样，会被误当成"B 站官方说的"。
+ *
+ * 所以标题右侧常驻一个来源标签：
+ * - 官方 → 「B 站官方 AI」
+ * - 第三方 → 模型名（如 `gpt-4o-mini`）
+ */
+@Composable
+fun AiSummarySheet(
+    state: AiSummaryUiState,
+    onDismiss: () -> Unit,
+    onRetry: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    val colors = BiliTheme.colors
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+        ),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colors.scrimPanel)
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = Space.x4)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(Radius.panel))
+                    // 弹层用 surfaceElevated（比卡片亮一档）—— 深色下分层靠提亮
+                    .background(colors.surfaceElevated)
+                    .clickable(enabled = false) {}
+                    .heightIn(max = MAX_SHEET_HEIGHT)
+                    .padding(bottom = Space.x3),
+            ) {
+                // ---- 标题栏 ----
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Space.x4, vertical = Space.x3),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "AI 总结",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = FontSize.titleMd,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.textPrimary,
+                        ),
+                    )
+                    Spacer(Modifier.width(Space.x2))
+                    // 来源标签（拿到结果后才显示）
+                    (state as? AiSummaryUiState.Done)?.summary?.let { s ->
+                        SourceTag(source = s.source, model = s.model)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Box(
+                        modifier = Modifier
+                            .size(Sizes.iconXl + Space.x2)
+                            .clip(RoundedCornerShape(Radius.interactive))
+                            .clickable(onClick = onDismiss),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "关闭",
+                            tint = colors.textSecondarySafe,
+                            modifier = Modifier.size(Sizes.iconLg),
+                        )
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    when (state) {
+                        is AiSummaryUiState.Idle,
+                        is AiSummaryUiState.Loading,
+                        -> TerminalLoadingState(
+                            text = state.hint(),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        is AiSummaryUiState.Error -> Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = Space.x4),
+                        ) {
+                            Text(
+                                text = state.message,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize = FontSize.body,
+                                    lineHeight = FontSize.bodyLine,
+                                    color = colors.textSecondarySafe,
+                                ),
+                            )
+                            Spacer(Modifier.height(Space.x4))
+                            Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+                                BrandButton(
+                                    label = "重试",
+                                    onClick = onRetry,
+                                    variant = BrandButtonVariant.Outline,
+                                )
+                                // 官方拿不到且第三方没配 → 直接给"去配置"的出口
+                                if (state.needsConfig) {
+                                    BrandButton(
+                                        label = "配置第三方 AI",
+                                        onClick = onOpenSettings,
+                                        variant = BrandButtonVariant.Filled,
+                                    )
+                                }
+                            }
+                        }
+
+                        is AiSummaryUiState.Done -> SummaryBody(state.summary)
+                    }
+                    Spacer(Modifier.height(Space.x4))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 总结正文。
+ *
+ * ## 结构（严格用现有分组语言，不套卡片）
+ *
+ * ```
+ * 01 ── 视频概述
+ *   正文…
+ * 02 ── 核心内容
+ *   02:00  分段标题
+ *     · 要点
+ * 03 ── 简短总结
+ *   正文…
+ * ```
+ *
+ * 章节标记用 `SectionMark`（替代"卡片组标题"），与设置页/其它页一致。
+ */
+@Composable
+private fun SummaryBody(summary: VideoSummary) {
+    val colors = BiliTheme.colors
+
+    // ---- 概述 ----
+    if (summary.overview.isNotBlank()) {
+        SectionMark(
+            index = 1,
+            title = "视频概述",
+            modifier = Modifier.padding(top = Space.x1),
+        )
+        Spacer(Modifier.height(Space.x2))
+        Text(
+            text = summary.overview,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = FontSize.body,
+                lineHeight = FontSize.bodyLine,
+                color = colors.textPrimary,
+            ),
+            modifier = Modifier.padding(horizontal = Space.x4),
+        )
+    }
+
+    // ---- 核心内容 ----
+    if (summary.outline.isNotEmpty()) {
+        SectionMark(
+            index = 2,
+            title = "核心内容",
+            modifier = Modifier.padding(top = Rhythm.between),
+        )
+        summary.outline.forEach { sec ->
+            SummarySectionBlock(sec)
+        }
+    }
+
+    // ---- 简短总结 ----
+    if (summary.conclusion.isNotBlank()) {
+        SectionMark(
+            index = if (summary.outline.isEmpty()) 2 else 3,
+            title = "简短总结",
+            modifier = Modifier.padding(top = Rhythm.between),
+        )
+        Spacer(Modifier.height(Space.x2))
+        Text(
+            text = summary.conclusion,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = FontSize.body,
+                lineHeight = FontSize.bodyLine,
+                color = colors.textPrimary,
+            ),
+            modifier = Modifier.padding(horizontal = Space.x4),
+        )
+    }
+
+    // ---- 截断告知（必须显示，否则用户以为覆盖了全片）----
+    if (summary.truncated) {
+        Spacer(Modifier.height(Rhythm.between))
+        RuleLine(color = Rule.subtle)
+        Text(
+            text = "⚠️ 字幕过长已截断，本总结仅基于视频前一部分内容。",
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.label,
+                lineHeight = FontSize.labelLine,
+                color = colors.accentCoin,
+            ),
+            modifier = Modifier.padding(
+                start = Space.x4,
+                end = Space.x4,
+                top = Space.x2,
+            ),
+        )
+    }
+
+    // ---- 第三方来源的责任说明 ----
+    if (summary.source == SummarySource.THIRD_PARTY) {
+        Spacer(Modifier.height(Rhythm.between))
+        RuleLine(color = Rule.subtle)
+        Text(
+            text = "以上内容由你自己配置的第三方 AI（${summary.model}）根据字幕生成，" +
+                "**不是 B 站官方总结**，可能有误，请自行判断。",
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.label,
+                lineHeight = FontSize.labelLine,
+                color = colors.textTertiary,
+            ),
+            modifier = Modifier.padding(
+                start = Space.x4,
+                end = Space.x4,
+                top = Space.x2,
+            ),
+        )
+    }
+}
+
+/** 一个分段：可选时间 + 标题 + 要点列表。 */
+@Composable
+private fun SummarySectionBlock(sec: SummarySection) {
+    val colors = BiliTheme.colors
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Space.x4, vertical = Space.x2),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // 时间用等宽（§5.1 允许的极客点缀：数字读数）
+            if (sec.timeLabel.isNotEmpty()) {
+                Text(
+                    text = sec.timeLabel,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        fontSize = FontSize.badge,
+                        color = colors.accentTerminal,
+                    ),
+                )
+                Spacer(Modifier.width(Space.x2))
+            }
+            if (sec.title.isNotEmpty()) {
+                Text(
+                    text = sec.title,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = FontSize.bodySm,
+                        fontWeight = FontWeight.Medium,
+                        color = colors.textPrimary,
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        sec.points.forEach { point ->
+            Spacer(Modifier.height(Space.x1))
+            Row(verticalAlignment = Alignment.Top) {
+                // 要点前缀用**短横线**而不是圆点符号：
+                // 与全站"左侧竖线/短横"的分组语言一致，且不引入 emoji 语义
+                Text(
+                    text = "—",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontSize = FontSize.label,
+                        color = colors.textTertiary,
+                    ),
+                )
+                Spacer(Modifier.width(Space.x2))
+                Text(
+                    text = point,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = FontSize.bodySm,
+                        lineHeight = FontSize.bodySmLine,
+                        color = colors.textSecondarySafe,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 来源标签。
+ *
+ * ⚠️ 官方与第三方**必须视觉可区分**：官方用品牌蓝（站内数据的语义），
+ * 第三方用中性色 —— 让用户一眼看出"这段是谁说的"。
+ */
+@Composable
+private fun SourceTag(source: SummarySource, model: String) {
+    val colors = BiliTheme.colors
+    val (label, tint) = when (source) {
+        SummarySource.OFFICIAL -> "B 站官方 AI" to colors.textLinkSafe
+        SummarySource.THIRD_PARTY ->
+            (model.ifEmpty { "第三方 AI" }) to colors.textSecondarySafe
+    }
+
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium.copy(
+            fontSize = FontSize.badge,
+            fontWeight = FontWeight.Medium,
+            color = tint,
+        ),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .clip(RoundedCornerShape(Radius.badge))
+            .background(colors.bgHover)
+            .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
+    )
+}
+
+/** 弹层高度上限（与 `PlayerSettingsSheet` 同一取值思路：不顶到状态栏）。 */
+private val MAX_SHEET_HEIGHT = 520.dp
+
+/**
+ * AI 总结的 UI 状态。
+ *
+ * 用密封接口而不是"三个布尔" —— 天然排除
+ * "既在加载又有结果"这种非法组合（与 `PlayerSettingsSheet` 的
+ * `PickerKindId` 同一思路）。
+ */
+sealed interface AiSummaryUiState {
+    /** 还没开始（弹层刚打开、正在决定走哪条路）。 */
+    data object Idle : AiSummaryUiState
+
+    /** 正在取总结。[step] 说明当前在做哪一步（官方 / 第三方 / 取字幕）。 */
+    data class Loading(val step: Step) : AiSummaryUiState
+
+    /** 拿到结果。 */
+    data class Done(val summary: VideoSummary) : AiSummaryUiState
+
+    /** 失败。[needsConfig] = true 时给"去配置"按钮。 */
+    data class Error(
+        val message: String,
+        val needsConfig: Boolean = false,
+    ) : AiSummaryUiState
+
+    /** 加载步骤（用于给用户**具体**的进度文案，而不是一句"加载中"）。 */
+    enum class Step {
+        /** 正在试官方总结。 */
+        OFFICIAL,
+
+        /** 正在取字幕。 */
+        SUBTITLE,
+
+        /** 正在调第三方模型。 */
+        MODEL,
+    }
+}
+
+/** 加载文案：说明**当前在哪一步**，长耗时操作尤其需要。 */
+private fun AiSummaryUiState.hint(): String = when (this) {
+    is AiSummaryUiState.Loading -> when (step) {
+        AiSummaryUiState.Step.OFFICIAL -> "正在查询 B 站官方 AI 总结…"
+        AiSummaryUiState.Step.SUBTITLE -> "正在获取字幕…"
+        AiSummaryUiState.Step.MODEL -> "正在调用第三方 AI 生成总结…"
+    }
+    else -> "正在准备…"
+}

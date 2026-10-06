@@ -80,6 +80,15 @@ class PlayerHolder(private val context: Context) {
         private set
 
     /**
+     * 当前装配的**直播**流地址（null = 当前不是直播）。
+     *
+     * 与 [currentPlayInfo] 互斥：任一方被设置时另一方清空，
+     * 避免"切回点播时误判成流没变"（见 [bindLive] 的说明）。
+     */
+    var currentLiveUrl: String? = null
+        private set
+
+    /**
      * **共享的** `TextureView` 承载容器。
      *
      * ---
@@ -234,6 +243,8 @@ class PlayerHolder(private val context: Context) {
 
         currentPlayInfo = info
         currentAudioOnly = audioOnly
+        // 切回点播时清掉直播标记（两者互斥，见 bindLive）
+        currentLiveUrl = null
         return runCatching {
             p.setMediaSource(source)
             p.prepare()
@@ -246,12 +257,65 @@ class PlayerHolder(private val context: Context) {
         }.getOrElse { BindResult.Failed(it.message ?: "未知错误") }
     }
 
+    /**
+     * 装配**直播**媒体源（v1.6.3）。
+     *
+     * ## 为什么不复用 [bindMedia]
+     *
+     * `bindMedia` 的"是否同一条流"判断基于 `PlayInfo` 的
+     * `cid / videoUrl / audioUrl / currentQuality` —— 那些是**点播**的
+     * 概念。直播没有 cid、没有独立音轨、没有清晰度切换，
+     * 硬塞进 `PlayInfo` 会造出一个"大部分字段都是空"的假对象。
+     *
+     * 所以这里单独一个入口，判重只比 **URL**。
+     *
+     * ## 关键：直播流**不 seek、不恢复位置**
+     *
+     * 点播切换时要"记位置 → 重建 → seek 回去"，直播没有"位置"可言
+     * （HLS 的 timeline 一直在滚动）。对直播调 `seekTo` 会直接跳到
+     * 直播窗口之外 → 黑屏或卡死。
+     *
+     * @return 与 [bindMedia] 同族的装配结果
+     */
+    fun bindLive(
+        stream: com.example.biliv3.data.LiveStream,
+        playWhenReady: Boolean = true,
+    ): BindResult {
+        val p = player ?: return BindResult.NoPlayer
+        if (p.isReleased) return BindResult.Released
+        if (!stream.playable) return BindResult.NoSource
+
+        // 判重只比 URL：同一条直播流重复进入（如 PiP 进出）不重装，
+        // 保住已经缓冲的分片。
+        val sameUrl = currentLiveUrl != null &&
+            currentLiveUrl == (stream.hlsUrl.ifEmpty { stream.flvUrl })
+        if (sameUrl) return BindResult.Reused
+
+        val source = PlayerFactory.buildLiveMediaSource(stream)
+            ?: return BindResult.NoSource
+
+        // ⚠️ 直播与点播互斥：切到直播必须清掉点播的状态标记，
+        // 否则之后 `bindMedia` 的 `same` 判断会拿点播的旧 PlayInfo
+        // 误判成"流没变"（表现为切回点播时画面还是直播）。
+        currentPlayInfo = null
+        currentLiveUrl = stream.hlsUrl.ifEmpty { stream.flvUrl }
+
+        return runCatching {
+            p.setMediaSource(source)
+            p.prepare()
+            // 不 seek：直播没有可恢复的位置（见 KDoc）
+            p.playWhenReady = playWhenReady
+            BindResult.Bound
+        }.getOrElse { BindResult.Failed(it.message ?: "未知错误") }
+    }
+
     /** 释放播放器（离开视频场景时调用）。 */
     fun release() {
         releaseInternal()
         currentKey = null
         currentPlayInfo = null
         currentAudioOnly = false
+        currentLiveUrl = null
     }
 
     private fun releaseInternal() {

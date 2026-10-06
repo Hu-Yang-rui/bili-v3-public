@@ -422,6 +422,62 @@ val pmRepository: PmRepository by lazy { PmRepository(api, authStore) }
         com.example.biliv3.data.SpaceRepository(api, authStore)
     }
 
+    /**
+     * 第三方 AI 配置（**加密存储**，v1.6.3）。
+     *
+     * ## 🔴 为什么用加密存储而不是 [settingsStore]
+     *
+     * API Key 与 `SESSDATA` 同级：拿到就能以用户身份调用并**花用户的钱**。
+     * `settingsStore` 是明文 DataStore，把 Key 混进去等于明文落盘。
+     *
+     * 所以走 `EncryptedSharedPreferences` + Android Keystore
+     * （与 `AuthStore` 同一套方案）。
+     *
+     * ⚠️ **绝不硬编码任何 Key** —— 没配置时功能直接不可用，
+     * 而不是偷偷用一个"公共 Key"（那会把所有人的用量记在一个人头上）。
+     */
+    val aiConfigStore: com.example.biliv3.data.ai.AiConfigStore by lazy {
+        com.example.biliv3.data.ai.AiConfigStore(appContext)
+    }
+
+    /**
+     * AI 视频总结仓库（v1.6.3）。
+     *
+     * ## 🔴 两个 client 各司其职（这是本项最容易出错的地方）
+     *
+     * - **官方总结**走 [api]（共享 client，**带** B 站 CookieJar）
+     * - **第三方总结**走 `AiSummaryRepository.defaultAiClient()`
+     *   （独立 client，**不挂** CookieJar）
+     *
+     * 反过来用（第三方走共享 client）= 把 `SESSDATA` / `bili_jct`
+     * 明文发给第三方 AI 服务 —— 与 `AicuApi` 完全同一条红线（§4.2）。
+     *
+     * 字幕复用现有 [subtitleRepository]，不新建一套视频文本获取系统。
+     */
+    val aiSummaryRepository: com.example.biliv3.data.ai.AiSummaryRepository by lazy {
+        com.example.biliv3.data.ai.AiSummaryRepository(
+            api = api,
+            subtitleRepository = subtitleRepository,
+            configStore = aiConfigStore,
+        )
+    }
+
+    /**
+     * 「特别关注」——**纯本地**的关注标记。
+     *
+     * ## 🔴 与 [spaceRepository] 的真实关注是两件事
+     *
+     * 它**不持有** `BiliApi`、**不持有** `OkHttpClient`，
+     * 所以**在类型上就不可能**发出关注请求 —— 这是用编译期保证的红线，
+     * 而不是靠"记得别调 `setFollow`"。
+     *
+     * 需求明确要求"不执行真实 B 站关注、不改变真实关注状态"，
+     * 这个类就是那条边界的载体。
+     */
+    val localAttentionStore: com.example.biliv3.data.LocalAttentionStore by lazy {
+        com.example.biliv3.data.LocalAttentionStore(appContext)
+    }
+
     /** 动态流。需要登录。 */
     val dynamicRepository: com.example.biliv3.data.DynamicRepository by lazy {
         com.example.biliv3.data.DynamicRepository(api, authStore)

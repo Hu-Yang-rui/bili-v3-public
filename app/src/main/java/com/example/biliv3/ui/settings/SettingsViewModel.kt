@@ -91,6 +91,57 @@ class SettingsViewModel(
 
     fun setSponsorBlockAllowUndo(v: Boolean) = launch { store.setSponsorBlockAllowUndo(v) }
 
+    // ---- 直播 ----
+
+    /**
+     * 隐身入场（v1.6.3）。
+     *
+     * 消费者：[com.example.biliv3.ui.live.LiveRoomViewModel.reportEntryIfNeeded]
+     * —— 开启后进入直播间**完全不发**入场上报请求。
+     */
+    fun setLiveIncognito(v: Boolean) = launch { store.setLiveIncognito(v) }
+
+    // ---------------------------------------------------------------------
+    // 第三方 AI 配置（v1.6.3）
+    // ---------------------------------------------------------------------
+
+    /**
+     * AI 配置状态。
+     *
+     * ⚠️ **只暴露脱敏摘要，绝不暴露 Key 明文** —— 与 [CookieState] 同一条
+     * 红线（§7.16-94）。UI 需要"有没有配 Key"就用 [AiConfig.hasKey]。
+     */
+    private val _aiConfig = kotlinx.coroutines.flow.MutableStateFlow(
+        com.example.biliv3.data.ai.AiConfig(),
+    )
+    val aiConfig: StateFlow<com.example.biliv3.data.ai.AiConfig> = _aiConfig
+
+    /** 由 `SettingsViewModelFactory` 注入（预览/单测里可为 null）。 */
+    var aiConfigStore: com.example.biliv3.data.ai.AiConfigStore? = null
+
+    /** 重新读一次 AI 配置（导入 / 清空后调）。 */
+    fun refreshAiConfig() {
+        _aiConfig.value = aiConfigStore?.snapshot()
+            ?: com.example.biliv3.data.ai.AiConfig()
+    }
+
+    /**
+     * 保存 AI 配置。
+     *
+     * ⚠️ [apiKey] 传 `null` = **不改动现有 Key**（用户只改模型名时，
+     * 不该因为输入框空着就把已存的 Key 抹掉）。传空串才是显式清空。
+     */
+    fun saveAiConfig(baseUrl: String, model: String, apiKey: String?) {
+        aiConfigStore?.save(baseUrl, model, apiKey)
+        refreshAiConfig()
+    }
+
+    /** 清空 AI 配置（含 Key）。 */
+    fun clearAiConfig() {
+        aiConfigStore?.clear()
+        refreshAiConfig()
+    }
+
     // ---------------------------------------------------------------------
     // 开发者工具：Cookie 导入 / 导出
     // ---------------------------------------------------------------------

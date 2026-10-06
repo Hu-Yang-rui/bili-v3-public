@@ -128,6 +128,124 @@ class LiveRepository(
         }
         else -> 0
     }
+
+    /**
+     * 直播间取流（v1.6.3，**应用内播放**）。
+     *
+     * ## 实测（2026-10-06，未登录直连 `room_id=6`）
+     *
+     * ```
+     * code=0, live_status=1
+     * stream[] 共 6 种组合：flv(avc/hevc) + hls(ts/fmp4 × avc/hevc)
+     * 真正的地址 = url_info[0].host + codec.base_url + url_info[0].extra
+     * ```
+     *
+     * ## ⚠️ 参数里为什么有 `protocol=0,1&format=0,1,2&codec=0,1`
+     *
+     * 这是"要哪些协议/封装/编码"的**位掩码**。不传的话服务端
+     * 可能只回一种（实测传全量才拿到 6 种组合）。
+     * 我们要 HLS 与 FLV 两条路，所以显式要全。
+     *
+     * ## 失败必须**抛异常**，不能返回空
+     *
+     * 与 [list] 同一条理由（§7.8-44）：返回空会让"直播间没开播"
+     * 与"接口失败"长得一模一样，用户看到的是黑屏而没有任何提示。
+     *
+     * @return 可播地址集合；`playable == false` 表示**确实没流**
+     *         （例如主播未开播），这是**正常状态**，由 UI 显示空态。
+     */
+    suspend fun stream(roomId: Long): LiveStream {
+        if (roomId <= 0L) throw BiliException(-1, "直播间不存在")
+
+        val json = api.getRaw(
+            path = Endpoints.LIVE_PLAY_INFO,
+            query = mapOf(
+                "room_id" to roomId.toString(),
+                // 0=FLV(progressive) 1=HLS —— 两条都要
+                "protocol" to "0,1",
+                // 0=flv 1=ts 2=fmp4
+                "format" to "0,1,2",
+                // 0=avc 1=hevc
+                "codec" to "0,1",
+                // 10000 = 原画（服务端按账号权限降级，未登录会给到 250）
+                "qn" to "10000",
+                "platform" to "web",
+                "ptype" to "8",
+                "dolby" to "5",
+                "panorama" to "1",
+            ),
+            signed = false,
+            host = Endpoints.LIVE_LIST_HOST,
+        )
+
+        val code = json.optInt("code", -1)
+        if (code != 0) {
+            throw BiliException(code, json.optString("message", "直播取流失败"))
+        }
+
+        val data = json.optJSONObject("data")
+            ?: throw BiliException(-1, "直播取流响应缺少 data")
+
+        // live_status: 0=未开播 1=直播中 2=轮播
+        val liveStatus = data.optInt("live_status", 0)
+        if (liveStatus == 0) {
+            // 未开播是**正常状态**，不是错误 —— 返回空流由 UI 显示空态
+            return LiveStream("", "", 0, "", emptyList())
+        }
+
+        return LiveStreamParser.parse(data)
+    }
+
+    /**
+     * 进入直播间上报（「隐身入场」的真实落点，v1.6.3）。
+     *
+     * ## 实测（2026-10-06，未登录直连）
+     *
+     * ```
+     * POST roomEntryAction  room_id=1&ruid=0&platform=web
+     *   -> code=0 / data=null        ✅ 接口真实可用
+     * 缺 room_id -> code=-400          （必填参数）
+     * GET        -> HTTP 405           （只接受 POST）
+     * ```
+     *
+     * ## 调用与不调用的语义
+     *
+     * 这是**客户端主动上报**"我进了这个直播间"。所以：
+     * - **调用** = 产生一次入场上报（与网页端行为一致）
+     * - **不调用** = 本应用不产生这次上报 → 即用户要的"隐身入场"
+     *
+     * 控制权在本应用手里，所以这个开关**真实有效**，
+     * 不是装饰性的（§1.6「空转设置项」的红线）。
+     *
+     * ## 与"应用内播放"的关系（v1.6.3 起）
+     *
+     * 直播已经改为**应用内播放**（不再跳浏览器），所以这个上报
+     * 成为本应用进入直播间的**唯一**入口上报点 —— 开关的语义
+     * 因此是完整、无歧义的：
+     * - 关：进入直播间时上报一次（默认，与官方网页一致）
+     * - 开：**完全不发**这个请求
+     *
+     * @return true = 上报成功（`code == 0`）；false = 未上报或失败。
+     *   调用方**不应**因为 false 而阻断观看 —— 上报失败不影响播放。
+     */
+    suspend fun reportEntry(roomId: Long): Boolean {
+        if (roomId <= 0L) return false
+        return runCatching {
+            val json = api.postForm(
+                path = Endpoints.LIVE_ENTRY_ACTION,
+                form = mapOf(
+                    "room_id" to roomId.toString(),
+                    // ruid=0 表示"不指定被邀请人"（实测可通）。
+                    // 不要传自己的 mid —— 那会把入场上报变成一次
+                    // "谁邀请了我"的关系上报，语义完全不同。
+                    "ruid" to "0",
+                    "platform" to "web",
+                ),
+                host = Endpoints.LIVE_LIST_HOST,
+            )
+            json.optInt("code", -1) == 0
+        }.getOrDefault(false)
+    }
 }
 
 /**

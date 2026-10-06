@@ -70,14 +70,14 @@ import com.example.biliv3.ui.home.pagePaddingFor
  * 首版 `Endpoints.LIVE_LIST` 常量定义了却从未调用，
  * 首页右侧栏的「正在直播」模块恒为空。这里把它接上。
  *
- * ## ⚠️ 点击行为：打开官方直播间（系统浏览器）
+ * ## 点击行为：进**应用内**直播间播放（v1.6.3 变更）
  *
- * 本项目**不做直播流播放**（缺 FLV/HLS 依赖，见 `LiveViewModel` 说明）。
- * 点击条目打开 `https://live.bilibili.com/{roomId}` ——
- * 真实可用，且不会因为"点进去黑屏"而变成更差的体验。
+ * 此前点击打开系统浏览器（当时缺 HLS/FLV 依赖，硬做会黑屏）。
+ * v1.6.3 补上 `media3-exoplayer-hls` 后改为站内播放 ——
+ * 实测接口确实返回可播的 HLS 清单，见 `LiveViewModel` 的范围说明。
  *
- * UI 上**明确标注**这一点（卡片右上角"官方页"角标），
- * 不让用户以为点进去是本应用内播放。
+ * 因此卡片右上角**不再**标注"官方页"角标（那个角标是
+ * "点进去会离开应用"的提示，现在不成立了）。
  */
 @Composable
 fun LiveScreen(

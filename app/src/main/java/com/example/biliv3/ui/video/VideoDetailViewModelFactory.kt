@@ -39,6 +39,8 @@ class VideoDetailViewModelFactory(
     private val libraryRepo: com.example.biliv3.data.LibraryRepository? = null,
     /** 设置（「保存观看历史」开关的消费者）。 */
     private val settingsStore: com.example.biliv3.data.SettingsStore? = null,
+    /** AI 总结（v1.6.3）。传 null 时该功能整体不启用。 */
+    private val aiSummaryRepo: com.example.biliv3.data.ai.AiSummaryRepository? = null,
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -60,6 +62,7 @@ class VideoDetailViewModelFactory(
             progressStore = progressStore,
             libraryRepo = libraryRepo,
             settingsStore = settingsStore,
+            aiSummaryRepo = aiSummaryRepo,
         ) as T
     }
 }

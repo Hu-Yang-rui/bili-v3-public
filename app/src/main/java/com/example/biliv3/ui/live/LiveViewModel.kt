@@ -14,17 +14,39 @@ import kotlinx.coroutines.launch
 /**
  * 直播列表 ViewModel。
  *
- * ## 范围说明（重要）
+ * ## 范围说明（v1.6.3 更新：直播已改为**应用内播放**）
  *
- * 本项目**只呈现"有哪些直播"**，不做直播间播放。
+ * ### 此前为什么不做播放
  *
- * 理由：直播流需要 HTTP-FLV / HLS 的另一套播放路径
- * （Media3 的 FLV 扩展或 HLS 模块），而当前依赖里只有
- * `media3-exoplayer-dash`。硬做会得到一个"点进去黑屏"的直播间 ——
- * 那是比"没有这个功能"更差的体验。
+ * 原实现点击条目 → 打开**系统浏览器**的官方直播间页面，理由是：
+ * 直播流需要 HTTP-FLV / HLS 的另一套播放路径，而当时依赖里只有
+ * `media3-exoplayer-dash`。硬做会得到一个"点进去黑屏"的直播间。
  *
- * 所以点击直播条目 → 打开**系统浏览器**看官方直播间页面。
- * 这是真实可用的出口，不是死入口。
+ * ### 现在为什么能做
+ *
+ * v1.6.3 补上了 `media3-exoplayer-hls`，并实测确认 B 站直播接口
+ * （`xlive/web-room/v2/index/getRoomPlayInfo`）确实返回可播地址：
+ *
+ * ```
+ * code=0, live_status=1
+ * http_hls    ts   avc   -> https://.../live_xxx.m3u8?expires=...
+ * http_stream flv  avc   -> https://.../live_xxx.flv?expires=...
+ * ```
+ *
+ * 实测拉取 `.m3u8` 得到 `HTTP 200` + `application/vnd.apple.mpegurl`
+ * + `#EXTM3U` / `#EXT-X-TARGETDURATION:3` / `.ts` 分片 —— 是**真实可用**的
+ * 直播清单，不是推测。
+ *
+ * 所以现在点击条目 → **进站内直播间页播放**（见 `LiveRoomScreen`），
+ * 不再跳出应用。
+ *
+ * ### 本项目仍然**不做**的
+ *
+ * - **直播弹幕**：走 WebSocket 长连接（`sub` 协议），与视频弹幕的
+ *   HTTP protobuf 分片是两套东西。直播间页会**如实说明**未接入，
+ *   而不是做一个假的弹幕区。
+ * - **清晰度切换**：接口给了 `accept_qn`，但本项目只取服务端默认档
+ *   （原画优先，未登录会降级）。不提供切换，也不假装能切。
  */
 class LiveViewModel(
     private val repo: LiveRepository,

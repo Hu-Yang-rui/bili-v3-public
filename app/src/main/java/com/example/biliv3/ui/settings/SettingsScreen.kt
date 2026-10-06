@@ -129,6 +129,11 @@ fun SettingsScreen(
     // 清除凭据是破坏性操作，必须二次确认
     var showClearCookieConfirm by remember { mutableStateOf(false) }
 
+    // AI 配置：编辑态 + 清空确认（与 Cookie 同一套交互约定）
+    var aiEditing by remember { mutableStateOf(false) }
+    var showClearAiConfirm by remember { mutableStateOf(false) }
+    val aiConfig by viewModel.aiConfig.collectAsStateWithLifecycle()
+
     /**
      * 当前打开的选择器（null = 未打开）。
      *
@@ -497,9 +502,32 @@ fun SettingsScreen(
                 InfoRow(label = "数据来源", value = "bsbsb.top（非官方接口）")
             }
 
-            // ================= 存储 =================
+            // ================= 直播 =================
+            //
+            // 直播已在 v1.6.3 改为**应用内播放**，所以"隐身入场"的
+            // 语义是完整无歧义的：本应用进入直播间只有这一个入口。
             SectionMark(
                 index = 7,
+                title = "直播",
+                modifier = Modifier.padding(top = Rhythm.section),
+            )
+
+            SwitchRow(
+                title = "隐身入场",
+                subtitle = "开启后进入直播间不发送入场上报（不影响观看）",
+                checked = settings.liveIncognito,
+                onCheckedChange = viewModel::setLiveIncognito,
+            )
+
+            // 开启时补一句说明：让用户知道它**具体**做了什么、没做什么。
+            // 不写清楚的话，用户无法判断这个开关到底有没有生效。
+            if (settings.liveIncognito) {
+                InfoRow(label = "当前状态", value = "本应用不发入场上报")
+            }
+
+            // ================= 存储 =================
+            SectionMark(
+                index = 8,
                 title = "存储",
                 modifier = Modifier.padding(top = Rhythm.section),
             )
@@ -513,6 +541,61 @@ fun SettingsScreen(
                 onClick = onClearImageCache,
             )
 
+            // ================= 第三方 AI（AI 总结用）=================
+            //
+            // ## 为什么单独一节而不是塞进"播放"
+            //
+            // 它是**外部服务凭据**（会产生费用），与本地偏好性质不同，
+            // 需要用户明确看到"我在配置什么、数据发给谁"。
+            //
+            // ## 🔴 Key 的安全约定（页面上必须体现）
+            //
+            // - 输入框**不回显已存的 Key**（只显示脱敏摘要）
+            // - 保存后只显示 `sk-a…(48)` 这种前缀 + 长度
+            // - 清空是显式动作（不是"留空即清空"）
+            SectionMark(
+                index = 9,
+                title = "第三方 AI（AI 总结）",
+                modifier = Modifier.padding(top = Rhythm.section),
+            )
+
+            AiConfigSection(
+                config = aiConfig,
+                editing = aiEditing,
+                onToggleEdit = { aiEditing = !aiEditing },
+                onSave = { base, model, key ->
+                    viewModel.saveAiConfig(base, model, key)
+                    aiEditing = false
+                },
+                onClear = { showClearAiConfirm = true },
+            )
+
+            if (showClearAiConfirm) {
+                AlertDialog(
+                    onDismissRequest = { showClearAiConfirm = false },
+                    title = { Text("清空 AI 配置？") },
+                    text = {
+                        Text(
+                            "将删除本机保存的 API 地址、模型名与 API Key。" +
+                                "AI 总结会退回「仅 B 站官方」这一条路径。",
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showClearAiConfirm = false
+                                viewModel.clearAiConfig()
+                            },
+                        ) { Text("清空") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearAiConfirm = false }) {
+                            Text("取消")
+                        }
+                    },
+                )
+            }
+
             // ================= 开发者工具 · Cookie 管理 =================
             //
             // 为什么放在「存储」与「关于」之间：它是**开发者向**的功能，
@@ -520,7 +603,7 @@ fun SettingsScreen(
             //
             // ⚠️ 整块只显示**字段名与长度**，永不显示值 —— 见 CookieState 的注释。
             SectionMark(
-                index = 9,
+                index = 10,
                 title = "开发者工具 · Cookie",
                 modifier = Modifier.padding(top = Rhythm.section),
             )
@@ -564,7 +647,7 @@ fun SettingsScreen(
 
             // ================= 关于 =================
             SectionMark(
-                index = 10,
+                index = 11,
                 title = "关于",
                 modifier = Modifier.padding(top = Rhythm.section),
             )
@@ -877,6 +960,208 @@ private fun KeywordBlockRow(
                 }
             }
         }
+    }
+}
+
+/**
+ * 第三方 AI 配置区块（v1.6.3）。
+ *
+ * ## 🔴 Key 的三条显示约定（与 Cookie 区块同源）
+ *
+ * 1. **不回显**：已保存的 Key 只显示脱敏摘要（`sk-a…(48)`），
+ *    输入框留空时**不覆盖**已存值
+ * 2. **不硬编码**：本项目不内置任何 Key —— 没配置就明确显示"未配置"
+ * 3. **不进日志**：这里只读写 UI 状态，不发请求、不打日志
+ *
+ * ## 为什么地址与模型也要用户填
+ *
+ * 需求要求"支持自定义 API 地址与模型、优先兼容 OpenAI 风格"。
+ * 写死某一家（如只支持 OpenAI）会把 Prompt 与那个厂商绑死 ——
+ * 需求明确禁止。所以三项全开放。
+ */
+@Composable
+private fun AiConfigSection(
+    config: com.example.biliv3.data.ai.AiConfig,
+    editing: Boolean,
+    onToggleEdit: () -> Unit,
+    onSave: (baseUrl: String, model: String, apiKey: String?) -> Unit,
+    onClear: () -> Unit,
+) {
+    val colors = BiliTheme.colors
+
+    // 草稿：编辑态才用；初始值取自当前配置（Key 留空 = 不改）
+    var draftBase by remember(config.baseUrl) { mutableStateOf(config.baseUrl) }
+    var draftModel by remember(config.model) { mutableStateOf(config.model) }
+    var draftKey by remember { mutableStateOf("") }
+
+    // ---- 状态行 ----
+    InfoRow(
+        label = "状态",
+        value = if (config.usable) "已配置" else "未配置",
+    )
+    InfoRow(
+        label = "API 地址",
+        value = config.baseUrl.ifEmpty { "—" },
+    )
+    InfoRow(
+        label = "模型",
+        value = config.model.ifEmpty { "—" },
+    )
+    // ⚠️ 只显示脱敏值。**任何情况下都不显示完整 Key。**
+    InfoRow(
+        label = "API Key",
+        value = config.maskedKey.ifEmpty { "未设置" },
+    )
+
+    if (!config.usable && !editing) {
+        Text(
+            text = config.missingHint +
+                "（未配置时 AI 总结只能走 B 站官方接口）",
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontSize = FontSize.bodySm,
+                color = colors.textTertiary,
+            ),
+            modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
+        )
+    }
+
+    ActionRow(
+        label = if (editing) "收起编辑" else "编辑配置",
+        subtitle = "支持任意 OpenAI 兼容接口（官方 / DeepSeek / 本地部署等）",
+        onClick = onToggleEdit,
+    )
+
+    if (editing) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Space.x4, vertical = Space.x3),
+        ) {
+            AiField(
+                label = "API 地址",
+                value = draftBase,
+                placeholder = "https://api.example.com/v1",
+                hint = "填到 /v1 为止，不要带 /chat/completions",
+                onValueChange = { draftBase = it },
+            )
+            Spacer(Modifier.height(Space.x3))
+            AiField(
+                label = "模型名",
+                value = draftModel,
+                placeholder = "gpt-4o-mini",
+                hint = "用服务商文档里的模型 ID",
+                onValueChange = { draftModel = it },
+            )
+            Spacer(Modifier.height(Space.x3))
+            AiField(
+                label = "API Key",
+                value = draftKey,
+                placeholder = if (config.hasKey) "留空 = 不修改已保存的 Key" else "sk-…",
+                hint = "加密保存在本机（Android Keystore），不会上传",
+                onValueChange = { draftKey = it },
+                // 用密码键盘，避免输入时被旁人看到
+                secret = true,
+            )
+            Spacer(Modifier.height(Space.x3))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                BrandButton(
+                    label = "保存",
+                    onClick = {
+                        // ⚠️ Key 留空 → 传 null（不改动），不是传空串（清空）
+                        onSave(
+                            draftBase,
+                            draftModel,
+                            draftKey.takeIf { it.isNotEmpty() },
+                        )
+                        draftKey = ""
+                    },
+                    variant = BrandButtonVariant.Filled,
+                )
+                if (config.hasKey || config.baseUrl.isNotEmpty()) {
+                    BrandButton(
+                        label = "清空配置",
+                        onClick = onClear,
+                        variant = BrandButtonVariant.Outline,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * AI 配置的输入行。
+ *
+ * ## 为什么用 `BasicTextField` 而不是 Material 的 `OutlinedTextField`
+ *
+ * 与设置页其它输入（弹幕关键词）保持一致：M3 的 TextField 自带
+ * 一套容器与内边距，与"无卡片、靠留白分组"的语言冲突。
+ */
+@Composable
+private fun AiField(
+    label: String,
+    value: String,
+    placeholder: String,
+    hint: String,
+    onValueChange: (String) -> Unit,
+    secret: Boolean = false,
+) {
+    val colors = BiliTheme.colors
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.label,
+                color = colors.textSecondarySafe,
+            ),
+        )
+        Spacer(Modifier.height(Space.x1))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(Radius.interactive))
+                .background(colors.bgHover)
+                .padding(horizontal = Space.x3, vertical = Space.x2),
+        ) {
+            if (value.isEmpty()) {
+                Text(
+                    text = placeholder,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = FontSize.bodySm,
+                        color = colors.textTertiary,
+                    ),
+                )
+            }
+            androidx.compose.foundation.text.BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                // 密码键盘（不显示已输入字符）—— 旁人看不到
+                visualTransformation = if (secret) {
+                    androidx.compose.ui.text.input.PasswordVisualTransformation()
+                } else {
+                    androidx.compose.ui.text.input.VisualTransformation.None
+                },
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = FontSize.bodySm,
+                    color = colors.textPrimary,
+                ),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.brandPrimary),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        Spacer(Modifier.height(Space.x1))
+        Text(
+            text = hint,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.badge,
+                color = colors.textTertiary,
+            ),
+        )
     }
 }
 

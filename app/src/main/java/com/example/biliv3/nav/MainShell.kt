@@ -745,6 +745,9 @@ fun MainShell(
                         },
                         resumePositionMs = resumeMs,
                         onResumeConsumed = { resumeMs = 0L },
+                        // AI 总结里点「配置第三方 AI」→ 进设置页
+                        // （设置页已有「第三方 AI（AI 总结）」区块）
+                        onOpenAiSettings = { navController.navigate(Routes.SETTINGS) },
                         // ⚠️ 播放器弹层里改弹幕档位时，**同时写回全局设置**。
                         //
                         // 不写回的话，这两个入口就是"各改各的"：
@@ -794,6 +797,8 @@ fun MainShell(
                             libraryRepo = container.libraryRepository,
                             // 「保存观看历史」开关的消费者
                             settingsStore = container.settingsStore,
+                            // AI 总结（v1.6.3）：官方优先 + 第三方兜底
+                            aiSummaryRepo = container.aiSummaryRepository,
                         ),
                     ),
                 )
@@ -952,8 +957,32 @@ fun MainShell(
                             container.spaceRepository,
                             container.dynamicRepository,
                             mid,
+                            // 特别关注（本地书签）—— 与真实关注无关
+                            container.localAttentionStore,
                         ),
                     ),
+                )
+            }
+
+            // ---------- 特别关注（本地书签，v1.6.3）----------
+            //
+            // ⚠️ 这是一个**纯本地**列表：项目没有接入 B 站关注列表接口，
+            // 所以这里只包含用户在本应用里手动标记过的 UP 主。
+            // 页面顶部有常驻说明写明这一点（不能让它看起来像"我的关注"）。
+            composable(Routes.ATTENTION) {
+                val attended by container.localAttentionStore.items
+                    .collectAsStateWithLifecycle(initialValue = emptyList())
+                val attentionScope = rememberCoroutineScope()
+
+                com.example.biliv3.ui.space.AttentionScreen(
+                    users = attended,
+                    onBack = safeBack,
+                    onOpenUser = { mid -> navController.navigate(Routes.space(mid)) },
+                    onRemove = { mid ->
+                        attentionScope.launch {
+                            container.localAttentionStore.remove(mid)
+                        }
+                    },
                 )
             }
 
@@ -962,15 +991,81 @@ fun MainShell(
                 LiveScreen(
                     windowSize = windowSize,
                     onBack = safeBack,
-                    // ⚠️ 打开**官方直播间**（系统浏览器）。
-                    // 本项目不做直播流播放（缺 FLV/HLS 依赖），
-                    // 硬做会得到"点进去黑屏"——比没有这个功能更差。
+                    // 🔴 v1.6.3：改为**应用内播放**（不再跳系统浏览器）。
+                    //
+                    // 此前这里是 `openExternalUrl(context, "https://live.bilibili.com/...")`，
+                    // 理由是"缺 FLV/HLS 依赖，硬做会得到点进去黑屏"。
+                    // 现在补上了 `media3-exoplayer-hls`，实测 B 站直播确实
+                    // 返回可播的 HLS（`.m3u8`）与 FLV 地址，所以改为站内播放。
                     onOpenRoom = { room ->
-                        openExternalUrl(context, "https://live.bilibili.com/${room.roomId}")
+                        navController.navigate(
+                            Routes.liveRoom(
+                                roomId = room.roomId,
+                                title = room.title,
+                                uname = room.uname,
+                                face = room.face,
+                                online = room.online,
+                                area = room.areaName,
+                            ),
+                        )
                     },
                     viewModel = viewModel(
                         factory = com.example.biliv3.ui.live.LiveVmFactory(
                             container.liveRepository,
+                        ),
+                    ),
+                )
+            }
+
+            // ---------- 直播间（应用内播放，v1.6.3）----------
+            composable(
+                route = Routes.LIVE_ROOM,
+                arguments = listOf(
+                    navArgument(Routes.LIVE_ROOM_ARG_ID) { type = NavType.LongType },
+                    navArgument(Routes.LIVE_ROOM_ARG_TITLE) {
+                        type = NavType.StringType; defaultValue = ""
+                    },
+                    navArgument(Routes.LIVE_ROOM_ARG_UNAME) {
+                        type = NavType.StringType; defaultValue = ""
+                    },
+                    navArgument(Routes.LIVE_ROOM_ARG_FACE) {
+                        type = NavType.StringType; defaultValue = ""
+                    },
+                    navArgument(Routes.LIVE_ROOM_ARG_ONLINE) {
+                        type = NavType.IntType; defaultValue = 0
+                    },
+                    navArgument(Routes.LIVE_ROOM_ARG_AREA) {
+                        type = NavType.StringType; defaultValue = ""
+                    },
+                ),
+            ) { entry ->
+                val args = entry.arguments
+                val roomId = args?.getLong(Routes.LIVE_ROOM_ARG_ID) ?: 0L
+                // 列表里已有的信息带过来，省一次请求；缺失时字段为空，
+                // 页面用房间号兜底显示（不伪造数据）。
+                val room = com.example.biliv3.data.LiveRoom(
+                    roomId = roomId,
+                    title = args?.getString(Routes.LIVE_ROOM_ARG_TITLE).orEmpty(),
+                    cover = "",
+                    uname = args?.getString(Routes.LIVE_ROOM_ARG_UNAME).orEmpty(),
+                    face = args?.getString(Routes.LIVE_ROOM_ARG_FACE).orEmpty(),
+                    online = args?.getInt(Routes.LIVE_ROOM_ARG_ONLINE) ?: 0,
+                    areaName = args?.getString(Routes.LIVE_ROOM_ARG_AREA).orEmpty(),
+                    uid = 0L,
+                )
+
+                com.example.biliv3.ui.live.LiveRoomScreen(
+                    room = room,
+                    onBack = safeBack,
+                    viewModel = viewModel(
+                        key = "live-room-$roomId",
+                        factory = com.example.biliv3.ui.live.LiveRoomVmFactory(
+                            repo = container.liveRepository,
+                            room = room,
+                            // 复用 Activity 级播放器（禁止第二套 Player）
+                            holder = container.playerHolder,
+                            // 「隐身入场」的消费者
+                            settingsStore = container.settingsStore,
                         ),
                     ),
                 )
@@ -1802,7 +1897,12 @@ fun MainShell(
                 // ⚠️ **任何分支都不把 cookie 值打进日志** —— 只有字段名与长度。
                 val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
                 val settingsVm = viewModel<SettingsViewModel>(
-                    factory = SettingsViewModelFactory(container.settingsStore, container.authStore),
+                    factory = SettingsViewModelFactory(
+                        container.settingsStore,
+                        container.authStore,
+                        // 第三方 AI 配置（加密存储）—— 设置页的 AI 区块用它
+                        container.aiConfigStore,
+                    ),
                 )
                 val cookieState by settingsVm.cookie.collectAsStateWithLifecycle()
 

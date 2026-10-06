@@ -213,12 +213,36 @@ fun VideoPlayerSurface(
  *
  * `setSurface` 必须在 **player 已 attach 到主线程** 之后。
  * `ExoPlayer` 要求所有调用在同一线程（这里是主线程，Compose 也是主线程，OK）。
+ *
+ * ## 为什么从 `private class` 提成公开的工厂函数（v1.6.3）
+ *
+ * 直播间页（`LiveRoomScreen`）需要**完全相同**的 Surface 生命周期语义 ——
+ * 同样的"共享 TextureView、切页不黑帧、dispose 时不清 player 输出"
+ * 那一整套踩坑结论。复制一份必然漂移（本项目已经发生过多次
+ * "两处各写一份然后不一致"），所以抽成可复用的
+ * [PlayerSurfaceBinding] + [attachPlayerSurface]。
+ *
+ * 视频详情页与直播间页**共用同一份实现**，行为不可能分叉。
  */
+interface PlayerSurfaceBinding {
+    /** 重新绑定到（可能已变化的）player 实例。 */
+    fun rebind(player: ExoPlayer)
+
+    /** 解绑（Compose 的 `onRelease`）。 */
+    fun dispose()
+}
+
+/** 创建 [PlayerSurfaceBinding]（见其说明：视频页与直播页共用这一份）。 */
+fun attachPlayerSurface(
+    player: ExoPlayer,
+    view: android.view.TextureView,
+): PlayerSurfaceBinding = TextureSurfaceBinder(player, view)
+
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private class TextureSurfaceBinder(
     private var player: ExoPlayer,
     private val view: android.view.TextureView,
-) : android.view.TextureView.SurfaceTextureListener {
+) : android.view.TextureView.SurfaceTextureListener, PlayerSurfaceBinding {
 
     private var surface: android.view.Surface? = null
 
@@ -271,7 +295,7 @@ private class TextureSurfaceBinder(
      * `onSurfaceTextureAvailable`），主动读一次 —— 共享的 TextureView
      * 在重新挂载时可能**已经可用但不再回调**（见 [dispose] 的说明）。
      */
-    fun rebind(newPlayer: ExoPlayer) {
+    override fun rebind(newPlayer: ExoPlayer) {
         player = newPlayer
         if (surface == null && view.isAvailable) {
             view.surfaceTexture?.let {
@@ -309,7 +333,7 @@ private class TextureSurfaceBinder(
      * - 只释放**本 binder 自己创建的** `Surface` 包装对象
      *   （`Surface` 是轻量句柄，`surfaceTexture` 本体由 TextureView 持有）
      */
-    fun dispose() {
+    override fun dispose() {
         // ⚠️ 不调 player.setVideoSurface(null) —— 见上面的 KDoc
         surface?.release()
         surface = null

@@ -37,6 +37,18 @@ class SpaceViewModel(
     private val repo: SpaceRepository,
     private val dynamicRepo: DynamicRepository? = null,
     private val mid: Long,
+    /**
+     * 「特别关注」的本地存储（v1.6.3）。
+     *
+     * ## 🔴 它**不能**发关注请求
+     *
+     * `LocalAttentionStore` 只持有 `Context`，**没有** `BiliApi`、
+     * 没有 `OkHttpClient` —— 所以"特别关注"在类型上就不可能
+     * 触发真实关注。这是需求「不执行真实 B 站关注」的编译期保证。
+     *
+     * 传 null = 该功能不可用（预览/测试环境），此时 UI 不渲染入口。
+     */
+    private val attentionStore: com.example.biliv3.data.LocalAttentionStore? = null,
 ) : ViewModel() {
 
     private val _profile = MutableStateFlow<SpaceProfile?>(null)
@@ -72,6 +84,65 @@ class SpaceViewModel(
     private val _followPending = MutableStateFlow(false)
     val followPending: StateFlow<Boolean> = _followPending.asStateFlow()
 
+    // ---------------------------------------------------------------------
+    // 特别关注（本地书签，v1.6.3）
+    // ---------------------------------------------------------------------
+
+    /**
+     * 是否已在「特别关注」里。
+     *
+     * ⚠️ 与 [following]（B 站**真实**关注态）是**两个独立的量** ——
+     * 不合并、不互推。用户可能"真实关注了但没特别关注"，
+     * 也可能"特别关注了但没真实关注"。合并任意一个方向都会产生
+     * 假的同步关系。
+     */
+    private val _attended = MutableStateFlow(false)
+    val attended: StateFlow<Boolean> = _attended.asStateFlow()
+
+    /** 该功能是否可用（存储已注入）。 */
+    val attentionAvailable: Boolean get() = attentionStore != null
+
+    /**
+     * 切换特别关注（**纯本地**，无网络、无 csrf、不需要登录）。
+     *
+     * ## 为什么不需要登录
+     *
+     * 它只是本机的一个书签。要求登录才能"标记自己想留意的人"
+     * 是没有道理的 —— 而且会让未登录用户体验不到这个功能。
+     */
+    fun toggleAttention() {
+        val store = attentionStore ?: return
+        val p = _profile.value
+        if (p == null) {
+            _toast.value = "用户资料还没加载完，请稍后再试"
+            return
+        }
+
+        val target = !_attended.value
+        // 乐观更新（本地写盘很快，但 UI 要立刻反馈）
+        _attended.value = target
+        _toast.value = if (target) "已加入特别关注（仅本机）" else "已取消特别关注"
+
+        viewModelScope.launch {
+            val ok = runCatching {
+                store.toggle(
+                    com.example.biliv3.data.AttendedUser(
+                        mid = p.mid,
+                        name = p.name,
+                        face = p.face,
+                    ),
+                )
+            }.getOrNull()
+            // 写盘失败 → 回滚 + 如实告知（不能留下"看着加上了、实际没存"的假象）
+            if (ok == null) {
+                _attended.value = !target
+                _toast.value = "本地保存失败，请稍后重试"
+            } else {
+                _attended.value = ok
+            }
+        }
+    }
+
     val isLoggedIn: Boolean get() = repo.isLoggedIn
 
     /** 是否是自己（自己的主页不显示关注按钮，显示"编辑资料"占位）。 */
@@ -102,7 +173,14 @@ class SpaceViewModel(
             // 投稿与关注态并行拉（都是增强信息）
             launch { loadVideos() }
             launch { loadFollowState() }
+            launch { loadAttentionState() }
         }
+    }
+
+    /** 读本地"特别关注"状态（纯本地，无网络）。 */
+    private suspend fun loadAttentionState() {
+        val store = attentionStore ?: return
+        _attended.value = runCatching { store.contains(mid) }.getOrDefault(false)
     }
 
     private suspend fun loadVideos() {
@@ -185,8 +263,10 @@ class SpaceVmFactory(
     private val repo: SpaceRepository,
     private val dynamicRepo: DynamicRepository?,
     private val mid: Long,
+    /** 特别关注的本地存储（v1.6.3）。传 null 时该功能不渲染入口。 */
+    private val attentionStore: com.example.biliv3.data.LocalAttentionStore? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        SpaceViewModel(repo, dynamicRepo, mid) as T
+        SpaceViewModel(repo, dynamicRepo, mid, attentionStore) as T
 }

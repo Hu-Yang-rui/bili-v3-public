@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.DownloadDone
 import androidx.compose.material.icons.automirrored.outlined.ManageSearch
 import androidx.compose.material.icons.automirrored.outlined.QueueMusic
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.SmartDisplay
@@ -201,6 +202,9 @@ private fun GuestPanel(
             entries = listOf(
                 Entry("离线缓存", Icons.Outlined.DownloadDone, "downloads"),
                 Entry("查成分", Icons.AutoMirrored.Outlined.ManageSearch, "aicu"),
+                // 特别关注是**本地书签**（v1.6.3）—— 不依赖登录态，
+                // 未登录也应该能看到自己标记过的人。
+                Entry("特别关注", Icons.Outlined.BookmarkBorder, "attention"),
                 // 竖屏模式同样不依赖登录态：推荐流匿名可读，
                 // 探测竖屏要的详情/取流接口也都能匿名访问。
                 Entry("竖屏模式", Icons.Outlined.SmartDisplay, "vertical"),
@@ -302,6 +306,11 @@ private fun LoggedInPanel(
                 Entry("历史记录", Icons.Filled.History, "history"),
                 Entry("我的收藏", Icons.Filled.Star, "favorites"),
                 Entry("稍后再看", Icons.Outlined.Schedule, "toView"),
+                // 特别关注：**纯本地书签**（v1.6.3）。
+                // 与"关注"不是一回事 —— 它不向 B 站发任何请求。
+                // 放在"我的"里是因为它属于"我标记过的东西"这一类，
+                // 与历史/收藏/稍后再看同族。
+                Entry("特别关注", Icons.Outlined.BookmarkBorder, "attention"),
                 // 竖屏沉浸式观看模式。不依赖登录态（推荐流匿名可读），
                 // 所以两处入口都放。
                 Entry("竖屏模式", Icons.Outlined.SmartDisplay, "vertical"),
