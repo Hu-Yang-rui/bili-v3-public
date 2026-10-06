@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/Kotlin-2.0.21-4FD1C5?style=flat-square&labelColor=171B22" alt="Kotlin">
   <img src="https://img.shields.io/badge/Compose-BOM%202024.09-4FD1C5?style=flat-square&labelColor=171B22" alt="Compose">
   <img src="https://img.shields.io/badge/Media3-1.4.1-4FD1C5?style=flat-square&labelColor=171B22" alt="Media3">
-  <img src="https://img.shields.io/badge/tests-554%20passing-4FD1C5?style=flat-square&labelColor=171B22" alt="554 tests">
+  <img src="https://img.shields.io/badge/tests-599%20passing-4FD1C5?style=flat-square&labelColor=171B22" alt="599 tests">
 </p>
 
 <p>
@@ -32,7 +32,7 @@ A third-party Bilibili client built around **video playback, audio experience, c
 Not a clone of the official app. The goal is to take one path — *watching something* — and make it feel considered all the way through: a dark, quiet interface, motion that exists only to give feedback, and a playback core that behaves the same whether you are watching, listening, or with the screen off.
 
 <div align="center">
-<sub><b>Kotlin</b> · <b>Jetpack Compose</b> · <b>Media3</b> · <b>554 unit tests</b></sub>
+<sub><b>Kotlin</b> · <b>Jetpack Compose</b> · <b>Media3</b> · <b>599 unit tests</b></sub>
 </div>
 
 ---
@@ -309,7 +309,7 @@ The second is the dangerous one: it needs no root and no user trust. Same packag
   <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/Hu-Yang-rui/bili-v3-public?style=for-the-badge&label=DOWNLOAD%20APK&color=FF8FB0&labelColor=171B22" alt="Download the latest release APK"></a>
 </p>
 
-**`bili-v3-v1.6.3-release.apk`** · 3.54 MB · `versionCode 40`
+**`bili-v3-v1.6.4-release.apk`** · 3.58 MB · `versionCode 41`
 
 </div>
 
@@ -318,7 +318,7 @@ The second is the dangerous one: it needs no root and no user trust. Same packag
 | Certificate | `CN=BiliV3 Release` / RSA 4096 |
 | Signing | v1 + v2 + v3 |
 | Validity | 30 years |
-| SHA-256 | `97B594E9CED4602521AD0038D6545A6B5CC7EA3AA675F85A7129627FAC1D6755` |
+| SHA-256 | `B0127204D823B79B46488B3D92C0C1A9435089A1302417691DD533288FB75785` |
 
 ### Install
 
@@ -392,7 +392,7 @@ This is a personal project that happens to be public. Issues and pull requests a
 | **Favorites** | batch multi-select, rule-driven quick organize, local tags |
 | **Comments** | cursor paging, nested replies, posting, reporting, IP region |
 | **Search / Category / Ranking** | hot searches, highlight cleanup; 12 categories, latest and popular |
-| **Live** | room list **and in-app HLS playback** (no external browser) |
+| **Live** | room list, **in-app HLS playback**, **real-time chat over WebSocket** (danmaku / entries / likes), per-user role badges, and moderator tools (mute / kick / block) with permission gating |
 | **Bangumi** | index, detail, episode list, follow |
 | **Profile / Dynamic** | user card, uploads, follow; following feed and space feed |
 | **Local watchlist** | 「特别关注」— a local-only bookmark list, never touches the real follow API |
