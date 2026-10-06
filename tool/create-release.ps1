@@ -84,9 +84,18 @@ try {
     & git -C $root fetch --tags --quiet origin 2>$null | Out-Null
 
     # Newest tag by version that is not the tag we are about to publish.
-    $tags = @(& git -C $root tag -l 'v*' --sort=-v:refname 2>$null) |
+    #
+    # WARNING: the outer @(...) is REQUIRED, not cosmetic.
+    # When exactly ONE tag matches, PowerShell unwraps the pipeline result to a
+    # plain String; $tags[0] would then return its FIRST CHARACTER ('v') instead
+    # of the tag name, and `git log "v..HEAD"` dies with
+    # "fatal: ambiguous argument 'v..HEAD'".
+    # That is not hypothetical -- it broke the very first release after this
+    # repo was reduced to a single tag. Re-wrapping the whole pipeline in @()
+    # forces Object[] regardless of element count.
+    $tags = @(@(& git -C $root tag -l 'v*' --sort=-v:refname 2>$null) |
         ForEach-Object { $_.Trim() } |
-        Where-Object { $_ -and $_ -ne $tag }
+        Where-Object { $_ -and $_ -ne $tag })
     $prevTag = if ($tags.Count -gt 0) { $tags[0] } else { '' }
 
     if ($prevTag) {
