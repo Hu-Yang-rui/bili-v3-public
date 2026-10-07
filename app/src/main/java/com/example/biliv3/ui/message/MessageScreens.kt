@@ -29,6 +29,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -302,6 +303,53 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     var draft by remember { mutableStateOf("") }
 
+    // ---- 表情面板状态（v1.6.8）----
+    val emotePackages by viewModel.emotePackages.collectAsStateWithLifecycle()
+    val emoteLoading by viewModel.emoteLoading.collectAsStateWithLifecycle()
+    val emoteError by viewModel.emoteError.collectAsStateWithLifecycle()
+    val emoteOpen by viewModel.emotePanelOpen.collectAsStateWithLifecycle()
+    val pendingEmote by viewModel.pendingEmote.collectAsStateWithLifecycle()
+
+    /**
+     * 表情插入（v1.6.8）。
+     *
+     * ## 🔴 为什么用"一次性信号 + 消费"
+     *
+     * 草稿是**本 Composable 的局部状态**，ViewModel 拿不到。
+     * VM 只发"用户选了哪个 token"这个事件，这里消费后追加到草稿。
+     *
+     * ⚠️ 消费后必须 `consumeEmoteInsert()` 清掉 ——
+     *    否则每次重组都会再插一遍（点一次出现两个）。
+     */
+    LaunchedEffect(pendingEmote) {
+        pendingEmote?.let { token ->
+            // 追加而不是覆盖：用户可能已经打了半句话
+            draft = draft + token
+            viewModel.consumeEmoteInsert()
+        }
+    }
+
+    /**
+     * 表情 token → 图片地址（v1.6.8）。
+     *
+     * ## 为什么需要它
+     *
+     * 私信里的表情在协议上就是**文本 token**（`[OK]`）。
+     * 没有这个映射，**发送与接收都会显示成方括号文字**。
+     *
+     * ⚠️ 只收**图片**表情（颜文字的 url 就是文字本身，
+     * 把它当图片加载会 404）。
+     */
+    val emoteUrlMap = remember(emotePackages) {
+        buildMap {
+            emotePackages.forEach { p ->
+                p.emotes.forEach { e ->
+                    if (e.isImage && e.usable) put(e.token, e.url)
+                }
+            }
+        }
+    }
+
     // 新消息到达时滚到底（即时通讯的基本预期）
     LaunchedEffect(state.messages.size) {
         if (state.messages.isNotEmpty()) {
@@ -465,54 +513,100 @@ fun ChatScreen(
                 verticalArrangement = Arrangement.spacedBy(Space.x2),
             ) {
                 items(state.messages, key = { it.msgKey }) { m ->
-                    MessageBubble(message = m)
+                    MessageBubble(
+                        message = m,
+                        // 表情 token → 图片地址（v1.6.8）。
+                        // 从已加载的表情面板建映射；拿不到时返回 null
+                        // → 气泡保持显示原始 token（不显示空框）。
+                        emoteUrl = { token -> emoteUrlMap[token] },
+                    )
                 }
             }
         }
 
         // ---- 输入区（仅登录后显示）----
         if (state.loggedIn) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    // ⚠️ 用 `band()` 而不是 `.background(colors.bgCard)`（v1.2.4 统一）。
-                    // 输入条是全宽直角的分区带（与上方消息列表同宽），不是卡片。
-                    .band(BandLevel.Raised)
-                    .imePadding()
-                    .navigationBarsPadding()
-                    .padding(horizontal = Space.x4, vertical = Space.x2),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(CHAT_INPUT_HEIGHT)
-                        .clip(RoundedCornerShape(Radius.pill))
-                        .background(colors.bgHover)
-                        .padding(horizontal = Space.x3),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    if (draft.isEmpty()) {
-                        Text(
-                            text = "发消息…",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = FontSize.body,
-                                color = colors.textTertiary,
-                            ),
-                        )
-                    }
-                    BasicTextField(
-                        value = draft,
-                        onValueChange = { draft = it },
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.body,
-                            color = colors.textPrimary,
-                        ),
-                        cursorBrush = SolidColor(colors.brandPrimary),
-                        modifier = Modifier.fillMaxWidth(),
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // ---- 表情面板（v1.6.8）----
+                //
+                // 放在输入条**上方**：展开时把输入条顶上去，
+                // 而不是盖住它（盖住的话用户看不到自己正在写什么）。
+                if (emoteOpen) {
+                    EmotePickerPanel(
+                        packages = emotePackages,
+                        loading = emoteLoading,
+                        error = emoteError,
+                        onPick = { token ->
+                            // 传的是**官方 token**（`[doge_金箍]`），不是表情名
+                            viewModel.insertEmote(token)
+                        },
+                        onDismiss = { viewModel.closeEmotePanel() },
                     )
                 }
-                Spacer(Modifier.width(Space.x2))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // ⚠️ 用 `band()` 而不是 `.background(colors.bgCard)`（v1.2.4 统一）。
+                        // 输入条是全宽直角的分区带（与上方消息列表同宽），不是卡片。
+                        .band(BandLevel.Raised)
+                        .imePadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = Space.x4, vertical = Space.x2),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // ---- 表情入口（v1.6.8）----
+                    //
+                    // ⚠️ 只有 `emoteRepo` 注入时才渲染 —— 没注入时
+                    //    按钮点了没反应是死入口（§1.6）。
+                    if (viewModel.emoteAvailable) {
+                        Box(
+                            modifier = Modifier
+                                .size(Sizes.iconXl + Space.x2)
+                                .clip(CircleShape)
+                                .clickable { viewModel.toggleEmotePanel() },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.EmojiEmotions,
+                                contentDescription = if (emoteOpen) "收起表情" else "表情",
+                                tint = if (emoteOpen) colors.brandPrimary else colors.textSecondarySafe,
+                                modifier = Modifier.size(Sizes.iconLg),
+                            )
+                        }
+                        Spacer(Modifier.width(Space.x1))
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(CHAT_INPUT_HEIGHT)
+                            .clip(RoundedCornerShape(Radius.pill))
+                            .background(colors.bgHover)
+                            .padding(horizontal = Space.x3),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        if (draft.isEmpty()) {
+                            Text(
+                                text = "发消息…",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize = FontSize.body,
+                                    color = colors.textTertiary,
+                                ),
+                            )
+                        }
+                        BasicTextField(
+                            value = draft,
+                            onValueChange = { draft = it },
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = FontSize.body,
+                                color = colors.textPrimary,
+                            ),
+                            cursorBrush = SolidColor(colors.brandPrimary),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    Spacer(Modifier.width(Space.x2))
                 // 发送按钮：发送中禁用 + 显示进度（v1.4.2 修）。
                 //
                 // 首版完全没有用 `state.sending` —— ViewModel 一直在维护它
@@ -557,6 +651,7 @@ fun ChatScreen(
                     }
                 }
             }
+            }   // end Column（表情面板 + 输入条）
         }
     }
 }
@@ -568,7 +663,23 @@ fun ChatScreen(
  * 用**位置 + 颜色**双重区分，不只靠颜色（色弱可辨）。
  */
 @Composable
-private fun MessageBubble(message: PmMessage) {
+private fun MessageBubble(
+    message: PmMessage,
+    /**
+     * 表情 token → 图片地址（v1.6.8）。
+     *
+     * ## 🔴 为什么气泡需要它
+     *
+     * 私信里的表情在协议上就是**文本 token**（`[OK]` / `[doge_金箍]`）。
+     * 不做映射的话，发送与接收都会**显示成方括号文字** ——
+     * 用户看到的是 `[OK]` 而不是那个表情图。
+     *
+     * 映射表来自 `x/emote/user/panel`（已加载的表情面板）。
+     * **拿不到映射时保持原样显示 token** —— 宁可显示 `[OK]`
+     * 也不要显示一个空框（那是更糟的"看起来坏了"）。
+     */
+    emoteUrl: (String) -> String? = { null },
+) {
     val colors = BiliTheme.colors
     // ⚠️ 气泡**不是玻璃/浮层**，所以不该借 `Radius.card`（§5.2 已限定它只服务
     // `biliCard`/`Glass` 两个原语）。它是一块有方向的**内容面**，走 `panel`(16dp)。
@@ -621,23 +732,43 @@ private fun MessageBubble(message: PmMessage) {
                 .background(if (message.isMine) colors.brandPrimary else colors.bgCard)
                 .padding(horizontal = Space.x3, vertical = Space.x2),
         ) {
-            Text(
-                // ⚠️ 未知类型要**说清是什么**，不是笼统的"不支持" ——
-                // 用户看到 type 号才知道该反馈什么（§11.1 的"明示"要求）。
-                text = if (message.isUnsupported) {
-                    "[暂不支持的消息类型 ${message.msgType}]"
-                } else {
-                    message.text
-                },
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    lineHeight = FontSize.bodyLine,
-                    color = if (message.isMine) colors.textOnBrand else colors.textPrimary,
-                ),
-            )
+            // 纯表情消息（整条就是一个 token）→ 直接渲染大图，
+            // 不套气泡底色（与图片消息同一处理：内容本身就是图）
+            val onlyEmote = !message.isUnsupported &&
+                message.text.isNotBlank() &&
+                emoteUrl(message.text.trim()) != null
+
+            if (onlyEmote) {
+                AsyncImage(
+                    model = emoteUrl(message.text.trim()),
+                    contentDescription = message.text,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .size(EMOTE_BUBBLE)
+                        .clip(RoundedCornerShape(Radius.badge)),
+                )
+            } else {
+                Text(
+                    // ⚠️ 未知类型要**说清是什么**，不是笼统的"不支持" ——
+                    // 用户看到 type 号才知道该反馈什么（§11.1 的"明示"要求）。
+                    text = if (message.isUnsupported) {
+                        "[暂不支持的消息类型 ${message.msgType}]"
+                    } else {
+                        message.text
+                    },
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = FontSize.body,
+                        lineHeight = FontSize.bodyLine,
+                        color = if (message.isMine) colors.textOnBrand else colors.textPrimary,
+                    ),
+                )
+            }
         }
     }
 }
+
+/** 纯表情气泡里的表情尺寸。 */
+private val EMOTE_BUBBLE = 92.dp
 
 /** 空态 / 错误态提示。 */
 @Composable

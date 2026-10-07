@@ -95,6 +95,12 @@ class ChatViewModel(
      * null = 不是从分享进来的（普通聊天）。
      */
     private val pendingShare: com.example.biliv3.data.PendingShare? = null,
+    /**
+     * 表情仓库（v1.6.8）。
+     *
+     * null = 表情功能不可用（预览/测试环境），此时 UI 不渲染表情入口。
+     */
+    private val emoteRepo: com.example.biliv3.data.emote.EmoteRepository? = null,
 ) : ViewModel() {
 
     data class UiState(
@@ -129,9 +135,142 @@ class ChatViewModel(
      */
     private var shareAttempted = false
 
+    // ---------------------------------------------------------------------
+    // 表情（v1.6.8）
+    // ---------------------------------------------------------------------
+    //
+    // ⚠️ **这些字段必须声明在 `init` 之前** —— Kotlin 的属性初始化器
+    //    按**声明顺序**执行，而 `init` 也是一个初始化器。
+    //    曾经把 `init { loadEmotes() }` 放在这些字段**之前**，
+    //    结果 `loadEmotes()` 里读 `_emoteLoading.value` 时它还是 null →
+    //    `NullPointerException: MutableStateFlow.getValue() on a null reference`
+    //    → **App 一进会话页就崩**。
+    //
+    //    判据：**`init` 里用到的字段，声明必须在 `init` 之上。**
+    //    这类崩溃在编译期完全看不出来。
+
+    /** 表情包列表（UI 直接渲染）。 */
+    private val _emotePackages = MutableStateFlow<List<com.example.biliv3.data.emote.EmotePackage>>(
+        emptyList(),
+    )
+    val emotePackages: StateFlow<List<com.example.biliv3.data.emote.EmotePackage>> =
+        _emotePackages.asStateFlow()
+
+    /** 表情加载中。 */
+    private val _emoteLoading = MutableStateFlow(false)
+    val emoteLoading: StateFlow<Boolean> = _emoteLoading.asStateFlow()
+
+    /** 表情加载的问题（null = 正常）。**不影响聊天本身**。 */
+    private val _emoteError = MutableStateFlow<String?>(null)
+    val emoteError: StateFlow<String?> = _emoteError.asStateFlow()
+
+    /** 表情面板是否展开。 */
+    private val _emotePanelOpen = MutableStateFlow(false)
+    val emotePanelOpen: StateFlow<Boolean> = _emotePanelOpen.asStateFlow()
+
+    /**
+     * 待插入输入框的表情 token（见 [insertEmote]）。
+     *
+     * ⚠️ 也必须声明在 `init` 之前（同上面的初始化顺序说明）。
+     */
+    private val _pendingEmote = MutableStateFlow<String?>(null)
+    val pendingEmote: StateFlow<String?> = _pendingEmote.asStateFlow()
+
+    /**
+     * 初始化。
+     *
+     * 🔴 **必须放在所有 `StateFlow` 字段声明之后** ——
+     * Kotlin 按声明顺序执行初始化器，`init` 里会读写这些字段。
+     * 放前面会 NPE（本项目真实踩过，见上方注释）。
+     */
     init {
         load()
+        loadEmotes()
     }
+
+    /**
+     * 加载表情面板。
+     *
+     * ## 失败不影响聊天
+     *
+     * 表情是**附加能力** —— 拉不到时聊天照常可用，只把原因写进
+     * [_emoteError] 让面板显示一行提示。**不写 `_state.error`**
+     * （那是聊天本身的错误，混在一起会让用户以为消息发不出去了）。
+     */
+    fun loadEmotes() {
+        val r = emoteRepo ?: return
+        if (_emoteLoading.value) return
+        _emoteLoading.value = true
+        viewModelScope.launch {
+            val load = runCatching { r.load() }.getOrNull()
+            if (load != null) {
+                _emotePackages.value = load.packages
+                _emoteError.value = load.error
+            } else {
+                _emoteError.value = "表情加载失败"
+            }
+            _emoteLoading.value = false
+        }
+    }
+
+    /** 展开 / 收起表情面板。展开时若还没数据就拉一次。 */
+    fun toggleEmotePanel() {
+        val next = !_emotePanelOpen.value
+        _emotePanelOpen.value = next
+        if (next && _emotePackages.value.isEmpty() && !_emoteLoading.value) {
+            loadEmotes()
+        }
+    }
+
+    fun closeEmotePanel() {
+        _emotePanelOpen.value = false
+    }
+
+    /**
+     * 待插入输入框的表情 token（v1.6.8）。
+     *
+     * ## 🔴 为什么走"一次性信号"而不是直接改草稿
+     *
+     * 草稿（`draft`）是 **ChatScreen 的 `remember` 局部状态**，
+     * ViewModel 拿不到它 —— 也不该拿（草稿是纯 UI 状态，
+     * 提升到 VM 会让"返回再进"时残留上一条草稿）。
+     *
+     * 所以 VM 只发出"用户选了哪个 token"这个**事件**，
+     * 由 Screen 消费后追加到自己那份草稿里。
+     *
+     * 消费后必须 [consumeEmoteInsert] 清掉 —— 否则重组会**重复插入**
+     * （用户点一次表情，输入框里出现两个）。
+     *
+     * ⚠️ 字段本身声明在 `init` **之前**（见那里的初始化顺序说明）。
+     */
+
+    /**
+     * 用户选了一个表情。
+     *
+     * ## 🔴 传的是**官方 token**，不是表情名
+     *
+     * 实测：表情的 `text` 字段（如 `[doge_金箍]`）就是 B 站识别表情的
+     * 内联 token。插 token 服务端才会渲染成图；插表情名（`金箍`）
+     * 发出去只是普通文字 —— 那正是任务书禁止的做法。
+     *
+     * @param token `Emote.token`（调用方直接传它，不要自己拼）
+     */
+    fun insertEmote(token: String) {
+        if (token.isBlank()) return
+        _pendingEmote.value = token
+    }
+
+    /** 插入已消费（Screen 追加到草稿后调用，防重复插入）。 */
+    fun consumeEmoteInsert() {
+        _pendingEmote.value = null
+    }
+
+    /**
+     * 表情功能是否可用。
+     *
+     * `false` 时 UI **不渲染表情按钮** —— 点了没反应的按钮是死入口（§1.6）。
+     */
+    val emoteAvailable: Boolean get() = emoteRepo != null
 
     fun load() {
         val loggedIn = repo.isLoggedIn
@@ -373,9 +512,11 @@ class ChatVmFactory(
     private val talkerId: Long,
     /** 待发送的分享内容（v1.6.7）。null = 普通聊天。 */
     private val pendingShare: com.example.biliv3.data.PendingShare? = null,
+    /** 表情仓库（v1.6.8）。null = 不渲染表情入口。 */
+    private val emoteRepo: com.example.biliv3.data.emote.EmoteRepository? = null,
 ) : androidx.lifecycle.ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         @Suppress("UNCHECKED_CAST")
-        return ChatViewModel(repo, talkerId, pendingShare) as T
+        return ChatViewModel(repo, talkerId, pendingShare, emoteRepo) as T
     }
 }

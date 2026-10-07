@@ -762,6 +762,39 @@ class BiliApi(
     }
 
     /**
+     * 表情面板（v1.6.8）。
+     *
+     * ## 端点与参数（实测）
+     *
+     * ```
+     * GET x/emote/user/panel?business=reply
+     * ```
+     *
+     * | 调用 | 结果 |
+     * |---|---|
+     * | 不带 `business` | `-400 请求错误`（**business 必填**）|
+     * | `business=reply` **未登录** | `code=0` 但 `packages=null` |
+     * | `business=reply` **已登录** | `code=0`，`packages` 是**数组**（实测 5 个包 / 431 个表情）|
+     *
+     * ## ⚠️ 未登录时拿不到结构
+     *
+     * `packages` 未登录时为 `null` —— 所以**不能凭公开资料猜结构**，
+     * 否则解析必然失败。本项目是先在已登录设备上抓真实响应，
+     * 再写 `EmoteParser` 的（结构见其 KDoc）。
+     *
+     * @return 原始 JSON（由 `EmoteParser` 解析）；请求异常时 null
+     */
+    suspend fun emotePanel(business: String = "reply"): JSONObject? = try {
+        getRaw(
+            path = Endpoints.EMOTE_PANEL,
+            query = mapOf("business" to business),
+            signed = false,
+        )
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
      * 这个资源**已经在哪些收藏夹里**（v1.6.7 新增）。
      *
      * ## 为什么需要它

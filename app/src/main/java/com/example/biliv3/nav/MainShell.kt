@@ -1817,6 +1817,8 @@ fun MainShell(
                         talkerId,
                         // 分享自动发送（v1.6.7）：VM 会 take() 一次并自动发出
                         container.pendingShare,
+                        // 表情面板（v1.6.8）：null 时 UI 不渲染表情入口
+                        container.emoteRepository,
                     ),
                 )
                 com.example.biliv3.ui.message.ChatScreen(

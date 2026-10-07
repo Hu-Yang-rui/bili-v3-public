@@ -105,6 +105,14 @@ object Endpoints {
      */
     const val FAV_RESOURCE_IDS = "x/v3/fav/resource/ids"
 
+    /**
+     * 表情面板（v1.6.8）。
+     *
+     * 实测：`business` 是**必填** —— 不带它返回 `-400 请求错误`。
+     * `business=reply`（评论区与私信通用）。
+     */
+    const val EMOTE_PANEL = "x/emote/user/panel"
+
     /** 分享上报（仅埋点）。 */
     const val SHARE_ADD = "x/web-interface/share/add"
 

@@ -214,6 +214,17 @@ class AppContainer(context: Context) {
  */
 val pmRepository: PmRepository by lazy { PmRepository(api, authStore) }
 
+    /**
+     * 表情面板（v1.6.8）。
+     *
+     * 走共享 [api]（**带 CookieJar**）—— 表情包是**账号相关**的
+     * （不同账号解锁的收藏集不同），未登录时接口返回 `packages=null`。
+     * 这与 AI 第三方调用（独立 client、不挂 cookie）刚好相反。
+     */
+    val emoteRepository: com.example.biliv3.data.emote.EmoteRepository by lazy {
+        com.example.biliv3.data.emote.EmoteRepository(api, appContext)
+    }
+
     /** 历史 / 稍后再看 / 收藏夹。全部需要登录。 */
     val libraryRepository: LibraryRepository by lazy { LibraryRepository(api, authStore) }
 
