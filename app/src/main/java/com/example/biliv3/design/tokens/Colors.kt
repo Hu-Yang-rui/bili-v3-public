@@ -2,6 +2,7 @@ package com.example.biliv3.design.tokens
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import com.example.biliv3.design.v3.V3DarkColors
 
 /**
  * 颜色令牌。
@@ -215,105 +216,127 @@ data class BiliColors(
 /**
  * 深色（主态）。
  *
- * 冷调中性灰底：`#0E1116` 略带蓝，比纯黑更有"材质感"，
- * 又比暖调（旧版的 `#121114`）更现代、更技术。
+ * ---
+ *
+ * # 🔴 v3 全量 UI 重构：本表已改为**新设计系统的投影**
+ *
+ * 旧的调色板（冷调蓝灰 `#0E1116` + 三级卡片色）**已废弃**。
+ * 现在这里的每个值都取自 `design/v3/V3Colors.kt` ——
+ * **新系统是唯一真值来源**，本表只是为了让尚未迁移的页面继续编译。
+ *
+ * ## 为什么保留这张表，而不是直接删掉
+ *
+ * 全量重构要迁移 95 个文件。如果一次性改掉 `BiliTheme.colors.xxx` 的
+ * 所有调用点，中间态无法编译、也无法逐页验证。
+ *
+ * 所以策略是：**新系统提供真值 → 旧表映射到新值 → 逐页迁移 → 迁完删表**。
+ * 这样任何时刻 App 都能跑、能截图对比。
+ *
+ * ## 映射原则
+ *
+ * | 旧角色 | 新归属 |
+ * |---|---|
+ * | `brandPrimary`（粉，做交互色） | → **交互蓝** `V3.brand`（粉色降为品牌标识） |
+ * | `bgBase` / `bgCard` / `bgHover` | → 背景三级 `bgPrimary` / `bgSecondary` / `bgTertiary` |
+ * | `textPrimary` / `textSecondarySafe` | → 标签四级 `labelPrimary` / `labelSecondary` |
+ * | `borderHairline` | → `separator` |
+ * | `accentTerminal`（极客青） | → 保留（承担"技术标注"语义，新系统继续用） |
+ *
+ * ⚠️ **新代码请直接用 `BiliV3.colors`**，不要再往本表加字段。
  */
 val DarkColors = BiliColors(
-    // 品牌（B 站真值，不改）
-    brandPrimary = Color(0xFFFF8FB0),
-    brandSecondary = Color(0xFF00A1D6),
-    brandPrimaryHover = Color(0xFFFFA3BF),
-    brandPrimaryActive = Color(0xFFE87A9C),
-    brandPrimaryDim = Color(0x26FF8FB0),
-    brandSecondaryHover = Color(0xFF33B4E0),
+    // ---- 品牌 ----
+    // 🔴 交互色从"粉"改为"蓝"（见 V3Colors.brand 的说明）。
+    //    粉色降为品牌标识色（brandSecondary 承载）。
+    brandPrimary = V3DarkColors.brand,
+    brandSecondary = V3DarkColors.brandBili,
+    brandPrimaryHover = Color(0xFF3FA9FF),
+    brandPrimaryActive = Color(0xFF0077D4),
+    brandPrimaryDim = V3DarkColors.brandDim,
+    brandSecondaryHover = Color(0xFFFFA3BF),
 
-    // 极客点缀：低饱和青，只做小面积
+    // ---- 极客点缀（保留：它承担"技术标注"语义，新系统继续用）----
     accentTerminal = Color(0xFF4FD1C5),
     accentTerminalDim = Color(0x1F4FD1C5),
     gridLine = Color(0x0FFFFFFF),
 
-    // 文字安全变体
-    textBrandSafe = Color(0xFFFF9EBB),
-    textLinkSafe = Color(0xFF4FC3E8),
-    textSecondarySafe = Color(0xFFA0A9B8),
+    // ---- 文字安全变体 ----
+    textBrandSafe = V3DarkColors.brandBiliText,
+    textLinkSafe = V3DarkColors.brandText,
+    textSecondarySafe = Color(0xFFB8B8C0),
 
-    // 三级层次
-    bgBase = Color(0xFF0E1116),
-    bgCard = Color(0xFF171B22),
-    bgHover = Color(0xFF1F2530),
-    surfaceElevated = Color(0xFF232A35),
+    // ---- 背景三级（新系统的投影）----
+    bgBase = V3DarkColors.bgPrimary,
+    bgCard = V3DarkColors.bgSecondary,
+    bgHover = V3DarkColors.bgTertiary,
+    surfaceElevated = V3DarkColors.bgSecondaryElevated,
 
-    // 文字
-    textPrimary = Color(0xFFE8ECF2),
-    textSecondary = Color(0xFF8B95A5),
-    textTertiary = Color(0xFF66707F),
-    textOnBrand = Color(0xFF1A1014),
-    textOnMedia = Color(0xFFFFFFFF),
+    // ---- 文字 ----
+    textPrimary = V3DarkColors.labelPrimary,
+    textSecondary = Color(0xFF8E8E93),
+    textTertiary = Color(0xFF636366),
+    textOnBrand = V3DarkColors.labelOnBrand,
+    textOnMedia = V3DarkColors.labelOnMedia,
 
-    // 描边
-    borderHairline = Color(0x14FFFFFF),
-    borderStrong = Color(0x2EFFFFFF),
+    // ---- 描边 ----
+    borderHairline = V3DarkColors.separator,
+    borderStrong = Color(0x3DFFFFFF),
 
-    // 遮罩
-    overlayCover = Color(0x66000000),
-    scrim = Color(0x99000000),
-    scrimPanel = Color(0x99000000),
-    overlayControl = Color(0xCC000000),
+    // ---- 遮罩 ----
+    overlayCover = V3DarkColors.overlay,
+    scrim = V3DarkColors.scrim,
+    scrimPanel = V3DarkColors.scrim,
+    overlayControl = V3DarkColors.controlOverlay,
     onOverlay = Color(0xFFFFFFFF),
-    trackInactive = Color(0x3DFFFFFF),
+    trackInactive = V3DarkColors.trackInactive,
     gradientMediaEnd = Color(0x99000000),
 
-    // 状态
-    stateError = Color(0xFFF87171),
-    stateSuccess = Color(0xFF4ADE80),
-    stateLive = Color(0xFFFF5C8A),
+    // ---- 状态 ----
+    stateError = V3DarkColors.stateError,
+    stateSuccess = V3DarkColors.stateSuccess,
+    stateLive = V3DarkColors.stateLive,
 
-    // 空降助手：进度条上的跳过区间（终端青系，与 accentTerminal 同族）
-    // ⚠️ 用 0xE6（90%）而不是全不透明：标记要压在 2dp 细轨道上，
-    //    全不透明会让这几段比轨道本身"重"，抢走播放进度这个主信息。
+    // ---- 空降助手：进度条上的跳过区间 ----
     skipSegment = Color(0xE64FD1C5),
-    // 当前位置正处于跳过区间内 —— 提亮同族青色，做出"命中"反馈。
-    // ⚠️ 不要用 accentCoin 的金色：金色在本项目里已经绑定"硬币/投币"语义，
-    //    出现在进度条上会被读成"这一段有投币"，而不是"这一段会被跳过"。
     skipSegmentActive = Color(0xFF9BF5EC),
 
-    // 互动
-    accentCoin = Color(0xFFFFC44D),
-    accentFavorite = Color(0xFFFFD666),
+    // ---- 互动 ----
+    accentCoin = V3DarkColors.accentCoin,
+    accentFavorite = V3DarkColors.accentFavorite,
     accentCoinBright = Color(0xFFFFD166),
-    onAccentCoin = Color(0xFF2B1E00),
+    onAccentCoin = V3DarkColors.onAccentCoin,
 
-    // 播放器
-    danmakuStroke = Color(0xCC000000),
+    // ---- 播放器 ----
+    danmakuStroke = V3DarkColors.danmakuStroke,
     subtitleScrim = Color(0xB3000000),
-    playerBackground = Color(0xFF000000),
+    playerBackground = V3DarkColors.playerBackground,
 
-    // 二维码
+    // ---- 二维码 ----
     qrSurface = Color(0xFFF7F8FA),
     onQrSurface = Color(0xFF14181F),
 
-    // 榜单
+    // ---- 榜单 ----
     rankFirst = Color(0xFFFF6B6B),
     rankSecond = Color(0xFFFFA94D),
     rankThird = Color(0xFFFFD43B),
 
-    // 骨架
-    skeletonBase = Color(0xFF1C222B),
-    skeletonHighlight = Color(0xFF262E39),
+    // ---- 骨架 ----
+    skeletonBase = Color(0xFF1C1C1E),
+    skeletonHighlight = Color(0xFF2C2C2E),
 
-    // 占位
-    coverPlaceholder = Color(0xFF1B212A),
-    avatarPlaceholder = Color(0xFF252D38),
+    // ---- 占位 ----
+    coverPlaceholder = V3DarkColors.coverPlaceholder,
+    avatarPlaceholder = V3DarkColors.avatarPlaceholder,
 
-    // 分区
-    categoryAccent = Color(0xFF8B95A5),
-    categorySurface = Color(0xFF1B212A),
+    // ---- 分区 ----
+    categoryAccent = Color(0xFF8E8E93),
+    categorySurface = Color(0xFF1C1C1E),
 
-    // 第三方渠道品牌色 —— 他方品牌真值，豁免说明见 `BiliColors` 的字段声明处。
-    channelWechat = Color(0xFF4CAF50),
-    channelMoments = Color(0xFF66BB6A),
-    channelDownload = Color(0xFF7E57C2),
-    channelCopyLink = Color(0xFF42A5F5),
+    // ---- 第三方渠道品牌色（他方品牌真值）----
+    channelWechat = V3DarkColors.channelWechat,
+    channelMoments = V3DarkColors.channelMoments,
+    channelDownload = V3DarkColors.channelDownload,
+    channelCopyLink = V3DarkColors.channelCopyLink,
 )
 
 

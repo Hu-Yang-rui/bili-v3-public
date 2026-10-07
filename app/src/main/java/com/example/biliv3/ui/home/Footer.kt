@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +41,8 @@ import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.v3.GlassNavBar
+import com.example.biliv3.design.v3.GlassNavItem
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
@@ -160,73 +165,53 @@ fun BottomNav(
     onSelect: (Int) -> Unit = {},
     onDisabledTap: () -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
-
-    val items = listOf(
-        BottomNavItem("首页", Icons.Filled.Home, enabled = true),
-        BottomNavItem("动态", Icons.Outlined.ChatBubbleOutline, enabled = true),
-        BottomNavItem("我的", Icons.Outlined.Person, enabled = true),
+    // 🔴 v3 全量重构：底栏改为**悬浮式 Liquid Glass 导航**。
+    //
+    // ## 为什么推翻旧实现（旧版是"贴底通栏 + 顶边发丝线"）
+    //
+    // 旧系统的判断是"底栏是页面的一部分，所以要与页面同明度、只靠一条线分隔"。
+    // 那在**无卡片 + 无玻璃**的语言里是对的。
+    //
+    // 但新设计语言引入了 Liquid Glass，它的核心语义恰恰是
+    // **"浮动层与内容分离"** —— 底栏是**浮在内容之上**的一层，
+    // 内容从它下面滚过去。所以底栏必须**看得出来是浮的**：
+    // 四边离屏、有材质、有边缘光。
+    //
+    // 这不是"加个玻璃效果"，而是**改变底栏与页面的空间关系**。
+    //
+    // 详见 `design/v3/GlassNavBar.kt` 的规格说明（尺寸与动效都取自实测）。
+    GlassNavBar(
+        items = NAV_ITEMS,
+        selectedIndex = selectedIndex,
+        onSelect = onSelect,
+        modifier = modifier,
     )
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(Sizes.bottomNav)
-            // 🔴 乙·质感：底栏**不再是卡片**。
-            //
-            // 上一版是通栏卡片（上方两角圆角 + 底色），是屏幕上
-            // 最后一块"盒子"。网格去掉卡片后，它是最刺眼的一个。
-            //
-            // 现在：与页面同明度，只靠**上边一条发丝线**分隔。
-            // 底栏"融入页面"，而不是"浮在页面上"。
-            .ruleTop(color = Rule.color),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        items.forEachIndexed { i, item ->
-            val selected = i == selectedIndex && item.enabled
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(enabled = item.enabled) {
-                        if (item.enabled) onSelect(i) else onDisabledTap()
-                    }
-                    .padding(vertical = Space.x1),
-            ) {
-                Icon(
-                    imageVector = item.icon,
-                    contentDescription = item.label,
-                    // 选中用品牌粉（图标是图形，不是文字，2.6:1 对图形可接受；
-                    // 且此处有文字标签作为第二信息载体）
-                    tint = when {
-                        !item.enabled -> colors.textTertiary
-                        selected -> colors.brandPrimary
-                        else -> colors.textSecondary
-                    },
-                    modifier = Modifier.size(Sizes.iconXl),
-                )
-                Spacer(Modifier.height(Space.micro))
-                Text(
-                    text = item.label,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = 10.sp,
-                        color = when {
-                            !item.enabled -> colors.textTertiary
-                            selected -> colors.textBrandSafe
-                            else -> colors.textSecondary
-                        },
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
 }
 
-private data class BottomNavItem(
-    val label: String,
-    val icon: ImageVector,
-    val enabled: Boolean,
+/**
+ * 底部导航项（3 项）。
+ *
+ * 按 `AGENTS.md` §3.3：「底部 TabBar（**3 项 —— 官方也是 3 项，不要加**）」，
+ * 并说明「『搜索』不做 Tab（从首页顶部搜索框进）」、
+ * 「『发布』第三方无投稿能力，**不做**」。
+ *
+ * ⚠️ 每项提供**两个**图标（Outlined / Filled）—— 选中态靠图标填充
+ * 与文字字重**两个额外维度**表达，不只靠颜色（无障碍要求）。
+ */
+private val NAV_ITEMS = listOf(
+    GlassNavItem(
+        label = "首页",
+        icon = Icons.Outlined.Home,
+        selectedIcon = Icons.Filled.Home,
+    ),
+    GlassNavItem(
+        label = "动态",
+        icon = Icons.Outlined.ChatBubbleOutline,
+        selectedIcon = Icons.Filled.ChatBubble,
+    ),
+    GlassNavItem(
+        label = "我的",
+        icon = Icons.Outlined.Person,
+        selectedIcon = Icons.Filled.Person,
+    ),
 )

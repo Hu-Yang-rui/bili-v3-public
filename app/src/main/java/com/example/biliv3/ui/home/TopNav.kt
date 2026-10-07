@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -45,6 +46,12 @@ import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
+import androidx.compose.ui.graphics.Color
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 顶部导航。
@@ -97,82 +104,64 @@ fun TopNav(
     val colors = BiliTheme.colors
 
     val height = when (windowSize) {
-        WindowSize.Desktop -> Sizes.topBarDesktop
-        WindowSize.Tablet -> Sizes.topBarTablet
-        WindowSize.Mobile -> Sizes.topBarMobile
+        WindowSize.Desktop -> V3Size.topBar
+        WindowSize.Tablet -> V3Size.topBar
+        WindowSize.Mobile -> V3Size.topBar
     }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            // 🔴 乙·质感：顶栏**不再是卡片**。
+            // 🔴 v3 重构：顶栏高度统一为 **54dp**（iOS 27 实测值，旧版是 52/56/64 三档）。
             //
-            // 上一版是通栏卡片（下方两角圆角 + 底色）。那是一条横过来的卡片，
-            // 同样在切割画面 —— 网格去掉卡片后，它是最刺眼的一个。
+            // 三端不再分档的原因：顶栏里只有"搜索框 + 两个圆钮"，
+            // 它们在平板上并不需要更高的栏 —— 分档只会让三端观感不一致。
             //
-            // 现在：顶栏与页面**同一明度**（不铺底色），靠搜索框自身的底线
-            // 与内容区分隔。顶栏"融入页面"，而不是"浮在页面上"。
-            //
-            // ⚠️ **这里刻意不画线**。
-            //
-            // 曾经在这里加过 `ruleBottom`，结果与搜索框的底线形成**双线**：
-            // 顶栏 52dp 的底边与搜索框 40dp 的底边只差 12dp，
-            // 两条 1px 线几乎重叠 → 视觉上是一条粗细不匀的脏线。
-            //
-            // 实测取色抓到 y=254 与 y=270 两条相邻线（相隔 16dp），
-            // 就是这个问题。**顶栏不需要自己的线** —— 搜索框的底线
-            // 已经承担了"顶栏到此结束"的语义。
+            // ⚠️ **仍然不画底边线**（旧版踩过的坑）：
+            // 搜索框自身有边界，顶栏再加一条线会与它形成"双线"。
             .height(height),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(height)
-                .padding(horizontal = pagePaddingFor(windowSize)),
+                .padding(horizontal = V3Space.contentMargin),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // ---- 导航项（桌面 / 平板；移动端让位给搜索框）----
             if (windowSize != WindowSize.Mobile) {
                 NavLinks(windowSize = windowSize, onNavItemClick = onNavItemClick)
-                Spacer(Modifier.width(Space.x5))
+                Spacer(Modifier.width(V3Space.xl))
             }
 
             // ---- 搜索框 ----
-            // ⚠️ 移动端/平板这里**只挂一个 weight(1f)**，吃掉剩余的全部宽度。
-            // 原来还有 Logo + `Spacer(weight(1f))`，三者里两个 weight 会平分
-            // 剩余空间 —— 搜索框实际只拿到一半，这就是它偏窄的原因。
+            // ⚠️ 只挂一个 weight(1f) 吃掉剩余宽度 ——
+            // 再加第二个 weight 会变成平分，搜索框又变窄（旧版踩过）。
             Box(
                 modifier = if (windowSize == WindowSize.Desktop) {
-                    Modifier.width(Sizes.searchWidthDesktop)
+                    Modifier.width(320.dp)
                 } else {
                     Modifier.weight(1f)
                 },
             ) {
-                SearchBox(windowSize = windowSize, onClick = onSearchClick)
+                SearchField(onClick = onSearchClick)
             }
 
-            // 只有桌面端需要这个弹性 spacer：搜索框是固定宽度，
-            // 靠它把右侧动作推到最右。移动/平板搜索框已占 weight(1f)，
-            // 再加一个 weight 就会重新变成平分（搜索框又变窄）。
             if (windowSize == WindowSize.Desktop) {
                 Spacer(Modifier.weight(1f))
             }
 
-            Spacer(Modifier.width(Space.x4))
+            Spacer(Modifier.width(V3Space.sm))
 
             // ---- 右侧动作 ----
-            if (windowSize != WindowSize.Mobile) {
-                UploadButton(enabled = false)
-                Spacer(Modifier.width(Space.x3))
-            }
-            NavIconButton(
+            NavCircleButton(
                 icon = Icons.Outlined.NotificationsNone,
                 label = "消息",
                 hasDot = hasUnread,
                 onClick = onMessageClick,
             )
-            Spacer(Modifier.width(Space.x3))
-            NavIconButton(
+            Spacer(Modifier.width(V3Space.xs))
+            NavCircleButton(
                 icon = Icons.Outlined.Person,
                 label = "头像",
                 hasDot = false,
@@ -201,9 +190,9 @@ fun pagePaddingFor(windowSize: WindowSize) = when (windowSize) {
  * 再小封面会"粘"在一起，再大就不像网格而像散落的卡片。
  */
 fun gridGutterFor(windowSize: WindowSize) = when (windowSize) {
-    WindowSize.Desktop -> Space.gridGutterDesktop
-    WindowSize.Tablet -> Space.gridGutterTablet
-    WindowSize.Mobile -> Space.x2
+    WindowSize.Desktop -> V3Space.sm
+    WindowSize.Tablet -> V3Space.sm
+    WindowSize.Mobile -> V3Space.sm
 }
 
 /**
@@ -218,9 +207,9 @@ fun gridGutterFor(windowSize: WindowSize) = when (windowSize) {
  * 24dp = 列间距的 3 倍，符合 [Rhythm] 的"组间距 ≥ 2× 组内间距"。
  */
 fun gridRowSpacingFor(windowSize: WindowSize) = when (windowSize) {
-    WindowSize.Desktop -> Space.gridRowDesktop
-    WindowSize.Tablet -> Space.gridRowTablet
-    WindowSize.Mobile -> Space.x6
+    WindowSize.Desktop -> V3Space.xl
+    WindowSize.Tablet -> V3Space.xl
+    WindowSize.Mobile -> V3Space.xl
 }
 
 /** 区块纵向间距按断点取值。 */
@@ -290,66 +279,62 @@ private fun NavLinks(
 }
 
 /**
- * 搜索框。
+ * **搜索入口**（顶栏里的假输入框）。
  *
- * ⚠️ 这里是**假输入框**（只做展示 + 点击跳转），
- * 真正的输入在搜索页 —— 避免首页原地输入把整个列表顶起。
+ * ---
+ *
+ * # 🔴 v3 重构：从"底线输入框"改回"填充胶囊"
+ *
+ * 旧系统把搜索框做成了**只有一条底线的无框输入区**，理由是
+ * "它是顶栏里最像卡片的元素，去掉容器才符合无卡片"。
+ *
+ * 新系统**改回填充胶囊**（iOS 的 search field 形态），因为：
+ *
+ * 1. **它不是卡片，是控件** —— 无卡片的约束针对"内容容器"，
+ *    而搜索框是一个**输入控件**。控件用填充色是正确语义
+ *    （见 `V3Colors` 的三层系统：Fill 层就是给控件用的）。
+ * 2. **底线在深色下太弱** —— 纯黑底上一条 12% 白的线，几乎看不见，
+ *    用户找不到搜索入口。
+ * 3. **iOS 语言里搜索框就是胶囊**（`UISearchBar` / search field）。
+ *
+ * ⚠️ 这与"无卡片"不冲突：卡片是**装内容的容器**，胶囊是**控件**。
+ * 区分标准是"它里面装的是内容，还是它本身是个可点的东西"。
+ *
+ * ⚠️ 这里是**假输入框**（只展示 + 点击跳转），真正的输入在搜索页。
  */
 @Composable
-private fun SearchBox(
-    windowSize: WindowSize,
-    onClick: () -> Unit,
-) {
-    val colors = BiliTheme.colors
+private fun SearchField(onClick: () -> Unit) {
+    val colors = BiliV3.colors
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-
-    val widthModifier = if (windowSize == WindowSize.Desktop) {
-        Modifier.width(Sizes.searchWidthDesktop)
-    } else {
-        // 非桌面端搜索框占满剩余空间 —— 由外层 Row 的 weight 提供
-        Modifier.fillMaxWidth()
-    }
 
     Row(
-        modifier = widthModifier
-            .height(Sizes.searchHeight)
-            // 🔴 乙·质感：搜索框从"圆角胶囊容器"改成"底线输入框"。
-            //
-            // 上一版是 `clip(button) + background + border` —— 一个完整的
-            // 圆角盒子。它是顶栏里最像卡片的元素。
-            //
-            // 现在：**无底色、无圆角、无四边框**，只有一条底边线。
-            // 这是"输入区"的通用语言，且视觉重量只有原来的 1/6。
-            //
-            // 交互不变（整行可点、hover 时底线变品牌色）。
-            .ruleBottom(
-                color = if (hovered) colors.brandPrimary else Rule.color,
-            )
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(V3Size.searchField)
+            .clip(RoundedCornerShape(V3Radius.pill))
+            // Fill 层：这是控件，不是区域
+            .background(colors.fillSecondary)
             .clickable(
                 interactionSource = interaction,
                 indication = null,
                 onClick = onClick,
             )
-            .padding(horizontal = Space.x1),
+            .padding(horizontal = V3Space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = Icons.Filled.Search,
             contentDescription = null,
-            tint = colors.textSecondary,
-            modifier = Modifier.size(Sizes.iconMd),
+            tint = colors.labelSecondary,
+            modifier = Modifier.size(V3Size.iconSm),
         )
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
         Text(
-            // ⚠️ 文案必须短。移动端这一行被 logo + 消息 + 头像挤得很窄，
-            // 原来的「搜索视频、UP主」实测会被折成两行（"搜索视"/"频、"），
-            // 把 40dp 高的搜索框顶变形。配合 maxLines=1 + Ellipsis 兜底。
+            // ⚠️ 文案必须短。移动端这一行被两个圆钮挤得很窄，
+            // 长文案会被折行把 36dp 的胶囊顶变形。
             text = "搜索",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                color = colors.textSecondary,
-            ),
+            style = V3Type.subheadline,
+            color = colors.labelSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -357,82 +342,49 @@ private fun SearchBox(
 }
 
 /**
- * 投稿按钮。
+ * 圆形图标按钮（消息 / 头像）。
  *
- * ⚠️ 第三方客户端无投稿能力 → **禁用态**。
- * 给一个能点但没反应的按钮是错误做法。
+ * ⚠️ v3：从"实心圆底"改为**透明 + 内容**（iOS 的 bar button 形态）。
+ *
+ * 旧版给每个圆钮铺了 `bgCard` 底 —— 那是"每个按钮一个盒子"，
+ * 正是卡片思维在控件上的残留。iOS 的顶栏按钮**没有底色**，
+ * 只有图标；底色只在按下时出现。
  */
 @Composable
-private fun UploadButton(enabled: Boolean) {
-    val colors = BiliTheme.colors
-    Row(
-        modifier = Modifier
-            .height(Sizes.searchHeight)
-            .clip(RoundedCornerShape(Radius.interactive))
-            .background(if (enabled) colors.brandPrimary else colors.skeletonBase)
-            .padding(horizontal = Space.x4),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Videocam,
-            contentDescription = null,
-            tint = if (enabled) colors.textOnBrand else colors.textTertiary,
-            modifier = Modifier.size(Sizes.iconMd),
-        )
-        Spacer(Modifier.width(Space.x2))
-        Text(
-            text = "投稿",
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontSize = FontSize.body,
-                fontWeight = FontWeight.SemiBold,
-                color = if (enabled) colors.textOnBrand else colors.textTertiary,
-            ),
-        )
-    }
-}
-
-/** 圆形图标按钮（消息 / 头像）。 */
-@Composable
-private fun NavIconButton(
+private fun NavCircleButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     hasDot: Boolean,
     onClick: () -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
+    val pressed by interaction.collectIsPressedAsState()
 
     Box(
         modifier = Modifier
-            .size(Space.minTouchTarget)
+            .size(V3Size.touchMin)
             .clip(CircleShape)
+            // 底色只在按下时出现（iOS 的 bar button 反馈）
+            .background(if (pressed) colors.fillTertiary else Color.Transparent)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(if (hovered) colors.bgBase else colors.bgCard),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = if (hovered) colors.brandPrimary else colors.textSecondarySafe,
-                modifier = Modifier.size(Sizes.iconLg),
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = colors.labelPrimary,
+            modifier = Modifier.size(V3Size.iconLg),
+        )
+        if (hasDot) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = V3Space.xs, end = V3Space.xs)
+                    .size(V3Size.dotSm)
+                    .clip(CircleShape)
+                    .background(colors.stateError),
             )
-            if (hasDot) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = Space.compactHorizontal, end = Space.compactHorizontal)
-                        .size(Sizes.dotLg)
-                        .clip(CircleShape)
-                        .background(colors.stateError),
-                )
-            }
         }
     }
 }

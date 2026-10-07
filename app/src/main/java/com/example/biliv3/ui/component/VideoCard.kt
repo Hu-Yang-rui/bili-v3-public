@@ -47,6 +47,12 @@ import com.example.biliv3.design.tokens.Motion
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 视频项 —— 主页最核心组件。
@@ -96,12 +102,12 @@ fun VideoCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    // v3：改用新调色板（label 四级 / fill 四级 / 背景三级）
+    val colors = BiliV3.colors
     val context = LocalContext.current
 
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    val pressed by interaction.collectIsPressedAsState()
 
     Column(
         modifier = modifier
@@ -112,12 +118,25 @@ fun VideoCard(
                 onClick = onClick,
             ),
     ) {
-        // ---- 封面（官方 16:10，直角无容器）----
+        // ---- 封面（官方 16:10）----
+        //
+        // 🔴 v3：封面**恢复圆角**（12dp）。
+        //
+        // 旧系统把封面改成了直角，理由是"圆角是卡片的语言，
+        // 保留圆角会让它看起来仍是一张卡"。
+        //
+        // 新系统推翻它：**真正让它像卡片的不是圆角，是容器**。
+        // 这个封面没有底色、没有内边距、没有描边 —— 它就是一张图，
+        // 圆角只是"图片"的现代处理（iOS 27 实测：列表行内嵌图 7~11dp 圆角）。
+        //
+        // 反过来，直角封面在深色底上会显得**硬、廉价、像截图**，
+        // 与"高级、有质感"的目标直接冲突。
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(Sizes.coverAspectRatio)
-                // 占位底色比页面底略深 —— 图片出现时有"内容填充"感，
+                .aspectRatio(V3Size.coverAspect)
+                .clip(RoundedCornerShape(V3Radius.md))
+                // 占位底色比页面底略亮 —— 图片出现时有"内容填充"感，
                 // 而不是"白块淡入"（这是搜索列表闪烁的根因之一）。
                 .background(colors.coverPlaceholder),
         ) {
@@ -127,7 +146,7 @@ fun VideoCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(Sizes.coverAspectRatio)
+                    .aspectRatio(V3Size.coverAspect)
                     .graphicsLayer {
                         // 只有桌面端 hover 才放大；移动端无 hover，恒为 1
                         val s = if (hovered) 1.04f else 1f
@@ -146,7 +165,8 @@ fun VideoCard(
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                colors.gradientMediaEnd,
+                                // 压暗到 60%：白字压任意封面都可读，且比旧版 40% 更干净
+                                Color(0x99000000),
                             ),
                         ),
                     ),
@@ -157,25 +177,19 @@ fun VideoCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = Space.x2, bottom = Space.x2),
+                    .padding(start = V3Space.xs, bottom = V3Space.xs),
             ) {
                 Icon(
                     imageVector = Icons.Filled.PlayArrow,
                     contentDescription = "播放",
-                    tint = colors.onOverlay,
-                    // ⚠️ 13dp → `Sizes.iconSm`(14dp)（v1.2.4）。
-                    // §5.2 规定图标只有 **14 / 18 / 20 / 24 四档**，
-                    // 13dp 不在档位上 —— 它夹在 `FontSize.label`(10sp) 的
-                    // 计数读数旁边，当初是为对齐文字而手调的。
-                    // 归到 iconSm 后视觉几乎无差别，但值可查、可统一调整。
-                    modifier = Modifier.size(Sizes.iconSm),
+                    tint = Color.White,
+                    modifier = Modifier.size(V3Size.iconXs),
                 )
-                Spacer(Modifier.width(Space.micro))
-                MonoReadout(
+                Spacer(Modifier.width(V3Space.hairline))
+                Text(
                     text = formatCount(video.playCount),
-                    color = colors.onOverlay,
-                    fontSize = FontSize.label,
-                    weight = FontWeight.Normal,
+                    style = V3Type.readout(size = 11),
+                    color = Color.White,
                 )
             }
 
@@ -185,69 +199,70 @@ fun VideoCard(
                     text = video.durationLabel,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(Space.x2),
+                        .padding(V3Space.xs),
                 )
             }
         }
 
-        // 封面 → 标题：走 Rhythm.inGroup（组内紧贴，与"组间大间距"形成对比）
-        Spacer(Modifier.height(Space.x2))
+        // 封面 → 标题
+        Spacer(Modifier.height(V3Space.xs))
 
         // ---- 标题（两行截断，预留高度防 CLS）----
         Text(
             text = video.title,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                lineHeight = FontSize.bodyLine,
-                fontWeight = FontWeight.Medium,
-                color = if (hovered) colors.textBrandSafe else colors.textPrimary,
-            ),
+            style = V3Type.subheadline,
+            fontWeight = FontWeight.Medium,
+            color = if (hovered) colors.brandText else colors.labelPrimary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .fillMaxWidth()
+                // 预留两行高度：避免图片加载完成时列表跳动（CLS）
                 .heightIn(min = 40.dp),
         )
 
-        Spacer(Modifier.height(Space.x1))
+        Spacer(Modifier.height(V3Space.xxs))
 
-        // ---- 元信息行 ----
+        // ---- 元信息行（UP 名 + 播放量）----
         //
-        // ⚠️ 头像**不做条件渲染**：只要 UP 名非空就画头像位。
-        // 上游字段写错时会是整片灰圆（肉眼可见），而不是静默消失。
+        // 🔴 v3 改动：**去掉小头像**。
+        //
+        // 旧版在标题下画了一个 16dp 的小圆头像。16dp 的头像
+        // **看不清是谁**，它不提供任何信息，只是装饰 ——
+        // 而且它比旁边的 12sp 文字还高，把行高撑得不自然。
+        //
+        // iOS 风格的做法：元信息就是**一行小字**（UP 名 · 播放量），
+        // 没有头像。头像留给"点进 UP 主页"那个场景。
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            if (video.authorName.isNotEmpty()) {
-                AsyncImage(
-                    model = video.faceUrl(48),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(UP_AVATAR_SIZE)
-                        .clip(CircleShape)
-                        .background(colors.skeletonBase),
-                )
-                Spacer(Modifier.width(Space.x1))
-            }
-
             Text(
                 text = video.authorName,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textSecondarySafe,
-                ),
+                style = V3Type.caption1,
+                color = colors.labelSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
             )
+            // ⚠️ 只在 UP 名确实存在时才加分隔点 ——
+            // 否则会得到"· 1.2万"这种开头的孤立分隔符
+            if (video.authorName.isNotEmpty()) {
+                Text(
+                    text = " · ",
+                    style = V3Type.caption1,
+                    color = colors.labelTertiary,
+                )
+            }
+            Text(
+                text = "${formatCount(video.playCount)} 播放",
+                style = V3Type.caption1,
+                color = colors.labelTertiary,
+                maxLines = 1,
+            )
         }
     }
 }
-
-/** UP 头像尺寸。16dp：不抢标题的视觉权重。 */
-private val UP_AVATAR_SIZE = 16.dp
 
 /**
  * 封面图片请求。
@@ -275,18 +290,17 @@ private fun videoCoverRequest(
  */
 @Composable
 private fun DurationBadge(text: String, modifier: Modifier = Modifier) {
-    val colors = BiliTheme.colors
     Box(
         modifier = modifier
-            .background(colors.overlayCover)
-            .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
+            .clip(RoundedCornerShape(V3Radius.xs))
+            .background(Color(0xA6000000))
+            .padding(horizontal = V3Space.xs, vertical = 3.dp),
     ) {
         // 等宽：网格里多个时长会上下对齐
-        MonoReadout(
+        Text(
             text = text,
-            color = colors.onOverlay,
-            fontSize = FontSize.badge,
-            weight = FontWeight.Medium,
+            style = V3Type.readout(size = 11),
+            color = Color.White,
         )
     }
 }

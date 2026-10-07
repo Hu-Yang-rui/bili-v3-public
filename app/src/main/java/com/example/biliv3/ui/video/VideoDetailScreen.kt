@@ -88,6 +88,13 @@ import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.GlassSurface
+import com.example.biliv3.design.v3.V3Glass
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Type
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
@@ -1738,7 +1745,8 @@ private fun DetailContent(
     onPlayInfoReady: (com.example.biliv3.data.model.PlayInfo, Long) -> Unit =
         { _, _ -> },
 ) {
-    val colors = BiliTheme.colors
+    // v3：内容区改用新调色板（label / fill / background 三层语义）
+    val colors = BiliV3.colors
 
     // 🔴 取流成功 → 把 PlayInfo 回填给 controller（v1.4.2 修）。
     //
@@ -1832,7 +1840,7 @@ private fun DetailContent(
                 .fillMaxSize()
                 // C 方案：评论模式下，播放器 + 工具条 + 评论区之间留出
                 // 页面底色的间隙，让三块各自成为独立卡片。
-                .background(colors.bgBase),
+                .background(colors.bgPrimary),
             // 与简介模式用同一套间距节奏（问题 11）：
             // 手写的 `Spacer(height = Space.x2)` 容易漏、且与 LazyColumn
             // 分支不一致。统一用 arrangement 表达"卡片间距"。
@@ -2078,56 +2086,120 @@ private fun DetailContent(
                         // 这样任意两块之间恒为一份间距，不会因为"两边都加"
                         // 而翻倍。全站统一遵守。
                         .padding(
-                            start = Space.x4,
-                            end = Space.x4,
-                            top = Rhythm.between,
+                            start = V3Space.contentMargin,
+                            end = V3Space.contentMargin,
+                            top = V3Space.xl,
                         ),
                 ) {
-                    // ---- ① 头像 + ② 名字 / ③ 粉丝数·视频数 ----
+                    // ---- ④ 标题（**提到最前**）----
                     //
-                    // ⚠️ 头像与名字**都可点**，进 UP 主主页。
-                    // 此前这里没有任何点击 —— 详情页的 UP 头像是全应用
-                    // 最显眼的"看着能点其实不能点"的元素之一。
+                    // 🔴 v3 结构重排：标题从"UP 信息之后"提到**最前**。
+                    //
+                    // ## 为什么顺序变了
+                    //
+                    // 旧顺序是「头像 → 名字 → 粉丝数 → 标题 → 数据 → 互动」，
+                    // 那是**社交优先**的组织方式（先看到"谁发的"）。
+                    //
+                    // 新顺序是「标题 → 数据 → UP → 互动」，这是**内容优先**：
+                    // - 用户点进来是为了看**这个视频**，标题是第一信息
+                    // - UP 是谁是**第二层**关心（而且播放器上已经显示了 UP 名）
+                    // - 这与 iOS 的内容型 App 一致（标题大、元信息小、作者次要）
+                    //
+                    // 标题用 title2（22sp Bold）—— 实测这是 iOS 二级标题档，
+                    // 在详情页里既是"最大的一行字"又不至于像 largeTitle 那样占三行。
+                    Text(
+                        text = detail.title,
+                        style = V3Type.title2,
+                        color = colors.labelPrimary,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    Spacer(Modifier.height(V3Space.sm))
+
+                    // ---- ⑤ 数据行（播放量 · 弹幕 · 时间 · 在看）----
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(V3Space.sm),
+                    ) {
+                        MetaItem(
+                            icon = Icons.Outlined.PlayCircleOutline,
+                            text = formatCount(detail.viewCount),
+                        )
+                        if (detail.danmakuCount > 0) {
+                            MetaItem(
+                                icon = Icons.Outlined.ChatBubbleOutline,
+                                text = formatCount(detail.danmakuCount),
+                            )
+                        }
+                        val timeLabel = formatRelativeTime(detail.publishedAt)
+                        if (timeLabel.isNotEmpty()) {
+                            MetaItem(icon = Icons.Outlined.Schedule, text = timeLabel)
+                        }
+                        // 在看人数只在 ≥2 时才显示（1 = 只有自己，见原注释）
+                        if (detail.viewers > 1) {
+                            MetaItem(
+                                icon = Icons.Outlined.RemoveRedEye,
+                                text = "${formatCount(detail.viewers)} 人在看",
+                            )
+                        }
+
+                        Spacer(Modifier.weight(1f))
+
+                        // 更多（⋮）—— 下载 / 稍后再看 / 分享渠道的入口
+                        Box(
+                            modifier = Modifier
+                                .size(V3Size.touchMin)
+                                .clip(CircleShape)
+                                .clickable(onClick = onMoreClick),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.MoreVert,
+                                contentDescription = "更多操作",
+                                tint = colors.labelSecondary,
+                                modifier = Modifier.size(V3Size.iconMd),
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(V3Space.md))
+
+                    // ---- UP 行（头像 + 名字 + 粉丝数 + 简介开关）----
+                    //
+                    // v3：UP 信息从"标题之前"移到"标题之后"，
+                    // 并把它与"简介展开"合并到同一行 —— 右侧那个倒 V
+                    // 本来就是"看简介"的入口，它属于"关于这个视频的更多信息"，
+                    // 与 UP 行同一层级。
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         AsyncImage(
                             model = detail.ownerFaceUrl(96),
                             contentDescription = "进入 UP 主主页",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .size(OWNER_AVATAR)
+                                .size(V3Size.avatarMd)
                                 .clip(CircleShape)
                                 .background(colors.avatarPlaceholder)
                                 .clickable { onOwnerClick(detail.ownerMid) },
                         )
-                        Spacer(Modifier.width(Space.x3))
+                        Spacer(Modifier.width(V3Space.sm))
 
                         Column(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(Radius.badge))
                                 .clickable { onOwnerClick(detail.ownerMid) },
                         ) {
-                            // ② 名字
                             Text(
                                 text = detail.ownerName,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = FontSize.body,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = colors.textPrimary,
-                                ),
+                                style = V3Type.subheadline,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.labelPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
-                            Spacer(Modifier.height(Space.micro))
-                            // ③ 粉丝数 · 视频数
-                            //
-                            // ⚠️ 两项都是"增强信息"，取不到时**不显示该项**
-                            // 而不是显示 0 —— 显示"0 个视频"是**错误信息**
-                            // （UP 主明明有很多视频），比不显示更糟。
-                            //
-                            // 实测：粉丝数来自 `x/relation/stat`（可用）；
-                            // 视频数需要 WBI 签名的 `space/wbi/arc/search`，
-                            // 当前未接入 —— 所以只显示粉丝数。
+                            // 粉丝数 / 视频数：取不到就**不显示该项**
+                            // （显示"0 个视频"是错误信息，比不显示更糟）
                             val meta = buildString {
                                 if (detail.ownerFans > 0) {
                                     append(formatCount(detail.ownerFans)).append(" 粉丝")
@@ -2138,46 +2210,20 @@ private fun DetailContent(
                                 }
                             }
                             if (meta.isNotEmpty()) {
+                                Spacer(Modifier.height(V3Space.hairline))
                                 Text(
                                     text = meta,
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontSize = FontSize.label,
-                                        color = colors.textSecondarySafe,
-                                    ),
+                                    style = V3Type.caption1,
+                                    color = colors.labelSecondary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
-                    }
 
-                    Spacer(Modifier.height(Space.x3))
-
-                    // ---- ④ 标题 + 最右侧的简介倒 V ----
-                    //
-                    // ⚠️ 字重从 SemiBold 降到 Medium（问题 11）。
-                    //
-                    // 详情页是"看视频"的页面，视频画面才是主角；
-                    // 标题用 SemiBold + titleMd 在 1080p 屏上非常"砸眼"，
-                    // 与下方一堆卡片叠加后整体观感过于浓重。
-                    // Medium 仍足以建立层级（标题比正文大且更亮），
-                    // 但不再抢画面。
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = detail.title,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontSize = FontSize.titleMd,
-                                lineHeight = FontSize.titleMdLine,
-                                fontWeight = FontWeight.Medium,
-                                color = colors.textPrimary,
-                            ),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
-                        )
-                        // 简介入口：只在有简介时可点（没有简介则按钮无意义）
+                        // 简介入口：只在有简介时可点
                         if (detail.desc.isNotBlank()) {
-                            Spacer(Modifier.width(Space.x1))
+                            Spacer(Modifier.width(V3Space.xs))
                             DescToggleButton(
                                 expanded = descExpanded,
                                 onClick = onToggleDesc,
@@ -2187,123 +2233,30 @@ private fun DetailContent(
 
                     // ---- 简介正文（默认隐藏，点倒 V 才展开）----
                     if (descExpanded && detail.desc.isNotBlank()) {
-                        Spacer(Modifier.height(Space.x2))
+                        Spacer(Modifier.height(V3Space.sm))
                         Text(
                             text = detail.desc,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = FontSize.bodySm,
-                                lineHeight = FontSize.bodySmLine,
-                                color = colors.textSecondarySafe,
-                            ),
+                            style = V3Type.footnote,
+                            color = colors.labelSecondary,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                // 简介块**不是交互元素** —— 它只是可读的文本区，
-                                // 按 §5.1 硬规则 2 一律直角。
-                                // （原来用 `Radius.button`(12dp)，那是"卡片"的语言）
-                                .background(colors.bgHover)
-                                .padding(Space.x3),
+                                // v3：简介用 Fill 四级做"极淡的块"——
+                                // 它既不是控件（不需要胶囊）也不是浮层，
+                                // 只是"这段是折叠内容"的轻微暗示。
+                                .clip(RoundedCornerShape(V3Radius.md))
+                                .background(colors.fillQuaternary)
+                                .padding(V3Space.sm),
                         )
                     }
 
-                    Spacer(Modifier.height(Space.x2))
-
-                    // ---- ⑤ 播放量 · 弹幕 · 发布时间 · 在看人数（带图标）----
+                    // ---- 互动栏 ----
                     //
-                    // ⚠️ 加图标的理由（用户要求"信息更直观"）：
+                    // v3：**去掉上方那条分隔线**。
                     //
-                    // 原先是一串纯文字「287.5万 播放 · 4.7万 弹幕 · 3天前 · 156 人在看」，
-                    // 四段信息挤在同一个字号里，用户要逐字读才知道哪段是什么。
-                    //
-                    // 加上图标后每段有了**视觉锚点**：扫一眼就知道
-                    // "这排是数据"，不需要读文字。图标也承担了分隔作用，
-                    // 可以省掉中间的 `·`，横向更省空间。
-                    //
-                    // 图标统一用 `Outlined` 描边风格 + `iconSm` 尺寸 ——
-                    // 与 App 其它地方的线性图标一致，不会显得突兀。
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Space.x3),
-                    ) {
-                        // 播放量
-                        MetaItem(
-                            icon = Icons.Outlined.PlayCircleOutline,
-                            text = formatCount(detail.viewCount),
-                        )
-                        // 弹幕数
-                        if (detail.danmakuCount > 0) {
-                            MetaItem(
-                                icon = Icons.Outlined.ChatBubbleOutline,
-                                text = formatCount(detail.danmakuCount),
-                            )
-                        }
-                        // 发布时间
-                        val timeLabel = formatRelativeTime(detail.publishedAt)
-                        if (timeLabel.isNotEmpty()) {
-                            MetaItem(
-                                icon = Icons.Outlined.Schedule,
-                                text = timeLabel,
-                            )
-                        }
-                        // 在看人数。
-                        //
-                        // 🔴 v1.5.1：**只在 ≥2 人时才显示**。
-                        //
-                        // 实测（真实账号，脚本直连）：`x/player/v2` 的
-                        // `online_count` 对冷门视频**恒返回 1** —— 那 1 个人
-                        // 就是当前观看者自己。原实现 `> 0` 就把"1 人在看"
-                        // 显示出来，用户看到的是一条**永远不变的无意义数字**，
-                        // 观感上等同"数据坏了"。
-                        //
-                        // 判据：这个数字只有在**能说明"还有别人在看"**时才有信息量。
-                        // 1 = 只有自己 → 不显示；≥2 → 显示。
-                        if (detail.viewers > 1) {
-                            MetaItem(
-                                icon = Icons.Outlined.RemoveRedEye,
-                                text = "${formatCount(detail.viewers)} 人在看",
-                            )
-                        }
-
-                        Spacer(Modifier.weight(1f))
-
-                        // ---- 更多（⋮）----
-                        //
-                        // ⚠️ 这个入口此前**完全不存在** —— 于是「下载」与
-                        // 「稍后再看」两项功能虽然底层都写好了
-                        // （`VideoDownloader` 315 行、`addToView()`），
-                        // 却没有任何 UI 调用，用户完全够不到。
-                        //
-                        // 放在元信息行最右侧：它属于"对这个视频做点什么"，
-                        // 与播放量/时间同一行不冲突（左信息右动作）。
-                        Box(
-                            modifier = Modifier
-                                .size(Space.minTouchTarget)
-                                .clip(CircleShape)
-                                .clickable(onClick = onMoreClick),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.MoreVert,
-                                contentDescription = "更多操作",
-                                tint = colors.textSecondarySafe,
-                                modifier = Modifier.size(Sizes.iconLg),
-                            )
-                        }
-                    }
-
-                    // ---- 互动栏（与 UP 信息同卡）----
-                    //
-                    // 放在卡片最底部：语义上"看完这个视频是什么 → 我能做什么"，
-                    // 与上方信息是同一块内容的收尾。
-                    //
-                    // 上方用一条极淡的分隔线（而非再套一层卡）——
-                    // 它只需要"分区"这一个作用，不需要自己的边界。
-                    Spacer(Modifier.height(Space.x2))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(colors.borderHairline),
-                    )
+                    // 旧版在互动栏上加了一条 1dp 的发丝线做分区。但互动栏
+                    // 就在元信息行下面 12dp 处 —— 这么近的距离画线，
+                    // 线本身就成了一个多余的视觉元素（用户读到的不是"分区"，
+                    // 而是"这里有一条线"）。间距已经足够表达分组。
                     InteractionBar(
                         interaction = interaction,
                         likeCount = detail.likeCount,
@@ -2354,7 +2307,7 @@ private fun DetailContent(
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontSize = FontSize.body,
                                 fontWeight = FontWeight.SemiBold,
-                                color = colors.textPrimary,
+                                color = colors.labelPrimary,
                             ),
                             modifier = Modifier.padding(horizontal = Space.x4),
                         )
@@ -2410,7 +2363,7 @@ private fun DetailContent(
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontSize = FontSize.body,
                                 fontWeight = FontWeight.SemiBold,
-                                color = colors.textPrimary,
+                                color = colors.labelPrimary,
                             ),
                             modifier = Modifier.padding(horizontal = Space.x4),
                         )
@@ -2491,7 +2444,7 @@ private fun DetailContent(
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontSize = FontSize.titleMd,
                                 fontWeight = FontWeight.SemiBold,
-                                color = colors.textPrimary,
+                                color = colors.labelPrimary,
                             ),
                         )
                     }
@@ -2987,42 +2940,49 @@ private fun PlayerChromeButton(
     contentDescription: String,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
+    val interaction = remember { MutableInteractionSource() }
+
     Box(
         modifier = Modifier
-            .size(PLAYER_CHROME_TOUCH)
-            // 同上：去掉默认指示（白色矩形焦点框 / 涟漪），保留可点性
+            .size(V3Size.touchMin)
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interaction,
                 indication = null,
                 onClick = onClick,
             ),
         contentAlignment = Alignment.Center,
     ) {
-        // ⚠️ v1.5.1：按钮**自己画一层轻量圆底**（因为外层面板已去掉）。
+        // 🔴 v3：播放器浮层控件改用 **Liquid Glass**（设计系统指定的合法位置之一）。
         //
-        // 层级演变：
-        // - v1.4.1 之前：外层玻璃面板 + 按钮不画底
-        // - v1.4.1：外层实体面板 + 按钮不画底（怕"板上加更深的圆"）
-        // - **v1.5.1：外层无面板 + 按钮自画半透明圆底**
+        // ## 为什么这里用玻璃是**对的**（而旧系统禁止过）
         //
-        // 为什么现在反过来：去掉面板后若按钮完全透明，图标在**亮画面**
-        // （雪景 / 白底封面）上会看不清。给每颗按钮一层
-        // `overlayControl`（约 50% 黑）刚好够辨认轮廓，
-        // 又不会像面板那样连成一大块色块 —— 这正是"轻量克制"的判据。
-        Box(
-            modifier = Modifier
-                .size(PLAYER_CHROME_BUTTON)
-                .clip(CircleShape)
-                .background(colors.overlayControl),
-            contentAlignment = Alignment.Center,
+        // 旧系统的 §7.12-67 规定"播放器工具层一律实体，玻璃会糊边缘、
+        // 降对比度，工具层要快速点中"。那在**没有真背景模糊**的时代是
+        // 完全正确的判断 —— 当时的"玻璃"只是半透明色块，只会降对比度。
+        //
+        // 现在 `GlassSurface` 有了**真背景采样 + 模糊**（见 V3Glass）：
+        // 它压在视频画面上时，取的是画面的模糊副本，观感是
+        // "控件与画面融为一体"，而**不是**"一块灰蒙蒙的板"。
+        // 设计系统也正是把"播放器控制"列为 Liquid Glass 的合法位置。
+        //
+        // ⚠️ 用 [V3Glass.Level.Clear]：压在**高对比媒体**上时，
+        //    clear 变体的近乎不透明底 + 压暗层才能保证图标可读
+        //    （实测：clear 的基础色是 #101010 @1.0，正是为此）。
+        GlassSurface(
+            modifier = Modifier.size(PLAYER_CHROME_BUTTON),
+            shape = CircleShape,
+            level = V3Glass.Level.Clear,
+            tint = colors.materials.clearScrim,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = colors.onOverlay,
-                modifier = Modifier.size(Sizes.iconMd),
-            )
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    tint = Color.White,
+                    modifier = Modifier.size(V3Size.iconMd),
+                )
+            }
         }
     }
 }

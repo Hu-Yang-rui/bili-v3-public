@@ -46,7 +46,12 @@ import com.example.biliv3.data.Settings
 import com.example.biliv3.data.SpeedTiers
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
-import com.example.biliv3.design.SectionMark
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Type
+import com.example.biliv3.design.v3.V3SectionTitle
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
@@ -123,7 +128,7 @@ fun SettingsScreen(
     onCopyCookie: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(),
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val cookieState by viewModel.cookie.collectAsStateWithLifecycle()
 
@@ -146,7 +151,7 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase)
+            .background(colors.bgPrimary)
             // ⚠️ 点页面空白处收起已展开的选择器。
             // 子控件（选项行）自己消费点击，不会误触。
             .clickable { picker = null },
@@ -172,7 +177,7 @@ fun SettingsScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
+                    tint = colors.labelPrimary,
                     modifier = Modifier.size(Sizes.iconXl),
                 )
             }
@@ -182,7 +187,7 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontSize = FontSize.titleMd,
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
         }
@@ -194,10 +199,9 @@ fun SettingsScreen(
                 .padding(bottom = Space.x8),
         ) {
             // ================= 播放 =================
-            SectionMark(
-                index = 1,
+            V3SectionTitle(
                 title = "播放",
-                modifier = Modifier.padding(top = Rhythm.between),
+                topSpace = V3Space.xl,
             )
 
             InlinePicker(
@@ -274,10 +278,9 @@ fun SettingsScreen(
             )
 
             // ================= 弹幕 =================
-            SectionMark(
-                index = 2,
+            V3SectionTitle(
                 title = "弹幕",
-                modifier = Modifier.padding(top = Rhythm.section),
+                topSpace = V3Space.xxl,
             )
 
             SwitchRow(
@@ -349,10 +352,9 @@ fun SettingsScreen(
                 // - 类型：滚动 / 顶部 / 底部 各自开关
                 // - 关键词：命中任一即不渲染
                 // 「按用户屏蔽」需要拉黑名单接口，属另一件事，暂不做。
-                SectionMark(
-                    index = 3,
-                    title = "弹幕屏蔽（本地生效）",
-                    modifier = Modifier.padding(top = Rhythm.section),
+                V3SectionTitle(
+                title = "弹幕屏蔽（本地生效）",
+                    topSpace = V3Space.xxl,
                 )
 
                 SwitchRow(
@@ -413,10 +415,9 @@ fun SettingsScreen(
             // 留一个下面空无一物的章节标记比没有更糟（§1.6 死入口）。
 
             // ================= 隐私 =================
-            SectionMark(
-                index = 4,
+            V3SectionTitle(
                 title = "隐私",
-                modifier = Modifier.padding(top = Rhythm.section),
+                topSpace = V3Space.xxl,
             )
 
             SwitchRow(
@@ -444,10 +445,9 @@ fun SettingsScreen(
             )
 
             // ================= 通知 =================
-            SectionMark(
-                index = 5,
+            V3SectionTitle(
                 title = "通知",
-                modifier = Modifier.padding(top = Rhythm.section),
+                topSpace = V3Space.xxl,
             )
 
             SwitchRow(
@@ -461,10 +461,9 @@ fun SettingsScreen(
             //
             // 数据来自第三方 bsbsb.top（社区标注的可跳过片段）。
             // 页面上**明确标注来源**（AGENTS.md §4.3 的合规要求）。
-            SectionMark(
-                index = 6,
+            V3SectionTitle(
                 title = "空降助手（第三方数据）",
-                modifier = Modifier.padding(top = Rhythm.section),
+                topSpace = V3Space.xxl,
             )
 
             SwitchRow(
@@ -513,10 +512,9 @@ fun SettingsScreen(
             //
             // 直播已在 v1.6.3 改为**应用内播放**，所以"隐身入场"的
             // 语义是完整无歧义的：本应用进入直播间只有这一个入口。
-            SectionMark(
-                index = 7,
+            V3SectionTitle(
                 title = "直播",
-                modifier = Modifier.padding(top = Rhythm.section),
+                topSpace = V3Space.xxl,
             )
 
             SwitchRow(
@@ -533,10 +531,9 @@ fun SettingsScreen(
             }
 
             // ================= 存储 =================
-            SectionMark(
-                index = 8,
+            V3SectionTitle(
                 title = "存储",
-                modifier = Modifier.padding(top = Rhythm.section),
+                topSpace = V3Space.xxl,
             )
 
             InfoRow(label = "图片缓存", value = cacheLabel)
@@ -560,10 +557,9 @@ fun SettingsScreen(
             // - 输入框**不回显已存的 Key**（只显示脱敏摘要）
             // - 保存后只显示 `sk-a…(48)` 这种前缀 + 长度
             // - 清空是显式动作（不是"留空即清空"）
-            SectionMark(
-                index = 9,
+            V3SectionTitle(
                 title = "第三方 AI（AI 总结）",
-                modifier = Modifier.padding(top = Rhythm.section),
+                topSpace = V3Space.xxl,
             )
 
             AiConfigSection(
@@ -609,10 +605,9 @@ fun SettingsScreen(
             //
             // 内容是**本项目整理**的常用直播用语。写清楚来源，
             // 避免被误认为是 B 站官方内容。
-            SectionMark(
-                index = 10,
+            V3SectionTitle(
                 title = "烂梗库",
-                modifier = Modifier.padding(top = Rhythm.section),
+                topSpace = V3Space.xxl,
             )
 
             InfoRow(
@@ -625,7 +620,7 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontSize = FontSize.badge,
                     lineHeight = FontSize.labelLine,
-                    color = colors.textTertiary,
+                    color = colors.labelTertiary,
                 ),
                 modifier = Modifier.padding(
                     start = Space.x4,
@@ -640,10 +635,9 @@ fun SettingsScreen(
             // 放在「烂梗库」与「开发者工具」之间：它是**播放向**的功能，
             // 但不该挤在播放区 —— 那里的 4 项是"每次都改"的，
             // 这里的是"设一次就不动"的。
-            SectionMark(
-                index = 11,
+            V3SectionTitle(
                 title = "自动画质 / 音质",
-                modifier = Modifier.padding(top = Rhythm.section),
+                topSpace = V3Space.xxl,
             )
 
             AutoQualitySection(
@@ -663,10 +657,9 @@ fun SettingsScreen(
             // 不该出现在普通用户视线中心（播放 / 弹幕那些区）。
             //
             // ⚠️ 整块只显示**字段名与长度**，永不显示值 —— 见 CookieState 的注释。
-            SectionMark(
-                index = 12,
+            V3SectionTitle(
                 title = "开发者工具 · Cookie",
-                modifier = Modifier.padding(top = Rhythm.section),
+                topSpace = V3Space.xxl,
             )
 
             CookieSection(
@@ -707,10 +700,9 @@ fun SettingsScreen(
             }
 
             // ================= 关于 =================
-            SectionMark(
-                index = 13,
+            V3SectionTitle(
                 title = "关于",
-                modifier = Modifier.padding(top = Rhythm.section),
+                topSpace = V3Space.xxl,
             )
 
             // ⚠️ 版本号必须从构建配置读。硬编码 "0.6.1" 时
@@ -769,7 +761,7 @@ private fun CategoryPicker(
     selected: Set<String>,
     onToggle: (String) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = Modifier
@@ -780,7 +772,7 @@ private fun CategoryPicker(
             text = "跳过哪些内容",
             style = MaterialTheme.typography.labelMedium.copy(
                 fontSize = FontSize.label,
-                color = colors.textTertiary,
+                color = colors.labelTertiary,
             ),
         )
         Spacer(Modifier.height(Space.x2))
@@ -799,13 +791,13 @@ private fun CategoryPicker(
                         text = com.example.biliv3.data.SkipSegment.LABELS[cat] ?: cat,
                         style = MaterialTheme.typography.labelMedium.copy(
                             fontSize = FontSize.label,
-                            color = if (on) colors.textOnBrand else colors.textSecondarySafe,
+                            color = if (on) colors.labelOnBrand else colors.labelSecondary,
                             fontWeight = if (on) FontWeight.Medium else FontWeight.Normal,
                         ),
                         maxLines = 1,
                         modifier = Modifier
                             .clip(RoundedCornerShape(Radius.pill))
-                            .background(if (on) colors.brandPrimary else colors.bgHover)
+                            .background(if (on) colors.brand else colors.bgTertiary)
                             .clickable { onToggle(cat) }
                             .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
                     )
@@ -854,7 +846,7 @@ private fun AutoQualitySection(
     /** 解锁开关：8K / 杜比视界 / AV1（杜比音频与无损位被服务端拒，故无开关）。 */
     onUnlock: (Boolean, Boolean, Boolean) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // 三个子选择器共用一个"当前打开哪个"（与页面其它选择器同一套约定）
     var aqPicker by remember { mutableStateOf<Int?>(null) }
@@ -877,7 +869,7 @@ private fun AutoQualitySection(
             style = MaterialTheme.typography.labelMedium.copy(
                 fontSize = FontSize.badge,
                 lineHeight = FontSize.labelLine,
-                color = colors.textTertiary,
+                color = colors.labelTertiary,
             ),
             modifier = Modifier.padding(
                 start = Space.x4,
@@ -959,7 +951,7 @@ private fun AutoQualitySection(
             text = "解锁设置",
             style = MaterialTheme.typography.labelMedium.copy(
                 fontSize = FontSize.label,
-                color = colors.textTertiary,
+                color = colors.labelTertiary,
             ),
             modifier = Modifier.padding(horizontal = Space.x4),
         )
@@ -974,7 +966,7 @@ private fun AutoQualitySection(
             style = MaterialTheme.typography.labelMedium.copy(
                 fontSize = FontSize.badge,
                 lineHeight = FontSize.labelLine,
-                color = colors.textTertiary,
+                color = colors.labelTertiary,
             ),
             modifier = Modifier.padding(
                 start = Space.x4,
@@ -1046,7 +1038,7 @@ private fun SwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1065,7 +1057,7 @@ private fun SwitchRow(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = FontSize.body,
-                    color = if (enabled) colors.textPrimary else colors.textTertiary,
+                    color = if (enabled) colors.labelPrimary else colors.labelTertiary,
                 ),
             )
             if (subtitle != null) {
@@ -1074,7 +1066,7 @@ private fun SwitchRow(
                     text = subtitle,
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                        color = colors.labelSecondary,
                     ),
                 )
             }
@@ -1085,8 +1077,8 @@ private fun SwitchRow(
             onCheckedChange = if (enabled) onCheckedChange else null,
             enabled = enabled,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = colors.textOnBrand,
-                checkedTrackColor = colors.brandPrimary,
+                checkedThumbColor = colors.labelOnBrand,
+                checkedTrackColor = colors.brand,
             ),
         )
     }
@@ -1095,7 +1087,7 @@ private fun SwitchRow(
 /** 只读信息行。 */
 @Composable
 private fun InfoRow(label: String, value: String) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1107,7 +1099,7 @@ private fun InfoRow(label: String, value: String) {
             text = label,
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontSize = FontSize.body,
-                color = colors.textPrimary,
+                color = colors.labelPrimary,
             ),
         )
         Spacer(Modifier.weight(1f))
@@ -1115,7 +1107,7 @@ private fun InfoRow(label: String, value: String) {
             text = value,
             style = MaterialTheme.typography.labelMedium.copy(
                 fontSize = FontSize.label,
-                color = colors.textSecondarySafe,
+                color = colors.labelSecondary,
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -1157,7 +1149,7 @@ private fun KeywordBlockRow(
     onToggleEdit: () -> Unit,
     onSave: (List<String>) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     var draft by remember(keywords) { mutableStateOf(keywords.joinToString(" ")) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -1174,7 +1166,7 @@ private fun KeywordBlockRow(
                     text = "屏蔽关键词",
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = FontSize.body,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
                 )
                 Spacer(Modifier.height(Space.micro))
@@ -1186,7 +1178,7 @@ private fun KeywordBlockRow(
                     },
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                        color = colors.labelSecondary,
                     ),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -1197,7 +1189,7 @@ private fun KeywordBlockRow(
                 text = if (editing) "收起" else "编辑",
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontSize = FontSize.label,
-                    color = colors.textBrandSafe,
+                    color = colors.brandBiliText,
                     fontWeight = FontWeight.Medium,
                 ),
             )
@@ -1216,9 +1208,9 @@ private fun KeywordBlockRow(
                     singleLine = false,
                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = FontSize.body,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.brandPrimary),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.brand),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(Space.x3))
@@ -1265,7 +1257,7 @@ private fun AiConfigSection(
     onSave: (baseUrl: String, model: String, apiKey: String?) -> Unit,
     onClear: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // 草稿：编辑态才用；初始值取自当前配置（Key 留空 = 不改）
     var draftBase by remember(config.baseUrl) { mutableStateOf(config.baseUrl) }
@@ -1297,7 +1289,7 @@ private fun AiConfigSection(
                 "（未配置时 AI 总结只能走 B 站官方接口）",
             style = MaterialTheme.typography.bodySmall.copy(
                 fontSize = FontSize.bodySm,
-                color = colors.textTertiary,
+                color = colors.labelTertiary,
             ),
             modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
         )
@@ -1387,14 +1379,14 @@ private fun AiField(
     onValueChange: (String) -> Unit,
     secret: Boolean = false,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium.copy(
                 fontSize = FontSize.label,
-                color = colors.textSecondarySafe,
+                color = colors.labelSecondary,
             ),
         )
         Spacer(Modifier.height(Space.x1))
@@ -1402,7 +1394,7 @@ private fun AiField(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(Radius.interactive))
-                .background(colors.bgHover)
+                .background(colors.bgTertiary)
                 .padding(horizontal = Space.x3, vertical = Space.x2),
         ) {
             if (value.isEmpty()) {
@@ -1410,7 +1402,7 @@ private fun AiField(
                     text = placeholder,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = FontSize.bodySm,
-                        color = colors.textTertiary,
+                        color = colors.labelTertiary,
                     ),
                 )
             }
@@ -1426,9 +1418,9 @@ private fun AiField(
                 },
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = FontSize.bodySm,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
-                cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.brandPrimary),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.brand),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -1437,7 +1429,7 @@ private fun AiField(
             text = hint,
             style = MaterialTheme.typography.labelMedium.copy(
                 fontSize = FontSize.badge,
-                color = colors.textTertiary,
+                color = colors.labelTertiary,
             ),
         )
     }
@@ -1450,7 +1442,7 @@ private fun ActionRow(
     subtitle: String?,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1464,7 +1456,7 @@ private fun ActionRow(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = FontSize.body,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
             if (subtitle != null) {
@@ -1473,7 +1465,7 @@ private fun ActionRow(
                     text = subtitle,
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                        color = colors.labelSecondary,
                     ),
                 )
             }
@@ -1517,7 +1509,7 @@ private fun CookieSection(
     onValidate: () -> Unit,
     onClear: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // 状态行：已登录 / 未登录
     InfoRow(
@@ -1530,7 +1522,7 @@ private fun CookieSection(
         Text(
             text = "字段：${state.fieldNames.joinToString("、")}",
             style = MaterialTheme.typography.bodySmall.copy(
-                color = colors.textSecondarySafe,
+                color = colors.labelSecondary,
             ),
             modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
         )
@@ -1539,7 +1531,7 @@ private fun CookieSection(
             text = state.masked,
             style = MaterialTheme.typography.bodySmall.copy(
                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                color = colors.textTertiary,
+                color = colors.labelTertiary,
             ),
             modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x1),
         )
@@ -1598,7 +1590,7 @@ private fun CookieSection(
     if (state.fieldNames.isEmpty() && state.message == null) {
         Text(
             text = "还没有凭据。导入后即可用开发者账号调试接口。",
-            style = MaterialTheme.typography.bodySmall.copy(color = colors.textTertiary),
+            style = MaterialTheme.typography.bodySmall.copy(color = colors.labelTertiary),
             modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
         )
     }

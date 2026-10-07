@@ -59,6 +59,11 @@ import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Type
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
@@ -649,7 +654,7 @@ private fun CommentRow(
     /** 是否为"定位目标"评论（短暂高亮，帮用户一眼找到）。 */
     highlighted: Boolean = false,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // 高亮底色的淡入淡出。用动画而不是硬切：突然出现一块色块很突兀。
     val highlightAlpha by animateFloatAsState(
@@ -704,13 +709,16 @@ private fun CommentRow(
             // ⚠️ 顺序：线在最外（横跨整个条目宽度），高亮底在内，
             // 内边距在最内 —— 否则高亮底会把分隔线也染上颜色。
             .background(
-                colors.brandPrimary.copy(alpha = HIGHLIGHT_ALPHA * highlightAlpha),
+                colors.brand.copy(alpha = HIGHLIGHT_ALPHA * highlightAlpha),
             )
             .padding(
-                start = Space.x4,
-                end = Space.x4,
-                top = if (isReply) Space.x2 else Rhythm.inGroup,
-                bottom = if (isReply) Space.x2 else Rhythm.inGroup,
+                start = V3Space.contentMargin,
+                end = V3Space.contentMargin,
+                // v3：间距从 Rhythm.inGroup(8) 增到 12 ——
+                // 评论之间没有分隔线，间距是**唯一**的分组手段，
+                // 8dp 在长列表里会糊成一片。
+                top = if (isReply) V3Space.xs else V3Space.sm,
+                bottom = if (isReply) V3Space.xs else V3Space.sm,
             ),
     ) {
         Row(verticalAlignment = Alignment.Top) {
@@ -719,14 +727,14 @@ private fun CommentRow(
                 contentDescription = "进入用户主页",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(if (isReply) REPLY_AVATAR else COMMENT_AVATAR)
+                    .size(if (isReply) V3Size.avatarSm else V3Size.avatarMd)
                     .clip(CircleShape)
                     .background(colors.avatarPlaceholder)
                     // ⚠️ 点头像进主页、点正文回复 —— 两个动作分开挂，
                     // 避免一次点击触发两件事。
                     .clickable { onAvatarClick(comment.mid) },
             )
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.sm))
 
             Column(modifier = Modifier.weight(1f)) {
                 // ---- 昵称 + UP 标记 ············· 时间 · IP属地 ----
@@ -750,33 +758,31 @@ private fun CommentRow(
                     ) {
                         Text(
                             text = comment.userName,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.label,
-                                color = colors.textSecondarySafe,
-                                fontWeight = FontWeight.Medium,
-                            ),
+                            style = V3Type.footnote,
+                            color = colors.labelSecondary,
+                            fontWeight = FontWeight.Medium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false),
                         )
                         if (comment.isUp) {
-                            Spacer(Modifier.width(Space.x1))
+                            Spacer(Modifier.width(V3Space.xxs))
                             Text(
                                 text = "UP",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = FontSize.badge,
-                                    color = colors.textOnBrand,
-                                    fontWeight = FontWeight.Medium,
-                                ),
+                                style = V3Type.caption2,
+                                color = colors.labelOnBrand,
+                                fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(Radius.badge))
-                                    .background(colors.brandPrimary)
-                                    .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
+                                    .clip(RoundedCornerShape(V3Radius.xs))
+                                    // UP 标记用品牌粉 —— 这是"B 站内容"的身份标识，
+                                    // 不是交互色（交互色是蓝，见 V3Colors.brand 说明）
+                                    .background(colors.brandBili)
+                                    .padding(horizontal = V3Space.xxs, vertical = 1.dp),
                             )
                         }
                     }
 
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
 
                     // 时间（非 weight：永远完整可见）
                     Text(
@@ -787,7 +793,7 @@ private fun CommentRow(
                             // "5天前""4天前"淡到几乎看不见 —— 它比 textSecondary
                             // 还浅，而 README 早就警告过 textSecondary 只有 2.9:1。
                             // 改用 textSecondarySafe（浅色 #6B6470，5.8:1）。
-                            color = colors.textSecondarySafe,
+                            color = colors.labelSecondary,
                         ),
                         maxLines = 1,
                     )
@@ -803,7 +809,7 @@ private fun CommentRow(
                             text = "IP属地：${comment.ipLocation}",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontSize = FontSize.badge,
-                                color = colors.textSecondarySafe,
+                                color = colors.labelSecondary,
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -820,7 +826,7 @@ private fun CommentRow(
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = FontSize.body,
                         lineHeight = FontSize.bodyLine,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
                     maxLines = if (isReply) 3 else 6,
                     overflow = TextOverflow.Ellipsis,
@@ -845,7 +851,7 @@ private fun CommentRow(
                         text = "回复",
                         style = MaterialTheme.typography.labelMedium.copy(
                             fontSize = FontSize.badge,
-                            color = colors.textSecondarySafe,
+                            color = colors.labelSecondary,
                         ),
                         modifier = Modifier.clickable {
                             if (isLoggedIn) onReply(comment) else onLoginRequired()
@@ -860,7 +866,7 @@ private fun CommentRow(
                             text = "举报",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontSize = FontSize.badge,
-                                color = colors.textSecondarySafe,
+                                color = colors.labelSecondary,
                             ),
                             modifier = Modifier.clickable {
                                 if (isLoggedIn) onReport(comment) else onLoginRequired()
@@ -874,7 +880,7 @@ private fun CommentRow(
                         Icon(
                             imageVector = Icons.Outlined.Delete,
                             contentDescription = "删除评论",
-                            tint = colors.textSecondarySafe,
+                            tint = colors.labelSecondary,
                             modifier = Modifier
                                 .size(Sizes.iconSm + Space.x1)
                                 .clickable { onDelete(comment) },
@@ -893,7 +899,7 @@ private fun CommentRow(
                             Icons.Outlined.ThumbUp
                         },
                         contentDescription = if (comment.liked) "取消点赞" else "点赞",
-                        tint = if (comment.liked) colors.brandPrimary else colors.textSecondarySafe,
+                        tint = if (comment.liked) colors.brand else colors.labelSecondary,
                         modifier = Modifier
                             .size(Sizes.iconSm + Space.x1)
                             .clickable {
@@ -906,7 +912,7 @@ private fun CommentRow(
                             text = formatCount(comment.likeCount),
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontSize = FontSize.badge,
-                                color = if (comment.liked) colors.brandPrimary else colors.textSecondarySafe,
+                                color = if (comment.liked) colors.brand else colors.labelSecondary,
                             ),
                             maxLines = 1,
                         )
@@ -948,7 +954,7 @@ private fun CommentRow(
                 },
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontSize = FontSize.badge,
-                    color = colors.textLinkSafe,
+                    color = colors.brandText,
                     fontWeight = FontWeight.Medium,
                 ),
                 modifier = Modifier
@@ -963,7 +969,7 @@ private fun CommentRow(
             Spacer(Modifier.height(Space.x1))
             // 层级竖线颜色：用 hairline 描边色（深浅主题各自成立，
             // 不引入新的硬编码色值 —— 对照 design/tokens）。
-            val replyGuideColor = colors.borderStrong
+            val replyGuideColor = colors.separator
             Column(
                 modifier = Modifier
                     // 嵌套层不再额外缩进 —— 它已经在父级缩进区内，
@@ -1068,7 +1074,7 @@ private fun CommentRow(
                         style = MaterialTheme.typography.labelMedium.copy(
                             fontSize = FontSize.badge,
                             // 加载中用弱化色，避免看起来还能点
-                            color = if (loading) colors.textTertiary else colors.textLinkSafe,
+                            color = if (loading) colors.labelTertiary else colors.brandText,
                             fontWeight = FontWeight.Medium,
                         ),
                         modifier = Modifier

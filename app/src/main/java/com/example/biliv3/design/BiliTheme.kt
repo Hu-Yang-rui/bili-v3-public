@@ -16,6 +16,9 @@ import com.example.biliv3.design.tokens.BiliColors
 import com.example.biliv3.design.tokens.DarkColors
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.v3.BiliV3Theme
+import com.example.biliv3.design.v3.V3DarkColors
+import com.example.biliv3.design.v3.V3WindowSize
 
 /**
  * 中文字形回落链。
@@ -65,6 +68,19 @@ enum class WindowSize {
 }
 
 /**
+ * 旧断点 → 新断点的映射。
+ *
+ * ⚠️ 两套断点的**阈值不同**（旧：768/1280；新：600/840），
+ * 所以这不是恒等映射，但迁移期必须能互转。
+ * 新代码请直接用 [V3WindowSize]。
+ */
+fun WindowSize.toV3(): V3WindowSize = when (this) {
+    WindowSize.Desktop -> V3WindowSize.Expanded
+    WindowSize.Tablet -> V3WindowSize.Medium
+    WindowSize.Mobile -> V3WindowSize.Compact
+}
+
+/**
  * 主题入口。
  *
  * ## 🔴 只有深色（v1.1.3 起）
@@ -104,20 +120,33 @@ fun BiliTheme(
         error = colors.stateError,
     )
 
-    CompositionLocalProvider(
-        LocalBiliColors provides colors,
-        LocalWindowSize provides windowSize,
+    // 🔴 v3 全量 UI 重构：本主题现在**委托**给新主题 `BiliV3Theme`。
+    //
+    // 这样做的原因：迁移是逐页进行的，中间态必须能同时提供
+    // 旧令牌（`BiliTheme.colors`）与新令牌（`BiliV3.colors`）。
+    // 如果只提供其中一个，未迁移的页面会立刻编译不过。
+    //
+    // ⚠️ **迁移完成后**：删掉本文件，全部改用 `BiliV3Theme`。
+    //    新代码请直接用 `BiliV3.colors`，不要再往旧表加字段。
+    BiliV3Theme(
+        windowSize = windowSize.toV3(),
+        colors = V3DarkColors,
     ) {
-        MaterialTheme(
-            colorScheme = scheme,
-            typography = BiliTypography,
-            // ⚠️ 首版漏了 shapes —— 于是所有 Material3 组件
-            // （Button / Card / Switch / Checkbox / TextField）都走 M3 默认圆角，
-            // 与我们的 Radius 令牌不一致。这是 CoinDialog 的勾选框、
-            // BrandButton 圆角看着"不是一套"的根因。
-            shapes = BiliShapes,
-            content = content,
-        )
+        CompositionLocalProvider(
+            LocalBiliColors provides colors,
+            LocalWindowSize provides windowSize,
+        ) {
+            MaterialTheme(
+                colorScheme = scheme,
+                typography = BiliTypography,
+                // ⚠️ 首版漏了 shapes —— 于是所有 Material3 组件
+                // （Button / Card / Switch / Checkbox / TextField）都走 M3 默认圆角，
+                // 与我们的 Radius 令牌不一致。这是 CoinDialog 的勾选框、
+                // BrandButton 圆角看着"不是一套"的根因。
+                shapes = BiliShapes,
+                content = content,
+            )
+        }
     }
 }
 
