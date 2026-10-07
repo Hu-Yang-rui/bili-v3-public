@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.biliv3.data.quality.AutoQuality
+import com.example.biliv3.data.quality.AutoQualitySettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -85,6 +87,21 @@ class SettingsStore(
             liveIncognito = p[KEY_LIVE_INCOGNITO] ?: false,
             // ---- 通用 ----
             preferH264 = p[KEY_H264] ?: true,
+            // ---- 自动画质 / 音质（未发版）----
+            autoQuality = AutoQualitySettings(
+                enabled = p[KEY_AQ_ENABLED] ?: false,
+                preferredQn = p[KEY_AQ_PREFERRED] ?: AutoQuality.QN_AUTO,
+                fallbackQn = p[KEY_AQ_FALLBACK] ?: AutoQuality.QN_AUTO,
+                autoAudio = p[KEY_AQ_AUTO_AUDIO] ?: true,
+                dolbyAtmos = p[KEY_AQ_DOLBY] ?: false,
+                hiResAudio = p[KEY_AQ_FLAC] ?: false,
+                unlock = AutoQuality.UnlockFlags(
+                    unlock8K = p[KEY_AQ_U8K] ?: true,
+                    unlockDolbyVision = p[KEY_AQ_UDV] ?: true,
+                    unlockAv1 = p[KEY_AQ_UAV1] ?: true,
+                ),
+                liveAutoQuality = p[KEY_AQ_LIVE] ?: true,
+            ),
             // ---- 外观 ----
         )
     }
@@ -98,6 +115,48 @@ class SettingsStore(
 
     /** 默认清晰度。`0` = 自动（取最高可用）。 */
     suspend fun setDefaultQuality(v: Int) = edit { it[KEY_QUALITY] = v }
+
+    // ---------------- 自动画质 / 音质（未发版）----------------
+
+    /** 自动画质总开关。关 = 保持改动前的行为。 */
+    suspend fun setAutoQualityEnabled(v: Boolean) = edit { it[KEY_AQ_ENABLED] = v }
+
+    /** 首选画质（`0` = 不指定 → 自动最高）。 */
+    suspend fun setAutoQualityPreferred(v: Int) = edit { it[KEY_AQ_PREFERRED] = v }
+
+    /** 备选画质（首选拿不到时用）。 */
+    suspend fun setAutoQualityFallback(v: Int) = edit { it[KEY_AQ_FALLBACK] = v }
+
+    /** 自动选最高音质。 */
+    suspend fun setAutoQualityAutoAudio(v: Boolean) = edit { it[KEY_AQ_AUTO_AUDIO] = v }
+
+    /** 杜比全景声（拿不到会自动回退普通 AAC）。 */
+    suspend fun setAutoQualityDolby(v: Boolean) = edit { it[KEY_AQ_DOLBY] = v }
+
+    /** Hi-Res 无损（拿不到会自动回退普通 AAC）。 */
+    suspend fun setAutoQualityFlac(v: Boolean) = edit { it[KEY_AQ_FLAC] = v }
+
+    /** 直播自动最高画质。 */
+    suspend fun setAutoQualityLive(v: Boolean) = edit { it[KEY_AQ_LIVE] = v }
+
+    /**
+     * 解锁开关（对应原脚本的「解锁设置」面板）。
+     *
+     * ⚠️ 这些只是**请求参数**，不保证服务端会给 —— 非会员照样只拿 480P。
+     *
+     * ⚠️ **只有三个**：杜比音频位（32）与无损位（4096）实测会让整条取流
+     * 请求返回 `-400`，所以它们**不是可选项**，没有对应的键与开关。
+     * 见 `AutoQuality.Fnval` 的实测表。
+     */
+    suspend fun setAutoQualityUnlock(
+        unlock8K: Boolean,
+        dolbyVision: Boolean,
+        av1: Boolean,
+    ) = edit {
+        it[KEY_AQ_U8K] = unlock8K
+        it[KEY_AQ_UDV] = dolbyVision
+        it[KEY_AQ_UAV1] = av1
+    }
 
     /**
      * 是否优先 H.264。
@@ -265,6 +324,24 @@ class SettingsStore(
         // ---- 直播 ----
         private val KEY_LIVE_INCOGNITO = androidx.datastore.preferences.core
             .booleanPreferencesKey("live_incognito")
+
+        // ---- 自动画质 / 音质（未发版）----
+        //
+        // 来源：AHCorn/Bilibili-Auto-Quality 的「设置音质和画质」面板。
+        // ⚠️ 全部**默认保守**：总开关默认关，杜比/无损默认关 ——
+        //    新功能不该改变升级前的行为（同 autoPip 的约定）。
+        private val KEY_AQ_ENABLED = booleanPreferencesKey("auto_quality_enabled")
+        private val KEY_AQ_PREFERRED = intPreferencesKey("auto_quality_preferred_qn")
+        private val KEY_AQ_FALLBACK = intPreferencesKey("auto_quality_fallback_qn")
+        private val KEY_AQ_AUTO_AUDIO = booleanPreferencesKey("auto_quality_auto_audio")
+        private val KEY_AQ_DOLBY = booleanPreferencesKey("auto_quality_dolby")
+        private val KEY_AQ_FLAC = booleanPreferencesKey("auto_quality_flac")
+        // ⚠️ 只有三个解锁键 —— 杜比音频（fnval 32）与无损（fnval 4096）
+        //    的位实测会让取流请求 -400，不能做成开关。
+        private val KEY_AQ_U8K = booleanPreferencesKey("auto_quality_unlock_8k")
+        private val KEY_AQ_UDV = booleanPreferencesKey("auto_quality_unlock_dolby_vision")
+        private val KEY_AQ_UAV1 = booleanPreferencesKey("auto_quality_unlock_av1")
+        private val KEY_AQ_LIVE = booleanPreferencesKey("auto_quality_live")
     }
 }
 
@@ -379,6 +456,17 @@ data class Settings(
      * 默认 `false`（保持改动前的行为）。
      */
     val liveIncognito: Boolean = false,
+
+    /**
+     * 自动画质 / 音质（未发版）。
+     *
+     * 移植自 `AHCorn/Bilibili-Auto-Quality`，见 [AutoQualitySettings]。
+     *
+     * ⚠️ **默认值是"全关"** —— 与 [autoPip] / [sponsorBlockEnabled]
+     * 同一条约定：新功能不得改变升级前的行为。
+     * 关闭时 `fnval` 退化为原来的 `16`，音轨选择与改动前一致。
+     */
+    val autoQuality: AutoQualitySettings = AutoQualitySettings(),
 ) {
     companion object {
         const val DEFAULT_SPEED = 1f

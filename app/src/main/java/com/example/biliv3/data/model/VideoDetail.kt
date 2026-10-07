@@ -175,6 +175,19 @@ data class PlayInfo(
      * 既有调用方与旧测试；新代码请用本字段。
      */
     val qualities: List<QualityOption> = emptyList(),
+    /**
+     * **实际**拿到的音质标签（未发版）。
+     *
+     * ## 为什么必须是"实际拿到的"而不是"用户开的开关"
+     *
+     * 用户可能开了「杜比全景声」，但账号不是大会员 → 服务端只给普通 AAC。
+     * 这时显示"杜比全景声"就是**又一次 UI 与实际不符**（§7.25-158 同类）。
+     *
+     * 判据是**选中的那条音轨**的 `id`：
+     * `30250`=杜比 / `30251`=无损 / 其它=AAC（带真实码率）。
+     * 详见 `AutoQuality.audioLabel`。
+     */
+    val audioLabel: String = "",
 ) {
     /** 当前清晰度的中文名。找不到时回退到 `清晰度 {id}`。 */
     val currentQualityLabel: String

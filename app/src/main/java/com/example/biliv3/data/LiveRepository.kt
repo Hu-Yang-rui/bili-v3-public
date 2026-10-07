@@ -173,10 +173,22 @@ class LiveRepository(
      * 与 [list] 同一条理由（§7.8-44）：返回空会让"直播间没开播"
      * 与"接口失败"长得一模一样，用户看到的是黑屏而没有任何提示。
      *
+     * @param autoQuality 自动最高画质（未发版）。
+     *   开启时请求 `qn=10000`（原画）—— 服务端按账号权限给到能给的最高档；
+     *   关闭时请求 `qn=250`（超清，本项目改动前一直用的档）。
+     *
+     *   ## ⚠️ 为什么"关"是降到 250 而不是 0
+     *
+     *   传 `qn=0` 会让服务端按**默认策略**给（实测给到 250 或更低），
+     *   行为不可预期。显式传 250 才是"稳定的非原画档"。
+     *
      * @return 可播地址集合；`playable == false` 表示**确实没流**
      *         （例如主播未开播），这是**正常状态**，由 UI 显示空态。
      */
-    suspend fun stream(roomId: Long): LiveStream {
+    suspend fun stream(
+        roomId: Long,
+        autoQuality: Boolean = true,
+    ): LiveStream {
         if (roomId <= 0L) throw BiliException(-1, "直播间不存在")
 
         val json = api.getRaw(
@@ -189,8 +201,11 @@ class LiveRepository(
                 "format" to "0,1,2",
                 // 0=avc 1=hevc
                 "codec" to "0,1",
-                // 10000 = 原画（服务端按账号权限降级，未登录会给到 250）
-                "qn" to "10000",
+                // 🔴 直播画质：10000 = 原画（服务端按账号权限降级，
+                //    未登录会给到 250）。这就是"自动最高画质"的落点 ——
+                //    与点播不同，直播**不需要**先探一遍再挑档：
+                //    `qn` 只是"我想要多高"，给多少由服务端定。
+                "qn" to if (autoQuality) "10000" else "250",
                 "platform" to "web",
                 "ptype" to "8",
                 "dolby" to "5",

@@ -222,7 +222,25 @@ class LiveRoomViewModel(
 
             reportEntryIfNeeded()
 
-            val result = runCatching { repo.stream(room.roomId) }
+            // ---- 直播自动最高画质（未发版）----
+            //
+            // ## 与原脚本做法的区别（必须说清）
+            //
+            // 原脚本是**运行期轮询 + 反复换档**：读 `livePlayer.getPlayerInfo()`
+            // 的 `qualityCandidates`，发现当前档不是最高就调 `switchQuality()`，
+            // 因为服务端/播放器可能把档位改回去。
+            //
+            // 本项目**不需要轮询**：请求时就已经带了 `qn=10000`（原画，
+            // 见 `LiveRepository.stream`），服务端按账号权限给到能给的最高档。
+            // 没有"画质被改回去"这回事，所以**不做定时器** ——
+            // 加一个每秒轮询的定时器只是耗电，换不来更高画质。
+            //
+            // 这里保留的只是「开关」：关掉时降级请求（见 LiveRepository.stream）。
+            val autoLive = runCatching {
+                settingsStore?.settings?.first()?.autoQuality?.liveAutoQuality ?: true
+            }.getOrDefault(true)
+
+            val result = runCatching { repo.stream(room.roomId, autoQuality = autoLive) }
             result.fold(
                 onSuccess = { s ->
                     _stream.value = s

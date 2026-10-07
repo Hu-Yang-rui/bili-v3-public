@@ -1,5 +1,6 @@
 package com.example.biliv3.data
 
+import com.example.biliv3.data.quality.LiveQualityNames
 import org.json.JSONObject
 
 /**
@@ -40,6 +41,24 @@ data class LiveStream(
 ) {
     /** 是否拿到了可播的地址。 */
     val playable: Boolean get() = hlsUrl.isNotEmpty() || flvUrl.isNotEmpty()
+
+    /**
+     * 是否**已经**是最高可得画质（未发版）。
+     *
+     * 对应原脚本的「直播自动切换最高画质」—— 原脚本的做法是**轮询**
+     * `livePlayer.getPlayerInfo().quality` 并反复调 `switchQuality()`
+     * （因为它换档后画质可能被服务端改回去）。
+     *
+     * 本项目不需要轮询：**请求时就带 `qn=10000`（原画）**，
+     * 服务端按账号权限给到能给的最高档。所以只要对比
+     * [quality] 与 [acceptQuality] 的最大值即可知道"还有没有更高的"。
+     */
+    val isTopQuality: Boolean
+        get() = quality > 0 && (acceptQuality.maxOrNull() ?: 0) <= quality
+
+    /** 画质名（拿不到 `g_qn_desc` 时回退到内置表）。 */
+    val qualityLabelOrFallback: String
+        get() = qualityLabel.ifEmpty { LiveQualityNames.label(quality) }
 }
 
 /**

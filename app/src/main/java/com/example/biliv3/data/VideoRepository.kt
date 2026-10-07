@@ -5,6 +5,8 @@ import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.api.Endpoints
 import com.example.biliv3.data.model.PlayInfo
 import com.example.biliv3.data.model.QualityAvailability
+import com.example.biliv3.data.quality.AutoQuality
+import com.example.biliv3.data.quality.AutoQualitySettings
 import com.example.biliv3.data.quality.QualityParser
 import com.example.biliv3.data.model.VideoDetail
 import com.example.biliv3.data.model.VideoItem
@@ -173,11 +175,25 @@ class VideoRepository(
      *
      * `fnval=16` 是 DASH 标志位，`fnver=0` / `fourk=1` 与之配套 ——
      * 这三个参数缺一个就拿不到 DASH 流，会退化成整段 flv/mp4。
+     *
+     * ## 自动画质 / 音质（未发版）
+     *
+     * @param autoQuality 自动画质设置。默认值 = **关闭**
+     *   （`fnval` 退化为 [AutoQuality.Fnval.BASIC]，音轨仍取最高码率 ——
+     *   那是修 bug，不是新功能）。
+     *   ⚠️ 传 [AutoQualitySettings] 的默认值即可保持改动前行为。
      */
     suspend fun playInfo(
         bvid: String,
         cid: Long,
         quality: Int = 0,
+        /**
+         * 自动画质设置（未发版）。
+         *
+         * ⚠️ **默认构造 = 关闭自动画质** —— 这样既有调用方
+         * （竖屏流 / 离线下载）不需要改动就保持原行为。
+         */
+        autoQuality: AutoQualitySettings = AutoQualitySettings(),
         /**
          * 当前是否登录（未发版）。
          *
@@ -197,7 +213,9 @@ class VideoRepository(
         val query = mutableMapOf(
             "bvid" to bvid,
             "cid" to cid.toString(),
-            "fnval" to "16",
+            // 🔴 `fnval` 是位掩码，不是枚举 —— 见 [AutoQuality.Fnval]。
+            //    关闭自动画质时就是原来的 16（行为不变）。
+            "fnval" to autoQuality.fnval().toString(),
             "fnver" to "0",
             "fourk" to "1",
         )
@@ -221,15 +239,43 @@ class VideoRepository(
             val videoArr = dash.optJSONArray("video")
             val audioArr = dash.optJSONArray("audio")
 
+            // ---- 自动画质：先算出"该要哪个档"（未发版）----
+            //
+            // 🔴 **一次请求就够，不需要二次取流** ——
+            //    实测 `dash.video` 会把这个账号**所有允许的档**都返回
+            //    （不管 `qn` 传了什么），所以拿到响应后再挑档，
+            //    比"先按首选请求、拿不到再按备选请求一次"少一次往返。
+            //
+            // 挑档规则见 [AutoQuality.pickVideoQn]：
+            // 首选 > 备选 > 可用集里最高；未登录时不猜。
+            val effectiveQn = if (autoQuality.enabled) {
+                AutoQuality.pickVideoQn(
+                    preferred = quality,
+                    fallback = autoQuality.fallbackQn,
+                    available = AutoQuality.playableVideoQns(d),
+                    loggedIn = loggedIn,
+                )
+            } else {
+                // 关闭自动画质 → 保持改动前的行为：按响应给的档
+                quality
+            }
+
             // ⚠️ 视频流选择必须同时考虑「档位」和「编码兼容性」。
             // 详见 [pickVideoStream]。
-            val video = pickVideoStream(videoArr, currentQuality)
+            val video = pickVideoStream(videoArr, effectiveQn.takeIf { it > 0 } ?: currentQuality)
                 ?: throw BiliException(-1, "DASH 无可用视频流")
 
             // 音频同样要挑编码。B 站会返回多档码率的 AAC，
             // 取第一条通常是 64k（30216）—— 音质偏低。
             // 挑最高码率的那条，音质更好且都是 mp4a，兼容性无差异。
-            val audio = pickAudioStream(audioArr)
+            //
+            // 未发版：开启杜比 / 无损时优先会员音轨
+            // （拿不到会自动回退到普通 AAC —— 见 AutoQuality.pickAudioStream）
+            val audio = AutoQuality.pickAudioStream(
+                dash = dash,
+                dolbyEnabled = autoQuality.enabled && autoQuality.dolbyAtmos,
+                flacEnabled = autoQuality.enabled && autoQuality.hiResAudio,
+            ) ?: pickAudioStream(audioArr)
 
             val videoUrl = video.optString("baseUrl")
                 .ifEmpty { video.optString("base_url") }
@@ -246,13 +292,21 @@ class VideoRepository(
                 cid = cid,
                 acceptQuality = acceptQuality,
                 acceptDescription = acceptDesc,
-                currentQuality = currentQuality,
+                // 🔴 未发版：`currentQuality` 改用**实际挑中的那条流的 id**，
+                //    而不是响应里的 `quality` 字段。
+                //    原因：自动画质会按偏好挑档，服务端也可能悄悄降档 ——
+                //    两个值不一致时，UI 必须显示"真的在播什么"（需求第八条）。
+                //    取不到 id 时才回退到响应字段。
+                currentQuality = video.optInt("id", 0).takeIf { it > 0 } ?: currentQuality,
                 videoUrl = videoUrl,
                 audioUrl = audioUrl,
                 videoCodecs = video.optString("codecs"),
                 width = video.optInt("width"),
                 height = video.optInt("height"),
                 durationSeconds = optIntLoose(dash, "duration"),
+                // 音质标签（未发版）：用**真实拿到的**音轨判断，
+                // 而不是用户开了什么开关 —— 开了杜比但没拿到就显示 AAC
+                audioLabel = AutoQuality.audioLabel(audio),
                 // 档位（含权限状态）—— 见 QualityParser 的说明
                 qualities = when (val q = QualityParser.parse(d, loggedIn = loggedIn)) {
                     is QualityAvailability.Ok -> q.options

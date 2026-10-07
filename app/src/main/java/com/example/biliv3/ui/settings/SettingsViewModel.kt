@@ -47,6 +47,39 @@ class SettingsViewModel(
 
     fun setPreferH264(v: Boolean) = launch { store.setPreferH264(v) }
 
+    // ---- 自动画质 / 音质（未发版）----
+    //
+    // 移植自 AHCorn/Bilibili-Auto-Quality，见 AutoQualitySettings 的说明。
+
+    fun setAutoQualityEnabled(v: Boolean) = launch { store.setAutoQualityEnabled(v) }
+
+    fun setAutoQualityPreferred(qn: Int) = launch { store.setAutoQualityPreferred(qn) }
+
+    fun setAutoQualityFallback(qn: Int) = launch { store.setAutoQualityFallback(qn) }
+
+    fun setAutoQualityAutoAudio(v: Boolean) = launch { store.setAutoQualityAutoAudio(v) }
+
+    fun setAutoQualityDolby(v: Boolean) = launch { store.setAutoQualityDolby(v) }
+
+    fun setAutoQualityFlac(v: Boolean) = launch { store.setAutoQualityFlac(v) }
+
+    fun setAutoQualityLive(v: Boolean) = launch { store.setAutoQualityLive(v) }
+
+    /**
+     * 解锁开关（8K / 杜比视界 / AV1）。
+     *
+     * ⚠️ **只有三个** —— 杜比全景声（fnval 32）与无损（fnval 4096）的位
+     * 实测会让取流请求返回 `-400`，所以**不能做开关**。
+     * 见 `AutoQuality.Fnval` 的实测表。
+     */
+    fun setAutoQualityUnlock(
+        unlock8K: Boolean,
+        dolbyVision: Boolean,
+        av1: Boolean,
+    ) = launch {
+        store.setAutoQualityUnlock(unlock8K, dolbyVision, av1)
+    }
+
     // ---- 弹幕 ----
 
     fun setDanmakuEnabled(v: Boolean) = launch { store.setDanmakuEnabled(v) }

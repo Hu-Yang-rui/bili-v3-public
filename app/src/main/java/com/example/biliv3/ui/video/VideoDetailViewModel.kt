@@ -14,6 +14,8 @@ import com.example.biliv3.data.model.CommentItem
 import com.example.biliv3.data.model.PlayInfo
 import com.example.biliv3.data.model.VideoDetail
 import com.example.biliv3.data.model.VideoItem
+import com.example.biliv3.data.quality.AutoQuality
+import com.example.biliv3.data.quality.AutoQualitySettings
 import com.example.biliv3.data.subtitle.SubtitleBody
 import com.example.biliv3.data.subtitle.SubtitleRepository
 import com.example.biliv3.data.subtitle.SubtitleTrack
@@ -164,6 +166,19 @@ class VideoDetailViewModel(
 
     /** 用户是否已登录。UI 据此决定点击互动时是否弹登录引导。 */
     val isLoggedIn: Boolean get() = interactions?.isLoggedIn == true
+
+    /**
+     * 本次播放中用户**手动选过**的清晰度（未发版）。
+     *
+     * ## 为什么必须记住它
+     *
+     * 用户手动选了 720P 后，切分P 会重新取流 —— 那时若还按
+     * 「默认清晰度 / 自动最高」决定，就会**把用户的选择顶掉**。
+     * 表现是"我明明选了 720P，换个 P 又变回 1080P"。
+     *
+     * `0` = 本次播放内没手动选过（才允许用设置里的默认值）。
+     */
+    private var manualQuality: Int = 0
 
     /** 简介是否展开。默认收起。 */
     private val _descExpanded = MutableStateFlow(false)
@@ -1325,6 +1340,9 @@ class VideoDetailViewModel(
     fun selectQuality(quality: Int) {
         val cur = _state.value
         if (cur !is DetailUiState.Content) return
+        // 用户显式选档 → 记下来，本次播放内后续取流（切分P / 重试）沿用，
+        // 而不是被"默认清晰度"覆盖回去
+        manualQuality = quality
         fetchPlayInfo(cur.detail, _currentPage.value, quality)
     }
 
@@ -1803,9 +1821,34 @@ class VideoDetailViewModel(
 
         viewModelScope.launch {
             _playState.value = PlayState.Loading
+
+            // ---- 自动画质（未发版）----
+            //
+            // 🔴 这里解决的是一个**既有缺陷**：「默认清晰度」设置项
+            //    此前是**死入口** —— 设置页能选，但没有任何调用方读它
+            //    （`grep defaultQuality` 只有设置页自己）。
+            //    现在它真正参与取流决策。
+            val aq = settingsStore?.settings?.first()?.autoQuality
+                ?: AutoQualitySettings()
+
+            // 用户本次显式选过的档 > 设置里的默认档
+            val wanted = when {
+                manualQuality > 0 -> manualQuality
+                aq.enabled -> aq.preferredQn
+                else -> settingsStore?.settings?.first()?.defaultQuality ?: 0
+            }
+
             // `loggedIn` 只影响"无档位时怎么解释"（未登录 vs 视频不支持），
             // 不影响取流本身 —— 见 VideoRepository.playInfo 的说明
-            runCatching { repo.playInfo(detail.bvid, cid, quality, loggedIn = isLoggedIn) }
+            runCatching {
+                repo.playInfo(
+                    bvid = detail.bvid,
+                    cid = cid,
+                    quality = wanted,
+                    autoQuality = aq,
+                    loggedIn = isLoggedIn,
+                )
+            }
                 .onSuccess {
                     _playState.value = PlayState.Ready(it)
                     // 取流成功 → 顺手拉进度条预览（同一 cid，失败静默）

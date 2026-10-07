@@ -634,6 +634,29 @@ fun SettingsScreen(
                 ),
             )
 
+            // ================= 自动画质 / 音质（未发版）=================
+            //
+            // 移植自 `AHCorn/Bilibili-Auto-Quality`（greasyfork 486151）。
+            // 放在「烂梗库」与「开发者工具」之间：它是**播放向**的功能，
+            // 但不该挤在播放区 —— 那里的 4 项是"每次都改"的，
+            // 这里的是"设一次就不动"的。
+            SectionMark(
+                index = 11,
+                title = "自动画质 / 音质",
+                modifier = Modifier.padding(top = Rhythm.section),
+            )
+
+            AutoQualitySection(
+                aq = settings.autoQuality,
+                onEnabled = viewModel::setAutoQualityEnabled,
+                onPreferred = viewModel::setAutoQualityPreferred,
+                onFallback = viewModel::setAutoQualityFallback,
+                onDolby = viewModel::setAutoQualityDolby,
+                onFlac = viewModel::setAutoQualityFlac,
+                onLive = viewModel::setAutoQualityLive,
+                onUnlock = viewModel::setAutoQualityUnlock,
+            )
+
             // ================= 开发者工具 · Cookie 管理 =================
             //
             // 为什么放在「存储」与「关于」之间：它是**开发者向**的功能，
@@ -641,7 +664,7 @@ fun SettingsScreen(
             //
             // ⚠️ 整块只显示**字段名与长度**，永不显示值 —— 见 CookieState 的注释。
             SectionMark(
-                index = 11,
+                index = 12,
                 title = "开发者工具 · Cookie",
                 modifier = Modifier.padding(top = Rhythm.section),
             )
@@ -685,7 +708,7 @@ fun SettingsScreen(
 
             // ================= 关于 =================
             SectionMark(
-                index = 12,
+                index = 13,
                 title = "关于",
                 modifier = Modifier.padding(top = Rhythm.section),
             )
@@ -791,6 +814,223 @@ private fun CategoryPicker(
         }
     }
 }
+
+/**
+ * 自动画质 / 音质（未发版）。
+ *
+ * 移植自 `AHCorn/Bilibili-Auto-Quality` 的「设置音质和画质」面板。
+ *
+ * ## 与原面板的对应关系
+ *
+ * | 原脚本 | 这里 |
+ * |---|---|
+ * | 首选画质 | [InlinePicker]「首选画质」 |
+ * | 备选画质 | [InlinePicker]「备选画质」 |
+ * | 自动音质 | 「自动选最高音质」（本项目的默认行为） |
+ * | 杜比全景声 | [SwitchRow] |
+ * | Hi-Res 音质 | [SwitchRow] |
+ * | 解锁设置面板 | 「解锁设置」子块（8K / 杜比视界 / 无损 / AV1） |
+ *
+ * ## 🔴 必须如实写清的两件事
+ *
+ * 1. **这些开关只是"请求"，不是"解锁"** —— 非会员账号带上全部请求位，
+ *    服务端照样只给 480P + 64k AAC（本项目已实测，见坑 172）。
+ *    所以文案写的是"向服务端请求"，而不是"开启后即可使用"。
+ * 2. **首选/备选是"在你能拿到的档位里挑"** —— 不是"强制切到该档"。
+ *    服务端没给的档位选了也拿不到，所以列表里会标出「需要大会员」。
+ *
+ * 这两条都是原脚本 README 自己声明的立场（"不是让非会员用户使用会员选项"），
+ * 本项目的实现与之保持一致。
+ */
+@Composable
+private fun AutoQualitySection(
+    aq: com.example.biliv3.data.quality.AutoQualitySettings,
+    onEnabled: (Boolean) -> Unit,
+    onPreferred: (Int) -> Unit,
+    onFallback: (Int) -> Unit,
+    onDolby: (Boolean) -> Unit,
+    onFlac: (Boolean) -> Unit,
+    onLive: (Boolean) -> Unit,
+    /** 解锁开关：8K / 杜比视界 / AV1（杜比音频与无损位被服务端拒，故无开关）。 */
+    onUnlock: (Boolean, Boolean, Boolean) -> Unit,
+) {
+    val colors = BiliTheme.colors
+
+    // 三个子选择器共用一个"当前打开哪个"（与页面其它选择器同一套约定）
+    var aqPicker by remember { mutableStateOf<Int?>(null) }
+
+    SwitchRow(
+        title = "自动选择最高画质",
+        subtitle = "按账号实际能拿到的档位自动选最高的；" +
+            "会员专属档位不会发出去（发了也只会被降档）",
+        checked = aq.enabled,
+        onCheckedChange = onEnabled,
+    )
+
+    // ⚠️ 未开启时**明确说明"现在是什么行为"**，而不是只把细项藏起来。
+    //    否则用户会以为"没开关就是没这个功能"，而实际上
+    //    "取最高码率音轨"这条一直在生效（它是修 bug，不是新功能）。
+    if (!aq.enabled) {
+        Text(
+            text = "关闭时按服务端默认档取流（fnval=16，改动前的行为）。" +
+                "音质始终取最高码率音轨。",
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.badge,
+                lineHeight = FontSize.labelLine,
+                color = colors.textTertiary,
+            ),
+            modifier = Modifier.padding(
+                start = Space.x4,
+                end = Space.x4,
+                top = Space.x1,
+            ),
+        )
+    }
+
+    // 关掉总开关后细项无意义 —— 不渲染（同弹幕区的做法，避免"改了没反应"）
+    if (aq.enabled) {
+        InlinePicker(
+            label = "首选画质",
+            currentLabel = com.example.biliv3.data.quality.QualityNames.label(aq.preferredQn),
+            options = QUALITY_CANDIDATES.map { (q, label) ->
+                PickerOption(key = q, label = label)
+            },
+            selectedKey = aq.preferredQn,
+            expanded = aqPicker == AQ_PICKER_PREFERRED,
+            onToggle = {
+                aqPicker = if (aqPicker == AQ_PICKER_PREFERRED) null else AQ_PICKER_PREFERRED
+            },
+            onSelect = {
+                onPreferred(it)
+                aqPicker = null
+            },
+        )
+
+        InlinePicker(
+            label = "备选画质",
+            currentLabel = com.example.biliv3.data.quality.QualityNames.label(aq.fallbackQn),
+            options = QUALITY_CANDIDATES.map { (q, label) ->
+                PickerOption(key = q, label = label)
+            },
+            selectedKey = aq.fallbackQn,
+            expanded = aqPicker == AQ_PICKER_FALLBACK,
+            onToggle = {
+                aqPicker = if (aqPicker == AQ_PICKER_FALLBACK) null else AQ_PICKER_FALLBACK
+            },
+            onSelect = {
+                onFallback(it)
+                aqPicker = null
+            },
+        )
+
+        // ---- 音质 ----
+        //
+        // 「自动选最高音质」在本项目**没有开关**：它是修过的 bug
+        // （旧实现取 audio[0] = 64k，见 AutoQuality.pickAudioStream），
+        // 不是一个可选行为。所以这里只显示当前行为，不做成开关。
+        InfoRow(label = "普通音质", value = "自动取最高码率（192k）")
+
+        SwitchRow(
+            title = "优先杜比全景声",
+            subtitle = "服务端返回了杜比音轨（30250）时优先用它；" +
+                "没返回就用普通 AAC —— 注意：杜比**不能主动请求**，见下方说明",
+            checked = aq.dolbyAtmos,
+            onCheckedChange = onDolby,
+        )
+
+        SwitchRow(
+            title = "优先 Hi-Res 无损音质",
+            subtitle = "服务端返回了无损音轨（30251）时优先用它；" +
+                "没返回就用普通 AAC —— 同样不能主动请求",
+            checked = aq.hiResAudio,
+            onCheckedChange = onFlac,
+        )
+
+        SwitchRow(
+            title = "直播自动最高画质",
+            subtitle = "直播间请求原画（qn=10000），服务端按账号权限给到能给的最高档",
+            checked = aq.liveAutoQuality,
+            onCheckedChange = onLive,
+        )
+
+        // ---- 解锁设置（对应原脚本的「解锁设置」面板）----
+        Spacer(Modifier.height(Space.x2))
+        Text(
+            text = "解锁设置",
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.label,
+                color = colors.textTertiary,
+            ),
+            modifier = Modifier.padding(horizontal = Space.x4),
+        )
+        Text(
+            text = "这些是**请求参数**（原脚本改 localStorage，本项目改 fnval 位）。" +
+                "非会员账号带上它们，服务端仍然只给 480P —— " +
+                "能不能拿到由账号权限决定，不是由开关决定。\n\n" +
+                "⚠️ 杜比全景声与 Hi-Res 无损**没有开关**：它们的 fnval 位（32 / 4096）" +
+                "实测会让整条取流请求返回 -400 请求错误 —— " +
+                "带上不是「没有提升」，而是**整个视频都放不了**。" +
+                "所以那两项只做「服务端给了就用」，不做「主动索要」。",
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = FontSize.badge,
+                lineHeight = FontSize.labelLine,
+                color = colors.textTertiary,
+            ),
+            modifier = Modifier.padding(
+                start = Space.x4,
+                end = Space.x4,
+                top = Space.x1,
+                bottom = Space.x1,
+            ),
+        )
+
+        SwitchRow(
+            title = "请求 8K",
+            subtitle = "fnval 位 128",
+            checked = aq.unlock.unlock8K,
+            onCheckedChange = { v ->
+                onUnlock(v, aq.unlock.unlockDolbyVision, aq.unlock.unlockAv1)
+            },
+        )
+
+        SwitchRow(
+            title = "请求杜比视界",
+            subtitle = "fnval 位 64",
+            checked = aq.unlock.unlockDolbyVision,
+            onCheckedChange = { v ->
+                onUnlock(aq.unlock.unlock8K, v, aq.unlock.unlockAv1)
+            },
+        )
+
+        SwitchRow(
+            title = "请求 AV1 编码",
+            subtitle = "fnval 位 256 + 2048；部分设备无 AV1 硬解",
+            checked = aq.unlock.unlockAv1,
+            onCheckedChange = { v ->
+                onUnlock(aq.unlock.unlock8K, aq.unlock.unlockDolbyVision, v)
+            },
+        )
+
+        // 当前实际发出的 fnval —— 让用户能核对"我开的开关真的进了请求"
+        InfoRow(label = "当前 fnval", value = aq.fnval().toString())
+    }
+}
+
+/** 自动画质区两个选择器的 id（与页面主 picker 分开，避免互相干扰）。 */
+private const val AQ_PICKER_PREFERRED = 101
+private const val AQ_PICKER_FALLBACK = 102
+
+/**
+ * 首选 / 备选画质的候选档位。
+ *
+ * ⚠️ 比「默认清晰度」的 `QUALITY_OPTIONS` 多了 1080P+ / 60帧 / 4K / 8K ——
+ * 那些是**会员档**，用户是会员时应该能直接指定它们。
+ * 非会员选了也不会生效（服务端不给），但列表里保留：
+ * 隐藏会让会员用户以为"没有这个选项"。
+ */
+private val QUALITY_CANDIDATES: List<Pair<Int, String>> =
+    listOf(0 to "自动（最高可用）") +
+        com.example.biliv3.data.quality.QualityNames.SELECTABLE
 
 /**
  * 开关行。

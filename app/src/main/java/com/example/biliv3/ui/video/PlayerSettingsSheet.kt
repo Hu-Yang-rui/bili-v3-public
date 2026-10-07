@@ -348,6 +348,39 @@ fun PlayerSettingsSheet(
                         },
                     )
                 }
+
+                // ---- 音质（未发版）----
+                //
+                // 🔴 显示的是**实际拿到的**音轨，不是设置里开的开关。
+                //
+                // 用户可能开了「杜比全景声」但账号不是大会员 → 服务端只给
+                // 普通 AAC。这时显示"杜比全景声"就是 UI 与实际不符
+                // （§7.25-158 同类错误）。判据是选中音轨的真实 id，
+                // 见 AutoQuality.audioLabel。
+                if (info != null && info.audioLabel.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Space.x4, vertical = Space.x2),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "音质",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = FontSize.body,
+                                color = colors.textPrimary,
+                            ),
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            text = info.audioLabel,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontSize = FontSize.label,
+                                color = colors.textSecondarySafe,
+                            ),
+                        )
+                    }
+                }
             }
         }
     }
