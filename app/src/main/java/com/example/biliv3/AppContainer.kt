@@ -56,16 +56,6 @@ class AppContainer(context: Context) {
     private val appContext = context.applicationContext
 
     /**
-     * 应用级协程作用域（**未发版**）。
-     *
-     * 装扮状态要活得比任何页面久（它影响底部导航 / 首页 / 我的页），
-     * 所以不能挂在某个 ViewModel 的 `viewModelScope` 上。
-     */
-    private val appScope = kotlinx.coroutines.CoroutineScope(
-        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate,
-    )
-
-    /**
      * 加密凭据存储（SESSDATA 走 Android Keystore）。
      *
      * ## 🔴 `by lazy` —— v1.6.2 启动优化（实测省 ~150ms）
@@ -266,33 +256,6 @@ val pmRepository: PmRepository by lazy { PmRepository(api, authStore) }
      */
     val pendingShare: com.example.biliv3.data.PendingShare =
         com.example.biliv3.data.PendingShare()
-
-    /**
-     * 本地装扮（Fake Skin，**未发版**）。
-     *
-     * 🔴 **只改本地 UI** —— 不调任何网络接口、不改账号真实装扮、
-     * **不改变**视频清晰度与会员权限（任务书第二十九条规定两者完全分离）。
-     */
-    val skinRepository: com.example.biliv3.data.skin.SkinRepository by lazy {
-        com.example.biliv3.data.skin.SkinRepository(appContext)
-    }
-
-    /**
-     * 装扮状态（全应用唯一）。
-     *
-     * ⚠️ 必须在 `App` 启动时调用一次 `skinState.load()`，
-     * 否则装扮不会被恢复（任务书第二十四条的启动流程）。
-     */
-    val skinState: com.example.biliv3.data.skin.SkinState by lazy {
-        com.example.biliv3.data.skin.SkinState(
-            repo = skinRepository,
-            scope = appScope,
-            // 适配器用**实际背景色**做对比度校验（浅色装扮会被拦下）
-            backgroundColor = com.example.biliv3.design.tokens.DarkColors.bgBase,
-            // 解码图片资源用 —— 传 applicationContext，避免持有 Activity
-            context = appContext,
-        )
-    }
 
     /**
      * 应用级播放器持有者。

@@ -94,18 +94,6 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
     /**
-     * 打开「本地装扮」（Fake Skin，未发版）。
-     *
-     * ⚠️ 用回调而不是直接导航：设置页不持有 NavController。
-     */
-    onOpenSkin: () -> Unit = {},
-    /**
-     * 当前装扮名（默认 = "默认"）。
-     *
-     * 由调用方从 `SkinState` 读后传入 —— 设置页不做 IO。
-     */
-    currentSkinName: String = "默认",
-    /**
      * 清理图片缓存。
      *
      * ⚠️ 用回调而不是直接在这里拿 Context：缓存清理属于**应用级动作**
@@ -646,57 +634,14 @@ fun SettingsScreen(
                 ),
             )
 
-            // ================= 11. 本地装扮（Fake Skin，未发版）=================
+            // ================= 开发者工具 · Cookie 管理 =================
             //
-            // ⚠️ 这里**明确写"不是官方装扮系统"**（任务书第二十七条）——
-            //    避免用户误认为这是官方商城。
-            SectionMark(
-                index = 11,
-                title = "本地装扮（Fake Skin）",
-                modifier = Modifier.padding(top = Rhythm.section),
-            )
-
-            InfoRow(
-                label = "当前装扮",
-                value = currentSkinName,
-            )
-
-            Text(
-                text = "本地装扮只改变**本 App** 的外观（颜色 / 背景 / 底部导航图标），" +
-                    "不会修改你的 Bilibili 账号装扮，也不影响视频清晰度与会员权限。" +
-                    "不是 B 站官方装扮系统。",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    lineHeight = FontSize.labelLine,
-                    color = colors.textTertiary,
-                ),
-                modifier = Modifier.padding(
-                    start = Space.x4,
-                    end = Space.x4,
-                    top = Space.x1,
-                ),
-            )
-
-            Text(
-                text = "打开装扮列表",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = colors.brandPrimary,
-                    fontWeight = FontWeight.Medium,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onOpenSkin)
-                    .padding(horizontal = Space.x4, vertical = Space.rowVertical),
-            )
-
-            // ================= 开发者工具 · Cookie 管理 =================            //
             // 为什么放在「存储」与「关于」之间：它是**开发者向**的功能，
             // 不该出现在普通用户视线中心（播放 / 弹幕那些区）。
             //
             // ⚠️ 整块只显示**字段名与长度**，永不显示值 —— 见 CookieState 的注释。
             SectionMark(
-                index = 12,
+                index = 11,
                 title = "开发者工具 · Cookie",
                 modifier = Modifier.padding(top = Rhythm.section),
             )
@@ -740,7 +685,7 @@ fun SettingsScreen(
 
             // ================= 关于 =================
             SectionMark(
-                index = 13,
+                index = 12,
                 title = "关于",
                 modifier = Modifier.padding(top = Rhythm.section),
             )
