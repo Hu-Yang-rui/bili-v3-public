@@ -346,6 +346,28 @@ fun ChatScreen(
     }
 
     /**
+     * 自动发送分享内容的结果（v1.6.7）。
+     *
+     * ## 为什么用 Toast 与上面同一条通路
+     *
+     * 分享是**自动**发生的（用户没有点发送按钮），所以他需要知道
+     * 到底发出去没有 —— 静默成功会让人不确定，静默失败更糟
+     * （以为发了、实际没发）。
+     *
+     * ⚠️ 失败时提示的是**真实原因**（来自 `userMessageFor`），
+     *    绝不在失败时显示"已发送"。分享时链接已复制到剪贴板，
+     *    用户仍可手动发出。
+     */
+    LaunchedEffect(state.shareResult) {
+        state.shareResult?.let { msg ->
+            android.widget.Toast
+                .makeText(toastHost, msg, android.widget.Toast.LENGTH_SHORT)
+                .show()
+            viewModel.consumeShareResult()
+        }
+    }
+
+    /**
      * 发送成功后清空输入框（v1.4.2）。
      *
      * ## 为什么用"监听 sending 落回"而不是在按钮里清

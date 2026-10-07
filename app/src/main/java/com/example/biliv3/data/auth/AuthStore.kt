@@ -348,7 +348,42 @@ class AuthCookieJar(private val storeProvider: () -> AuthStore) : CookieJar {
 
         // 用 bilibili 域名构造 Cookie，保证被接受
         val host = url.host
-        return parseCookieString(raw).mapNotNull { (k, v) ->
+        val parts = LinkedHashMap<String, String>()
+        parseCookieString(raw).forEach { (k, v) -> parts[k] = v }
+
+        // 🔴 v1.6.7 修：**必须补上 `buvid3`**，否则写操作全部 `-401 非法访问`。
+        //
+        // ## 根因（模拟器实测）
+        //
+        // 投币返回 `code=-401 非法访问`。用网络拦截器打印 cookie **名字**：
+        // ```
+        // cookies=[sid,SESSDATA,bili_jct,DedeUserID,DedeUserID__ckMd5]
+        // ```
+        // —— `SESSDATA` 与 `bili_jct` **都在**，唯独**缺 `buvid3`**。
+        //
+        // ## 为什么缺
+        //
+        // `buvid3` 是**设备指纹**，B 站通过 `Set-Cookie` 下发，
+        // 本应用把它单独存进 `AuthStore.buvid3`（见 [saveBuvid]），
+        // **但没有把它放回 `store.cookie` 串**。
+        // 于是 `loadForRequest` 只回放登录 cookie，`buvid3` 永远缺席。
+        //
+        // ## 为什么读操作没事、写操作就挂
+        //
+        // 读接口（`view` / `nav`）对 `buvid3` 宽松，所以首页、余额都正常；
+        // **写接口风控更严** —— 缺设备指纹会被判成"非法访问"。
+        // 这解释了"能登录、能看余额，但一投币就失败"的现象。
+        //
+        // ## 为什么不是覆盖
+        //
+        // `store.cookie` 里**本来就可能**已有 `buvid3`（WebView 登录时
+        // 整串转存过）。只有当它缺席时才补 —— 否则会用旧值覆盖新值。
+        if (parts["buvid3"].isNullOrEmpty()) {
+            val b3 = store.buvid3
+            if (b3.isNotEmpty()) parts["buvid3"] = b3
+        }
+
+        return parts.mapNotNull { (k, v) ->
             Cookie.Builder()
                 .name(k)
                 .value(v)

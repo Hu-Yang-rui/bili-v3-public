@@ -730,6 +730,12 @@ fun MainShell(
                         onOpenDownloads = { navController.navigate(Routes.DOWNLOADS) },
                         // 「分享给 B站好友」→ 进私信列表（链接已复制到剪贴板）
                         onOpenMessages = { navController.navigate(Routes.MESSAGES) },
+                        // 分享给好友（v1.6.7）：挂载内容后进私信列表，
+                        // 用户选完联系人**自动发送**（不再需要手动粘贴+点发送）
+                        onShareToFriend = { title, url ->
+                            container.pendingShare.post(title, url)
+                            navController.navigate(Routes.MESSAGES)
+                        },
                         inToView = inToView,
                         onAddToView = { aid ->
                             scope.launch {
@@ -1809,6 +1815,8 @@ fun MainShell(
                     factory = com.example.biliv3.ui.message.ChatVmFactory(
                         container.pmRepository,
                         talkerId,
+                        // 分享自动发送（v1.6.7）：VM 会 take() 一次并自动发出
+                        container.pendingShare,
                     ),
                 )
                 com.example.biliv3.ui.message.ChatScreen(

@@ -88,6 +88,13 @@ class MessageListViewModel(
 class ChatViewModel(
     private val repo: PmRepository,
     private val talkerId: Long,
+    /**
+     * 待发送的分享内容（v1.6.7）。
+     *
+     * 从视频详情页「分享 → B站好友」挂载；本页进入后**自动发送一次**。
+     * null = 不是从分享进来的（普通聊天）。
+     */
+    private val pendingShare: com.example.biliv3.data.PendingShare? = null,
 ) : ViewModel() {
 
     data class UiState(
@@ -96,10 +103,31 @@ class ChatViewModel(
         val sending: Boolean = false,
         val error: String? = null,
         val loggedIn: Boolean = false,
+        /**
+         * 自动发送分享内容的结果（v1.6.7）。
+         *
+         * `null` = 没有自动发送过。
+         * 非 null 时 UI 显示一次性提示（成功 / 真实失败原因）。
+         */
+        val shareResult: String? = null,
     )
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
+
+    /**
+     * 是否已经尝试过自动发送。
+     *
+     * ## 🔴 防重复发送的关键
+     *
+     * `load()` 在会话页可能被调用多次（收到新消息后刷新、用户下拉刷新）。
+     * 没有这个标志的话，**每次刷新都会再发一遍分享内容** ——
+     * 那是明确的刷屏行为。
+     *
+     * ⚠️ 用普通 `var` 而不是 StateFlow：它只用于"发没发过"的判定，
+     *    不需要触发重组。
+     */
+    private var shareAttempted = false
 
     init {
         load()
@@ -128,6 +156,9 @@ class ChatViewModel(
                     // `PmMessagePage` 只给了 minSeqno（用于上拉历史），
                     // 所以从消息列表里取最大的 msgKey 当 ack。
                     markReadUpTo(page)
+
+                    // 分享自动发送（v1.6.7）—— 在消息加载完之后做
+                    maybeAutoSendShare()
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(
@@ -136,6 +167,69 @@ class ChatViewModel(
                     )
                 }
         }
+    }
+
+    /**
+     * 自动发送分享内容（v1.6.7）。
+     *
+     * ---
+     *
+     * # 为什么在"消息加载完之后"发
+     *
+     * 用户点进会话时，屏幕上会先出现历史消息。如果**同时**插入
+     * 一条"正在发送"的乐观消息，它会与历史消息的渲染竞争，
+     * 视觉上像是历史里本来就有一条待发。
+     *
+     * 等加载完再发，时序上是"看到历史 → 发出分享"，符合真实顺序。
+     *
+     * # 🔴 三重防重复
+     *
+     * 1. `shareAttempted` —— 本 VM 实例只尝试一次
+     *    （`load()` 可能因刷新被多次调用）
+     * 2. `pendingShare.take()` —— **取走即清空**，
+     *    即使 VM 被重建也不会再拿到同一份内容
+     * 3. `repo.send` 有 `_state.sending` 守卫 —— 发送中不接受第二次
+     *
+     * 没有这三重，"切走再回来"或"收到新消息触发刷新"都会**重复发送**，
+     * 而那是明确的刷屏行为（任务书禁止）。
+     *
+     * # 失败处理
+     *
+     * 失败时**不清空 pendingShare 的语义结果**，而是把真实原因写进
+     * `shareResult` 让 UI 显示 —— 用户至少知道"没发出去"，
+     * 并且剪贴板里还有链接可以手动发（分享时已复制）。
+     *
+     * **绝不**在失败时显示"已发送"。
+     */
+    private fun maybeAutoSendShare() {
+        if (shareAttempted) return
+        val share = pendingShare ?: return
+
+        // take() 是"取走即清空" —— 拿不到就是没有待发送内容
+        val pending = share.take() ?: return
+        shareAttempted = true
+
+        viewModelScope.launch {
+            _state.value = _state.value.copy(sending = true)
+            val result = repo.send(talkerId, pending.body)
+            _state.value = _state.value.copy(
+                sending = false,
+                shareResult = result.fold(
+                    // ⚠️ `onSuccess` 也要写成 lambda —— `Result.fold` 的两个
+                    //    参数都是函数类型，直接传字符串会类型不匹配。
+                    onSuccess = { "已发送分享" },
+                    onFailure = { e -> "分享发送失败：${userMessageFor(e)}" },
+                ),
+            )
+            // 成功后刷新消息列表，让刚发的那条出现
+            // （send 内部已乐观插入，这里只是确保与服务端一致）
+            if (result.isSuccess) load()
+        }
+    }
+
+    /** 消费一次性分享提示（UI 显示过后调用）。 */
+    fun consumeShareResult() {
+        _state.value = _state.value.copy(shareResult = null)
     }
 
     /**
@@ -277,9 +371,11 @@ class MessageVmFactory(
 class ChatVmFactory(
     private val repo: PmRepository,
     private val talkerId: Long,
+    /** 待发送的分享内容（v1.6.7）。null = 普通聊天。 */
+    private val pendingShare: com.example.biliv3.data.PendingShare? = null,
 ) : androidx.lifecycle.ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         @Suppress("UNCHECKED_CAST")
-        return ChatViewModel(repo, talkerId) as T
+        return ChatViewModel(repo, talkerId, pendingShare) as T
     }
 }

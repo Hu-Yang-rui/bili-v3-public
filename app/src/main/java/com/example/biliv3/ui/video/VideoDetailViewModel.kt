@@ -684,13 +684,13 @@ class VideoDetailViewModel(
         }
 
         viewModelScope.launch {
-            // 第一步：官方
             _summaryState.value = AiSummaryUiState.Loading(AiSummaryUiState.Step.OFFICIAL)
 
-            // 第二步起交给仓库（它内部会决定走官方还是第三方）
-            _summaryState.value = AiSummaryUiState.Loading(AiSummaryUiState.Step.MODEL)
-
-            val r = repo.summarize(
+            // 🔴 v1.6.7：改用 summarizeState —— 它返回**真实状态**，
+            //    不再把一切失败压成"没有权限"。
+            //    旧实现调 summarize() 拿 Result，失败时只剩一句 message，
+            //    UI 只能猜，于是显示成"没有访问权限"。
+            val st = repo.summarizeState(
                 bvid = bvid,
                 cid = cid,
                 upMid = cur.detail.ownerMid,
@@ -698,22 +698,95 @@ class VideoDetailViewModel(
                 desc = cur.detail.desc,
             )
 
-            r.fold(
-                onSuccess = { s ->
-                    summaryCache[key] = s
-                    _summaryState.value = AiSummaryUiState.Done(s)
-                },
-                onFailure = { e ->
-                    val msg = e.message ?: "AI 总结失败"
-                    // 提示"需要配置"时给出配置入口（用户要能立刻行动）
-                    val needsConfig = !repo.thirdPartyUsable()
-                    _summaryState.value = AiSummaryUiState.Error(
-                        message = msg,
-                        needsConfig = needsConfig,
-                    )
-                },
-            )
+            _summaryState.value = toUiState(st, repo)
         }
+    }
+
+    /**
+     * 真实状态 → UI 状态（v1.6.7）。
+     *
+     * ## 🔴 为什么这一层必须一一对应，不能合并
+     *
+     * 需求明确禁止「API 失败 → hasPermission=false → 显示没有权限」。
+     * 所以这里**每个数据层状态映射到各自的 UI 文案**，
+     * 并且区分「能不能重试」—— 不可重试的状态不给重试按钮，
+     * 否则是在引导用户反复点击一个永远不会成功的按钮。
+     */
+    private fun toUiState(
+        st: com.example.biliv3.data.ai.AiSummaryState,
+        repo: com.example.biliv3.data.ai.AiSummaryRepository,
+    ): AiSummaryUiState = when (st) {
+        is com.example.biliv3.data.ai.AiSummaryState.Success ->
+            AiSummaryUiState.Done(st.summary)
+
+        com.example.biliv3.data.ai.AiSummaryState.Loading ->
+            AiSummaryUiState.Loading(AiSummaryUiState.Step.OFFICIAL)
+
+        // ---- 确定性的"走不通"，**不给重试**（重试没意义）----
+        com.example.biliv3.data.ai.AiSummaryState.NotLoggedIn ->
+            AiSummaryUiState.Blocked(
+                title = "登录后使用 AI 总结",
+                detail = "官方 AI 总结需要登录账号。登录后回来重新打开即可。",
+                action = AiSummaryUiState.BlockedAction.LOGIN,
+            )
+
+        com.example.biliv3.data.ai.AiSummaryState.Unauthorized ->
+            AiSummaryUiState.Blocked(
+                title = "当前账号暂无 AI 总结权限",
+                detail = "服务端明确返回权限不足。这不是网络问题，重试无效。",
+                action = AiSummaryUiState.BlockedAction.NONE,
+            )
+
+        com.example.biliv3.data.ai.AiSummaryState.NoSpeech ->
+            AiSummaryUiState.Blocked(
+                title = "该视频没有可用于总结的语音内容",
+                detail = "官方没有识别到语音，因此无法生成总结。",
+                action = AiSummaryUiState.BlockedAction.NONE,
+            )
+
+        com.example.biliv3.data.ai.AiSummaryState.Unsupported ->
+            AiSummaryUiState.Blocked(
+                title = "该视频暂不支持 AI 总结",
+                detail = "服务端返回该视频不支持摘要。",
+                action = AiSummaryUiState.BlockedAction.NONE,
+            )
+
+        // ---- 生成中：给"刷新"而不是"重试" ----
+        com.example.biliv3.data.ai.AiSummaryState.Generating ->
+            AiSummaryUiState.Blocked(
+                title = "AI 总结正在生成",
+                detail = "服务端正在处理这个视频，稍后刷新可能就有了。",
+                action = AiSummaryUiState.BlockedAction.REFRESH,
+            )
+
+        // ---- 可恢复的失败：给重试 ----
+        is com.example.biliv3.data.ai.AiSummaryState.NetworkError ->
+            AiSummaryUiState.Error(message = st.message, needsConfig = false)
+
+        is com.example.biliv3.data.ai.AiSummaryState.ServerError ->
+            AiSummaryUiState.Error(
+                message = "AI 总结服务异常：${st.message}",
+                needsConfig = false,
+            )
+
+        is com.example.biliv3.data.ai.AiSummaryState.BadRequest ->
+            AiSummaryUiState.Error(message = st.message, needsConfig = false)
+
+        com.example.biliv3.data.ai.AiSummaryState.ParseError ->
+            AiSummaryUiState.Error(
+                message = "拿到了总结内容但无法解析，请重试",
+                needsConfig = false,
+            )
+
+        // ---- 官方不可用 + 第三方没配：说明缺什么 ----
+        is com.example.biliv3.data.ai.AiSummaryState.ThirdPartyUnavailable ->
+            AiSummaryUiState.Error(
+                message = st.reason,
+                needsConfig = !repo.thirdPartyUsable(),
+            )
+
+        com.example.biliv3.data.ai.AiSummaryState.Idle ->
+            AiSummaryUiState.Idle
     }
 
     /** 关闭总结弹层（保留缓存，下次打开立即出结果）。 */
@@ -1426,6 +1499,182 @@ class VideoDetailViewModel(
     fun onShared() {
         viewModelScope.launch { interactions?.shareReport(bvid) }
     }
+
+    // ---------------------------------------------------------------------
+    // 收藏夹选择（v1.6.7）
+    // ---------------------------------------------------------------------
+
+    /**
+     * 收藏夹面板状态。
+     *
+     * ## 🔴 为什么需要它（用户报告的真实问题）
+     *
+     * 原实现点「收藏」**直接收藏到默认夹**，用户无法选择。
+     * 模拟器实测：点一下 → `fav/resource/deal code=0`，
+     * 但用户根本不知道收藏到哪去了。
+     */
+    private val _favSheet = MutableStateFlow(FavSheetState())
+    val favSheet: StateFlow<FavSheetState> = _favSheet.asStateFlow()
+
+    /**
+     * 打开收藏夹面板。
+     *
+     * 并行拉两份数据：
+     * 1. **我有哪些收藏夹**（`fav/folder/created/list-all`）
+     * 2. **这个视频已在哪些夹里**（`fav/resource/ids`）
+     *
+     * ## 为什么要拿第 2 份
+     *
+     * 没有它就只能把"已收藏"当"未收藏"显示 —— 那是**假状态**：
+     * 用户看到全空，以为自己没收藏过，点一下反而变成"重复收藏"
+     * 或"意外取消"。
+     */
+    fun openFavSheet() {
+        val repoI = interactions ?: return
+        if (!repoI.isLoggedIn) return toast("请先登录")
+
+        val cur = _state.value
+        val aid = (cur as? DetailUiState.Content)?.detail?.aid ?: 0L
+        if (aid <= 0L) return toast("视频信息未就绪，请稍后重试")
+
+        val mid = repoI.currentMid
+        if (mid <= 0L) return toast("登录信息不完整，请重新登录")
+
+        // ⚠️ `libraryRepo` 是可空注入（预览/测试环境为 null）——
+        //    没有它就拉不到收藏夹列表，如实报错而不是显示空面板。
+        val lib = libraryRepo
+        if (lib == null) return toast("收藏夹功能不可用")
+
+        _favSheet.value = FavSheetState(open = true, loading = true)
+
+        viewModelScope.launch {
+            // 两个请求互不依赖 → 并行（串行会多一个 RTT 的等待感）
+            val foldersDeferred = async { runCatching { lib.favoriteFolders(mid) } }
+            val idsDeferred = async { runCatching { repoI.favoriteFolderIds(aid) } }
+
+            val foldersRes = foldersDeferred.await()
+            val idsRes = idsDeferred.await()
+
+            val folders = foldersRes.getOrNull()
+            if (folders == null) {
+                // 收藏夹列表拿不到 → 如实报错，**不显示空列表**
+                // （空列表会被读成"你没有收藏夹"，那是假的事实断言）
+                _favSheet.value = FavSheetState(
+                    open = true,
+                    loading = false,
+                    error = userMessageFor(
+                        foldersRes.exceptionOrNull() ?: IllegalStateException("收藏夹加载失败"),
+                    ),
+                )
+                return@launch
+            }
+
+            _favSheet.value = FavSheetState(
+                open = true,
+                loading = false,
+                folders = folders,
+                // 拿不到"已在哪些夹"时给空集合 —— 勾选态会全部为空。
+                // ⚠️ 这是**已知的信息缺失**，不是"确认未收藏"；
+                //    面板里会带一句说明（见 UI），不假装确定。
+                selected = idsRes.getOrNull()?.toSet() ?: emptySet(),
+                selectionUnknown = idsRes.isFailure,
+            )
+        }
+    }
+
+    /** 关闭收藏夹面板。 */
+    fun closeFavSheet() {
+        _favSheet.value = FavSheetState()
+    }
+
+    /**
+     * 切换某个收藏夹的选中态。
+     *
+     * ## 立即写服务端（不攒到"确定"）
+     *
+     * 每次勾选/取消都立刻调 `fav/resource/deal`：
+     * - 成功 → 更新本地勾选态 + 通知其它页面刷新
+     * - 失败 → **回滚勾选态** + 显示真实原因
+     *
+     * 不攒批的理由：B 站的收藏夹是**独立**的资源，逐个提交的语义
+     * 与用户"点一下勾一下"的心智一致；攒批反而会出现
+     * "关了面板没保存"这类丢失。
+     *
+     * ## 防并发
+     *
+     * 同一时刻只允许一个写请求（与 `toggleFavorite` 同一约定）——
+     * 连点两下会发出 add + del 两组请求，响应乱序后状态不确定。
+     */
+    fun toggleFolder(folderId: Long) {
+        if (folderId <= 0L) return
+        if (_favWriteInFlight.value) return
+
+        val repoI = interactions ?: return
+        val cur = _state.value
+        val aid = (cur as? DetailUiState.Content)?.detail?.aid ?: 0L
+        if (aid <= 0L) return
+
+        val sheet = _favSheet.value
+        val wasSelected = folderId in sheet.selected
+        val next = !wasSelected
+
+        // 乐观更新勾选态（失败回滚）
+        _favSheet.value = sheet.copy(
+            selected = if (next) sheet.selected + folderId else sheet.selected - folderId,
+            busyFolderId = folderId,
+            error = null,
+        )
+        _favWriteInFlight.value = true
+
+        viewModelScope.launch {
+            try {
+                repoI.favoriteTo(aid, folderId, next)
+                    .onSuccess {
+                        // 勾选态已经乐观更新过，这里只同步"详情页的收藏按钮"
+                        // —— 至少有一个夹时按钮为"已收藏"
+                        val nowFavored = _favSheet.value.selected.isNotEmpty()
+                        _interaction.value = _interaction.value.copy(favored = nowFavored)
+                        favoritesSync.notifyChanged()
+                    }
+                    .onFailure { e ->
+                        // 回滚到操作前
+                        val s = _favSheet.value
+                        _favSheet.value = s.copy(
+                            selected = if (next) s.selected - folderId else s.selected + folderId,
+                            error = userMessageFor(e),
+                        )
+                    }
+            } finally {
+                _favWriteInFlight.value = false
+                _favSheet.value = _favSheet.value.copy(busyFolderId = 0L)
+            }
+        }
+    }
+
+    /** 收藏夹写入防并发。 */
+    private val _favWriteInFlight = MutableStateFlow(false)
+
+    /**
+     * 收藏夹面板状态。
+     *
+     * @param open 是否展开
+     * @param loading 正在拉列表
+     * @param folders 我的收藏夹
+     * @param selected **已收藏到**的收藏夹 id
+     * @param selectionUnknown `selected` 是否因接口失败而不可信
+     *   （true 时 UI 要说明"勾选态可能不准确"，不假装确定）
+     * @param busyFolderId 正在写入的收藏夹（该行显示进行中）
+     * @param error 最近一次失败原因（**如实显示**）
+     */
+    data class FavSheetState(
+        val open: Boolean = false,
+        val loading: Boolean = false,
+        val folders: List<com.example.biliv3.data.FavFolder> = emptyList(),
+        val selected: Set<Long> = emptySet(),
+        val selectionUnknown: Boolean = false,
+        val busyFolderId: Long = 0L,
+        val error: String? = null,
+    )
 
     /** 提示已消费。 */
     fun consumeToast() {

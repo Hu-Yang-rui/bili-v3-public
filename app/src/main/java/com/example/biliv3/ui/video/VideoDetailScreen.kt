@@ -272,6 +272,16 @@ fun VideoDetailScreen(
      * 是这个 App **真实能做到**的分享方式。
      */
     onOpenMessages: () -> Unit = {},
+    /**
+     * 分享给站内好友（v1.6.7）。
+     *
+     * 挂载待发送内容并跳进私信列表 —— 用户选完联系人后**自动发送**。
+     *
+     * 与 [onOpenMessages] 的区别：后者只是"打开私信页"，
+     * 本参数额外带上了要发的内容。分开是为了让"只是去看看消息"
+     * 这个场景不会被误当成分享。
+     */
+    onShareToFriend: (title: String, url: String) -> Unit = { _, _ -> },
     /** 加入稍后再看。由导航层注入（需要 LibraryRepository）。 */
     onAddToView: (Long) -> Unit = {},
     /** 该视频是否已在稍后再看。 */
@@ -847,8 +857,19 @@ fun VideoDetailScreen(
                     onCoin = {
                         if (viewModel.isLoggedIn) showCoinDialog = true else onLoginRequired()
                     },
+                    // 收藏（v1.6.7）：改为打开**收藏夹选择面板**。
+                    //
+                    // ## 为什么不再一键收藏到默认夹
+                    //
+                    // 原实现点一下就直接写 `fav/resource/deal`（默认夹），
+                    // 用户**没有任何选择权**，也不知道收进了哪个夹 ——
+                    // 模拟器实测确实 `code=0`，但这是"功能可用、交互错误"。
+                    //
+                    // 现在打开面板：列出我的收藏夹 + 标出哪些已收藏，
+                    // 用户自己决定收进哪个。取消收藏也在面板里做
+                    // （取消勾选 = 从该夹移除）。
                     onFavorite = {
-                        if (viewModel.isLoggedIn) viewModel.toggleFavorite() else onLoginRequired()
+                        if (viewModel.isLoggedIn) viewModel.openFavSheet() else onLoginRequired()
                     },
                     onShare = {
                         // 🔴 改为打开**应用内分享面板**（v1.4.2 修 #14）。
@@ -1012,12 +1033,23 @@ fun VideoDetailScreen(
                         }
 
                         // ---- B站好友：走**站内私信**，不离开 App ----
+                        //
+                        // 🔴 v1.6.7：改为**挂载待发送内容**，进入会话后自动发送。
+                        //
+                        // ## 为什么不再"复制链接 + 让用户自己粘贴"
+                        //
+                        // 原流程要用户自己选人、自己粘贴、自己点发送 ——
+                        // 而他的意图从点「B站好友」那刻就明确了：
+                        // "把这个视频发给某个好友"。
+                        //
+                        // 现在：挂载内容 → 进私信列表选人 → 进会话**自动发送**
+                        // → 提示成功/失败。用户不需要再点发送。
+                        //
+                        // ⚠️ 仍然**复制到剪贴板**作为兜底 —— 自动发送失败时
+                        //    用户可以手动粘贴（不给"发送失败就什么都没有"）。
                         "B站好友" -> {
-                            // 进私信列表，由用户自己选人。
-                            // 链接已复制好，用户粘贴即可 —— 这是没有
-                            // "选好友"弹窗（需要好友列表接口）时最诚实的做法。
                             copyToClipboard(context, shareUrl)
-                            onOpenMessages()
+                            onShareToFriend(shareTitle, shareUrl)
                         }
 
                         else -> {
@@ -1209,6 +1241,19 @@ fun VideoDetailScreen(
         )
     }
 
+    // ---- 收藏夹选择面板（v1.6.7）----
+    //
+    // 与投币 / AI 总结同一约定：用 Dialog（独立 window，自带返回拦截），
+    // 放在根 Box 之后渲染，保证覆盖在页面之上。
+    val favSheet by viewModel.favSheet.collectAsStateWithLifecycle()
+    if (favSheet.open) {
+        FavFolderSheet(
+            state = favSheet,
+            onDismiss = { viewModel.closeFavSheet() },
+            onToggle = { folderId -> viewModel.toggleFolder(folderId) },
+        )
+    }
+
     // ---- 字幕错误提示 ----
     LaunchedEffect(subtitleError) {
         subtitleError?.let {
@@ -1235,6 +1280,22 @@ fun VideoDetailScreen(
                 showSummary = false
                 viewModel.resetSummaryState()
                 onOpenAiSettings()
+            },
+            // 时间戳跳转（v1.6.7）：复用**同一个** player 实例。
+            //
+            // 🔴 不重新创建播放器、不重新起播 —— 只 `seekTo`。
+            //    与 `jumpToChapter` 同一套做法（`player?.seekTo(sec * 1000)`）。
+            //
+            // ⚠️ `player` 为 null 时传 null（UI 会隐藏跳转图标并让整行不可点），
+            //    而不是传一个点了没反应的 lambda。
+            onSeek = player?.let { p ->
+                { seconds: Int ->
+                    // 关掉弹层再跳 —— 否则用户看不到跳转结果
+                    // （弹层盖住画面，点了像没反应）
+                    showSummary = false
+                    viewModel.resetSummaryState()
+                    runCatching { p.seekTo(seconds.coerceAtLeast(0) * 1000L) }
+                }
             },
         )
     }

@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -76,6 +77,12 @@ fun AiSummarySheet(
     onDismiss: () -> Unit,
     onRetry: () -> Unit,
     onOpenSettings: () -> Unit,
+    /**
+     * 点击分段的时间戳 → 跳转播放位置（秒）（v1.6.7）。
+     *
+     * null = 播放器不可用（此时不显示跳转图标，整行不可点）。
+     */
+    onSeek: ((Int) -> Unit)? = null,
 ) {
     val colors = BiliTheme.colors
 
@@ -154,6 +161,56 @@ fun AiSummarySheet(
                             modifier = Modifier.fillMaxWidth(),
                         )
 
+                        // 🔴 v1.6.7：确定性的"走不通" —— 与 Error 分开渲染。
+                        //
+                        // 关键差别：**不给重试按钮**（除非 action = REFRESH）。
+                        // 给一个永远不会成功的按钮是在误导用户。
+                        is AiSummaryUiState.Blocked -> Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = Space.x4),
+                        ) {
+                            Text(
+                                text = state.title,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontSize = FontSize.titleMd,
+                                    fontWeight = FontWeight.Medium,
+                                    color = colors.textPrimary,
+                                ),
+                            )
+                            Spacer(Modifier.height(Space.x2))
+                            Text(
+                                text = state.detail,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = FontSize.bodySm,
+                                    lineHeight = FontSize.bodySmLine,
+                                    color = colors.textSecondarySafe,
+                                ),
+                            )
+                            Spacer(Modifier.height(Space.x4))
+                            Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+                                when (state.action) {
+                                    AiSummaryUiState.BlockedAction.LOGIN ->
+                                        BrandButton(
+                                            label = "去登录",
+                                            onClick = onOpenSettings,
+                                            variant = BrandButtonVariant.Filled,
+                                        )
+
+                                    // 生成中给「刷新」—— 语义是"稍后再看"，
+                                    // 不是"重试"（重试暗示刚才那次失败了）
+                                    AiSummaryUiState.BlockedAction.REFRESH ->
+                                        BrandButton(
+                                            label = "刷新",
+                                            onClick = onRetry,
+                                            variant = BrandButtonVariant.Outline,
+                                        )
+
+                                    AiSummaryUiState.BlockedAction.NONE -> Unit
+                                }
+                            }
+                        }
+
                         is AiSummaryUiState.Error -> Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -185,7 +242,7 @@ fun AiSummarySheet(
                             }
                         }
 
-                        is AiSummaryUiState.Done -> SummaryBody(state.summary)
+                        is AiSummaryUiState.Done -> SummaryBody(state.summary, onSeek)
                     }
                     Spacer(Modifier.height(Space.x4))
                 }
@@ -212,7 +269,10 @@ fun AiSummarySheet(
  * 章节标记用 `SectionMark`（替代"卡片组标题"），与设置页/其它页一致。
  */
 @Composable
-private fun SummaryBody(summary: VideoSummary) {
+private fun SummaryBody(
+    summary: VideoSummary,
+    onSeek: ((Int) -> Unit)? = null,
+) {
     val colors = BiliTheme.colors
 
     // ---- 概述 ----
@@ -242,7 +302,7 @@ private fun SummaryBody(summary: VideoSummary) {
             modifier = Modifier.padding(top = Rhythm.between),
         )
         summary.outline.forEach { sec ->
-            SummarySectionBlock(sec)
+            SummarySectionBlock(sec, onSeek)
         }
     }
 
@@ -306,13 +366,48 @@ private fun SummaryBody(summary: VideoSummary) {
 }
 
 /** 一个分段：可选时间 + 标题 + 要点列表。 */
+/**
+ * 一个总结分段。
+ *
+ * ## 🔴 时间戳可点击跳转（v1.6.7）
+ *
+ * 官方总结的 `outline[].timestamp` 是**真实可用的定位信息** ——
+ * 官方客户端点它就会跳转播放位置。
+ *
+ * 此前这里只把时间**当文字显示**，用户看到 `03:24` 却无法跳过去 ——
+ * 等于拿到了一半的信息。现在整行可点。
+ *
+ * ## 为什么只有"有时间戳"时才可点
+ *
+ * 没有时间戳的分段（第三方总结可能没有）点了无处可去 ——
+ * 给一个点了没反应的区域是死入口（§1.6）。
+ * 所以 `clickable` 只在 `timestampSeconds > 0` 时挂上。
+ *
+ * ## 可点的视觉提示
+ *
+ * 时间文字本身用终端青（本来就有），加下划线会太重。
+ * 用**时间文字 + 一个小的跳转图标**表达"这里能点" ——
+ * 不新增色值，且图标在无障碍树里有 `contentDescription`。
+ */
 @Composable
-private fun SummarySectionBlock(sec: SummarySection) {
+private fun SummarySectionBlock(
+    sec: SummarySection,
+    onSeek: ((Int) -> Unit)? = null,
+) {
     val colors = BiliTheme.colors
+    val jumpable = sec.timestampSeconds > 0 && onSeek != null
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            // ⚠️ 整行可点（热区足够大）—— 只让时间文字可点会很难点中
+            .then(
+                if (jumpable) {
+                    Modifier.clickable { onSeek?.invoke(sec.timestampSeconds) }
+                } else {
+                    Modifier
+                },
+            )
             .padding(horizontal = Space.x4, vertical = Space.x2),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -323,9 +418,19 @@ private fun SummarySectionBlock(sec: SummarySection) {
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                         fontSize = FontSize.badge,
-                        color = colors.accentTerminal,
+                        color = if (jumpable) colors.brandPrimary else colors.accentTerminal,
                     ),
                 )
+                // 可跳转时补一个图标 —— 表明"这里能点"
+                if (jumpable) {
+                    Spacer(Modifier.width(Space.x1))
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "跳转到 ${sec.timeLabel}",
+                        tint = colors.brandPrimary,
+                        modifier = Modifier.size(Sizes.iconSm),
+                    )
+                }
                 Spacer(Modifier.width(Space.x2))
             }
             if (sec.title.isNotEmpty()) {
@@ -424,6 +529,43 @@ sealed interface AiSummaryUiState {
         val message: String,
         val needsConfig: Boolean = false,
     ) : AiSummaryUiState
+
+    /**
+     * **确定性的"走不通"**（v1.6.7）。
+     *
+     * ## 🔴 为什么与 [Error] 分开
+     *
+     * [Error] 是"这次没成功，重试可能有用"（网络 / 服务端 / 解析）。
+     * [Blocked] 是"这条路对**当前账号或这个视频**就是不通" ——
+     * 重试一万次结果都一样。
+     *
+     * 之前两者混在一起，于是"没有权限"这个文案被用在了所有失败上，
+     * 包括本该说"未登录"或"不支持"的情况。需求明确禁止这一点。
+     *
+     * 分开之后，UI 对 [Blocked] **不给重试按钮**（除非 action 是刷新），
+     * 因为给一个永远不会成功的按钮是在误导用户。
+     *
+     * @param title 主标题（一句话说清是什么问题）
+     * @param detail 补充说明（为什么会这样 / 下一步做什么）
+     * @param action 该给用户什么出口
+     */
+    data class Blocked(
+        val title: String,
+        val detail: String,
+        val action: BlockedAction,
+    ) : AiSummaryUiState
+
+    /** [Blocked] 给出的出口。 */
+    enum class BlockedAction {
+        /** 什么都不给（重试也没用，也没有别的路）。 */
+        NONE,
+
+        /** 引导登录。 */
+        LOGIN,
+
+        /** 给「刷新」—— 服务端在生成中，等一会儿可能有。 */
+        REFRESH,
+    }
 
     /** 加载步骤（用于给用户**具体**的进度文案，而不是一句"加载中"）。 */
     enum class Step {

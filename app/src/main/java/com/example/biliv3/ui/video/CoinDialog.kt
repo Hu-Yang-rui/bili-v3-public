@@ -47,14 +47,21 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.biliv3.R
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.DeviceTier
 import com.example.biliv3.design.LocalDeviceTier
@@ -452,6 +459,26 @@ private fun MaidCoinScene(
     val handLift = CoinThrow.handLift(elapsedMs)
     val fx = CoinThrow.hoverFxIntensity(elapsedMs)
 
+    // 角色立绘（v1.6.7）。
+    //
+    // ⚠️ 用 `remember` 缓存解码结果 —— 每帧重新 decode 会**严重掉帧**
+    //    （这张图 335×597，解码一次约几毫秒；投币动画 60fps 下
+    //    每帧都解会直接把主线程压垮）。
+    //
+    // 用 `ImageBitmap` 而不是 `painterResource`：Canvas 里需要直接
+    // `drawImage` 才能精确控制位置与缩放。
+    // ⚠️ `LocalContext.current` 必须在 **Composable 作用域**里读，
+    //    不能写在 `remember { }` 的 lambda 内 —— 那会报
+    //    "@Composable invocations can only happen from the context of
+    //     a @Composable function"。
+    val res = LocalContext.current.resources
+    val maidSprite = remember(res) {
+        runCatching {
+            android.graphics.BitmapFactory.decodeResource(res, R.drawable.coin_maid)
+                ?.asImageBitmap()
+        }.getOrNull()
+    }
+
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -487,18 +514,55 @@ private fun MaidCoinScene(
         }
 
         // ---- ② 小人 ----
-        drawMaid(
-            cx = cx,
-            groundY = groundY,
-            hipY = hipY,
-            shoulderY = shoulderY,
-            handY = handY,
-            headR = headR,
-            bodyColor = colors.textSecondarySafe,
-            clothColor = colors.bgHover,
-            lineColor = colors.borderStrong,
-            strokePx = STROKE.toPx(),
-        )
+        //
+        // 🔴 v1.6.7：改为绘制**真实角色立绘**（用户提供的参考图），
+        //    取代原先"圆头 + 三角裙"的几何图形。
+        //
+        // ## 为什么用图片而不是继续用 Canvas 画
+        //
+        // 用户明确给了角色参考图，并要求"不要继续使用现在这种简单几何图形"。
+        // 用 Canvas 手绘去逼近一张精细立绘（渐变长发、蕾丝围裙、鱼尾）
+        // 不现实 —— 画出来必然是"像但很糙"，反而更糟。
+        //
+        // ## 资源从哪来
+        //
+        // `drawable-nodpi/coin_maid.png` —— 由 `tool/make-coin-maid.ps1`
+        // 从用户提供的参考图生成（**边界洪水填充**去掉白底，
+        // 保留围裙/头饰的**内部白色**）。
+        //
+        // ## 与动画的关系
+        //
+        // 图片只负责"人"，**位置与动作仍由 `CoinThrow` 相位机驱动**：
+        // 手抬起时整张立绘随 `handLift` 轻微上浮，投币时随 `drift` 微移 ——
+        // 这样"取币 → 投币"的节奏感不变，不会因为换成图片就变成静态贴图。
+        //
+        // ## 回退
+        //
+        // 立绘解码失败时回退到几何小人 —— 宁可画得糙，也不要**空白**。
+        if (maidSprite != null) {
+            drawMaidSprite(
+                cx = cx,
+                groundY = groundY,
+                height = h * 0.92f,
+                handLift = handLift,
+                drift = drift,
+                sprite = maidSprite,
+                alpha = 1f,
+            )
+        } else {
+            drawMaid(
+                cx = cx,
+                groundY = groundY,
+                hipY = hipY,
+                shoulderY = shoulderY,
+                handY = handY,
+                headR = headR,
+                bodyColor = colors.textSecondarySafe,
+                clothColor = colors.bgHover,
+                lineColor = colors.borderStrong,
+                strokePx = STROKE.toPx(),
+            )
+        }
 
         // ---- ③ 硬币（画在小人之上 = 手里/空中的硬币）----
         if (coinAlpha > 0.01f) {
@@ -582,6 +646,69 @@ private fun DrawScope.drawHoverFx(
  * ## 形状
  *
  * ```
+ *      ▲▲        ← 头饰（两个小三角 = 女仆头带）
+ *     ( ● )      ← 头
+ *    ╱  │  ╲     ← 抬起的手臂（随动画变高）
+ *   ┌───┴───┐
+ *   │  ▭▭▭  │    ← 围裙（浅色梯形，女仆装的识别位）
+ *   └───┬───┘
+ *      ╱ ╲       ← 裙摆
+ *     ╱   ╲
+ * ```
+ *
+ * ## 为什么用"围裙 + 头饰"表达女仆装
+ *
+ * 这两件是女仆装的**形状识别位**，与颜色无关 —— 于是不需要
+ * 引入任何新色值（§5.2），在深色主题下也不会显得突兀。
+ * 不用蕾丝/花边等细节：那是"装饰"，而这里只需要"可辨认"。
+ *
+ * ⚠️ 手的高度由 `handY` 传入（调用方已按 `CoinThrow.handLift` 算好），
+ * 本函数不再接收一个独立的"抬手程度"参数 —— 一个量只有一个来源，
+ * 两个来源必然漂移（手臂位置与硬币悬浮位会错开）。
+ */
+private fun DrawScope.drawMaidSprite(
+    cx: Float,
+    groundY: Float,
+    height: Float,
+    handLift: Float,
+    drift: Float,
+    sprite: ImageBitmap?,
+    alpha: Float,
+) {
+    // 立绘缺失 → 不画（调用方已保证有回退路径）
+    if (sprite == null || height <= 0f) return
+
+    // 位移：刻意很小，见调用处 KDoc
+    val liftPx = height * 0.04f * handLift
+    val driftPx = size.width * 0.03f * drift
+
+    // 按高度定标，宽度保持原图比例
+    val aspect = sprite.width.toFloat() / sprite.height.toFloat()
+    val drawH = height
+    val drawW = drawH * aspect
+
+    val left = cx - drawW / 2f + driftPx
+    val top = groundY - drawH - liftPx
+
+    drawImage(
+        image = sprite,
+        srcOffset = IntOffset.Zero,
+        srcSize = IntSize(sprite.width, sprite.height),
+        dstOffset = IntOffset(left.toInt(), top.toInt()),
+        dstSize = IntSize(drawW.toInt(), drawH.toInt()),
+        alpha = alpha,
+        filterQuality = FilterQuality.Medium,
+    )
+}
+
+/**
+ * 几何小人（v1.6.3 实现，v1.6.7 起**仅作回退**）。
+ *
+ * 立绘解码失败时用它兜底 —— 宁可画得糙，也不要空白。
+ *
+ * ## 形状
+ *
+ * ```text
  *      ▲▲        ← 头饰（两个小三角 = 女仆头带）
  *     ( ● )      ← 头
  *    ╱  │  ╲     ← 抬起的手臂（随动画变高）

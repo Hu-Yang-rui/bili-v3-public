@@ -207,7 +207,17 @@ class LoginViewModel(
             _formError.value = null
 
             // 先落 cookie，再查用户信息 —— fetchUserInfo 依赖登录态
-            repo.adoptCookie(cookie)
+            //
+            // 🔴 v1.6.7：改用 adoptCookieWithFingerprint —— 它在落 cookie 后
+            // **立刻补设备指纹 buvid3**。
+            //
+            // 用户粘贴的 Cookie 串里**没有** buvid3（它是设备指纹，
+            // 不是登录凭据）。缺它时读操作正常、**写操作全部 `-401 非法访问`** ——
+            // 模拟器实测的表现就是"能看视频、能看余额，但一投币就失败"。
+            //
+            // 拿不到 buvid3 不阻断登录（读功能仍可用），只是写操作会失败
+            // 并如实报错 —— 所以这里不检查返回值。
+            repo.adoptCookieWithFingerprint(cookie)
             val user = repo.fetchUserInfo()
 
             if (user != null) {

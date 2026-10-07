@@ -234,6 +234,43 @@ class PmRepository(
      * 未读数汇总（用于红点）。
      *
      * `unread_type=0` 返回全部四类（私信/回复/@/赞）。
+     *
+     * ---
+     *
+     * # 🔴 v1.6.7 修：解析的字段名**全都不存在**，红点永远不亮
+     *
+     * ## 实测的真实响应（模拟器 + 真实账号）
+     *
+     * ```json
+     * {"code":0,"data":{
+     *    "unfollow_unread":0, "follow_unread":0,
+     *    "unfollow_push_msg":0, "dustbin_push_msg":0, "dustbin_unread":0,
+     *    "biz_msg_unfollow_unread":1, "biz_msg_follow_unread":1,
+     *    "custom_unread":0}}
+     * ```
+     *
+     * 旧实现读的是 `unread` / `unread_reply` / `unread_at` / `unread_like`
+     * —— **这四个字段一个都不在响应里** → 全部 `optInt(..., 0)` 得到 0 →
+     * **未读数恒为 0，首页铃铛红点永远不亮**。
+     *
+     * ## 为什么 `biz_msg_*` 才是私信未读
+     *
+     * 与会话列表**交叉验证**（同一次会话，`get_sessions` 20 个会话）：
+     *
+     * | 来源 | 值 |
+     * |---|---|
+     * | `get_sessions` 里有未读的会话数 | **2**（`biz_msg_unread_count=1`） |
+     * | `single_unread` 的 `biz_msg_unfollow_unread` | **1** |
+     * | `single_unread` 的 `biz_msg_follow_unread` | **1** |
+     * | 两者相加 | **2** ✅ 吻合 |
+     *
+     * 所以私信未读 = `biz_msg_follow_unread + biz_msg_unfollow_unread`。
+     *
+     * ## 保留旧字段读取（兼容）
+     *
+     * 服务端可能按账号/版本返回不同字段集，所以旧字段仍然读 ——
+     * 只是**不再单独依赖它们**，而是与真实字段取较大值。
+     * 宁可多亮红点，也不要漏掉真实未读。
      */
     suspend fun unread(): PmUnread {
         if (!isLoggedIn) return PmUnread(0, 0, 0, 0)
@@ -252,8 +289,18 @@ class PmRepository(
             if (json.optInt("code", -1) != 0) return@runCatching PmUnread(0, 0, 0, 0)
 
             val d = json.optJSONObject("data") ?: return@runCatching PmUnread(0, 0, 0, 0)
+
+            // 🔴 真实字段（实测确认存在）
+            val bizFollow = d.optInt("biz_msg_follow_unread", 0)
+            val bizUnfollow = d.optInt("biz_msg_unfollow_unread", 0)
+            val bizTotal = bizFollow + bizUnfollow
+
+            // 旧字段（实测**不存在**，保留读取以防服务端按账号返回不同结构）
+            val legacyMessage = d.optInt("unread", 0)
+
             PmUnread(
-                message = d.optInt("unread", 0),
+                // 取较大值：不漏报真实未读
+                message = maxOf(bizTotal, legacyMessage, 0),
                 reply = d.optInt("unread_reply", 0),
                 at = d.optInt("unread_at", 0),
                 like = d.optInt("unread_like", 0),
@@ -341,9 +388,60 @@ class PmRepository(
             talkerFace = "",
             lastMessage = inner?.optString("content").orEmpty(),
             lastTime = lastMsg?.optLong("timestamp", 0L) ?: 0L,
-            unreadCount = o.optInt("unread_count", 0),
+            unreadCount = sessionUnread(o),
             isPinned = o.optInt("is_pinned", 0) == 1,
         )
+    }
+
+    /**
+     * 一个会话的**真实未读数**（v1.6.7 修的真实 bug）。
+     *
+     * ---
+     *
+     * # 🔴 根因：`unread_count` 恒为 0，真实未读在另一个字段
+     *
+     * 模拟器实测（真实账号，`get_sessions` 20 个会话）：
+     *
+     * ```
+     * counts=[u=0/biz=0/newPush=0, u=0/biz=1/newPush=1, u=0/biz=1/newPush=1,
+     *         u=0/biz=0/newPush=0, ... 其余 17 个全 0]
+     * ```
+     *
+     * **全部 20 个会话的 `unread_count` 都是 0**，
+     * 而其中 2 个的 `biz_msg_unread_count` 与 `new_push_msg` 是 **1**。
+     *
+     * 旧实现只读 `unread_count` → **未读数恒为 0** →
+     * 首页铃铛红点**永远不亮**。
+     *
+     * 这与 `single_unread` 的返回**完全对得上**：
+     * ```
+     * {"biz_msg_unfollow_unread":1,"biz_msg_follow_unread":1}
+     * ```
+     * —— 同样只有 `biz_msg_*` 系列有值，没有 `unread` 字段。
+     *
+     * # 为什么是"三个字段取最大"而不是"只换一个字段"
+     *
+     * 三个字段语义不同、可能各自独立有值：
+     *
+     * | 字段 | 含义 |
+     * |---|---|
+     * | `unread_count` | 传统私信未读（老会话可能只有它有值） |
+     * | `biz_msg_unread_count` | 业务消息未读（**当前账号的真实未读在这里**） |
+     * | `new_push_msg` | 新推送消息数 |
+     *
+     * 取最大值：**宁可多亮红点，也不要漏掉真实未读**。
+     * 红点"多亮"用户点进去就消了；"漏亮"则会让用户以为没有新消息
+     * （而任务书明确要求"如果服务器真实仍有未读，不能强制隐藏红点"）。
+     *
+     * ⚠️ **不把它们相加** —— 这三个字段在 B 站服务端很可能是
+     * **同一批未读的不同投影**（实测 `biz_msg_unread_count` 与
+     * `new_push_msg` 值完全相同），相加会得到 2 倍虚高的数字。
+     */
+    private fun sessionUnread(o: JSONObject): Int {
+        val legacy = o.optInt("unread_count", 0)
+        val biz = o.optInt("biz_msg_unread_count", 0)
+        val push = o.optInt("new_push_msg", 0)
+        return maxOf(legacy, biz, push, 0)
     }
 
     /**

@@ -111,6 +111,43 @@ class MainActivity : ComponentActivity() {
         // 所以这里不检查结果、不提示用户。
         runCatching { container.mediaSessionBridge.connect() }
 
+        /**
+         * 补齐设备指纹 `buvid3`（v1.6.7 修的真实 bug）。
+         *
+         * ## 为什么放在启动时
+         *
+         * `buvid3` 是**设备指纹**，不在用户粘贴的 Cookie 串里。
+         * 缺它时：**读操作全部正常**（首页/视频/余额），
+         * **写操作全部 `-401 非法访问`**（投币/点赞/收藏/关注/评论）——
+         * 模拟器实测确认过。
+         *
+         * 此前 `fetchBuvid()` 只被 `LoginViewModel` 调用（扫码路径），
+         * 所以：
+         * - 用 `importCookie` 登录的老账号 → **永远没有 buvid3** → 写操作全坏
+         * - 已经登录的账号（本次修好之前登的）→ 也不会自己补上
+         *
+         * 所以这里在启动时**自愈一次**。
+         *
+         * ## 为什么是裸 `launch` 而不是 `repeatOnLifecycle`
+         *
+         * 这是**一次性动作**，不是状态订阅。`repeatOnLifecycle` 会在每次
+         * 回到前台时**重跑**一遍 —— 对一个已经补好的指纹来说是无谓的网络请求。
+         * 上面两个订阅用它是对的（它们确实要持续收集），这里不是。
+         *
+         * ## 为什么不阻塞启动
+         *
+         * 它是网络请求，等它会让冷启动多一个 RTT。用户真正发写请求时
+         * 通常已经补好了；就算还没好，那次请求会失败并**如实报错**。
+         */
+        lifecycleScope.launch {
+            runCatching {
+                val store = container.authStore
+                if (store.isLoggedIn && !store.hasBuvid) {
+                    container.authRepository.fetchBuvid()
+                }
+            }
+        }
+
         // 状态栏图标颜色：**全应用恒为浅色图标**（配深色底）。
         //
         // 由 `values/themes.xml` + `values-night/themes.xml` 的

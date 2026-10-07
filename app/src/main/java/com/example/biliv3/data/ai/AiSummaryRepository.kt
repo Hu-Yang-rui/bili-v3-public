@@ -77,14 +77,123 @@ class AiSummaryRepository(
     fun config(): AiConfig = configStore.snapshot()
 
     /**
-     * 取 AI 总结（官方优先）。
+     * 取 AI 总结（官方优先），返回**真实状态**（v1.6.7）。
+     *
+     * ---
+     *
+     * # 🔴 本方法在 v1.6.7 被修正的地方
+     *
+     * 旧实现返回 `Result<VideoSummary>`，**把一切失败压成一个异常**，
+     * 于是 UI 只能显示"没有权限"。模拟器实测复现：
+     * 已登录账号点 AI 总结，显示「官方 AI 总结不可用（没有访问权限）」。
+     *
+     * 根因是**调用方式错误**：
+     *
+     * | 调用方式 | 返回 |
+     * |---|---|
+     * | 不带 WBI 签名（旧实现） | `-403 访问权限不足` |
+     * | 带 WBI 签名（本实现） | `-101 账号未登录` |
+     *
+     * `-403` 在**不带签名**时是"签名缺失"的伪装，不是权限问题。
+     * 旧实现把 `-403` 当成真实权限不足 → **无论登录与否都报"没有权限"**。
+     *
+     * # 现在的行为
+     *
+     * 1. **签名请求**（`signed = true`）—— 否则拿不到真实 code
+     * 2. 按真实 code 分类（见 [AiSummaryClassifier]）
+     * 3. 官方拿不到时，**只有"确实可能靠第三方补上"的情况**才降级
+     * 4. 返回 [AiSummaryState]，UI 直接显示，不再二次猜测
      *
      * @param aid 视频 aid（官方接口要 `up_mid`，不直接用它）
      * @param cid 分P 的 cid（官方接口必填）
      * @param upMid UP 主 mid（官方接口必填）
      * @param title 视频标题（第三方 Prompt 用）
      * @param desc 视频简介（第三方 Prompt 用）
-     * @return 成功时返回总结；官方与第三方都拿不到时返回失败原因
+     */
+    suspend fun summarizeState(
+        bvid: String,
+        cid: Long,
+        upMid: Long,
+        title: String,
+        desc: String,
+    ): AiSummaryState {
+        // ---- ① 官方 ----
+        val official = runCatching { officialState(bvid, cid, upMid) }
+            .getOrElse { e -> AiSummaryClassifier.classifyException(e) }
+
+        // 官方成功 / 或"重试也没用"的确定性状态 → 直接返回，不降级第三方
+        //
+        // ⚠️ 这里刻意**不**对所有失败都降级：
+        //    未登录时第三方同样拿不到（要登录才有字幕），
+        //    无语音/不支持时第三方也总结不出东西。
+        //    对它们降级只会给用户一个更长的、同样失败的等待。
+        when (official) {
+            is AiSummaryState.Success -> return official
+
+            // 这些是"官方这条路走不通，但第三方**可能**能补上"
+            is AiSummaryState.Unsupported,
+            is AiSummaryState.ParseError,
+            is AiSummaryState.ServerError,
+            -> Unit
+
+            // 其余（未登录 / 无权限 / 无语音 / 生成中 / 参数错 / 网络）
+            // 都是确定性的，直接如实返回
+            else -> return official
+        }
+
+        // ---- ② 第三方兜底 ----
+        val cfg = configStore.snapshot()
+        if (!cfg.usable) {
+            // 如实说明两条原因，不合并成"没有权限"
+            return AiSummaryState.ThirdPartyUnavailable(
+                reason = buildString {
+                    append(officialReason(official))
+                    append("；第三方 AI 尚未配置：")
+                    append(cfg.missingHint)
+                },
+            )
+        }
+
+        val third = runCatching { thirdParty(bvid, cid, title, desc, cfg) }
+            .getOrElse { e -> AiSummaryClassifier.classifyException(e) }
+
+        return when (third) {
+            is AiSummaryState.Success -> third
+            else -> AiSummaryState.ThirdPartyUnavailable(
+                reason = "${officialReason(official)}；第三方 AI 也失败：" +
+                    thirdReason(third),
+            )
+        }
+    }
+
+    /** 官方失败时给用户看的一句话（**不用"没有权限"兜一切**）。 */
+    private fun officialReason(s: AiSummaryState): String = when (s) {
+        is AiSummaryState.Unsupported -> "该视频暂不支持官方 AI 总结"
+        is AiSummaryState.ParseError -> "官方总结返回了内容但无法解析"
+        is AiSummaryState.ServerError -> "官方总结服务异常（${s.code}）"
+        is AiSummaryState.NotLoggedIn -> "未登录，无法使用官方 AI 总结"
+        is AiSummaryState.Unauthorized -> "当前账号暂无官方 AI 总结权限"
+        is AiSummaryState.NoSpeech -> "该视频没有可用于总结的语音内容"
+        is AiSummaryState.Generating -> "官方总结正在生成"
+        is AiSummaryState.BadRequest -> "请求参数有误（${s.message}）"
+        is AiSummaryState.NetworkError -> "网络不可用"
+        else -> "官方 AI 总结不可用"
+    }
+
+    /** 第三方失败时给用户看的一句话。 */
+    private fun thirdReason(s: AiSummaryState): String = when (s) {
+        is AiSummaryState.NetworkError -> s.message
+        is AiSummaryState.ServerError -> s.message
+        is AiSummaryState.ParseError -> "模型返回了无法解析的内容"
+        else -> "未知错误"
+    }
+
+    /**
+     * 取 AI 总结（旧入口，保留兼容）。
+     *
+     * ⚠️ 新代码请用 [summarizeState]。这里把状态压回 `Result`
+     * 只为不破坏既有调用点，**不携带真实 code** —— 正是这个缺陷
+     * 导致了 v1.6.6 的"没有权限"误报。
      */
     suspend fun summarize(
         bvid: String,
@@ -93,26 +202,21 @@ class AiSummaryRepository(
         title: String,
         desc: String,
     ): Result<VideoSummary> {
-        // ---- ① 官方优先 ----
-        val official = runCatching { official(bvid, cid, upMid) }
-        official.getOrNull()?.let { return Result.success(it) }
-
-        // 官方失败的原因要**带出来**（用户需要知道为什么没走官方）
-        val officialReason = official.exceptionOrNull()?.let { readable(it) }
-
-        // ---- ② 第三方 ----
-        val cfg = configStore.snapshot()
-        if (!cfg.usable) {
-            return Result.failure(
-                AiSummaryException(
-                    "官方 AI 总结不可用" +
-                        (officialReason?.let { "（$it）" } ?: "") +
-                        "；第三方 AI 尚未配置：${cfg.missingHint}",
-                ),
-            )
+        val s = summarizeState(bvid, cid, upMid, title, desc)
+        return when (s) {
+            is AiSummaryState.Success -> Result.success(s.summary)
+            else -> Result.failure(AiSummaryException(reasonFor(s)))
         }
+    }
 
-        return thirdParty(bvid, cid, title, desc, cfg)
+    /** 状态的展示文案（旧入口用）。 */
+    private fun reasonFor(s: AiSummaryState): String = when (s) {
+        is AiSummaryState.ThirdPartyUnavailable -> s.reason
+        is AiSummaryState.BadRequest -> s.message
+        is AiSummaryState.NetworkError -> s.message
+        is AiSummaryState.ServerError -> s.message
+        is AiSummaryState.Success -> ""
+        else -> officialReason(s)
     }
 
     // ---------------------------------------------------------------------
@@ -120,34 +224,48 @@ class AiSummaryRepository(
     // ---------------------------------------------------------------------
 
     /**
-     * B 站官方 AI 总结。
+     * B 站官方 AI 总结 —— **带 WBI 签名**（v1.6.7 修正）。
      *
-     * ⚠️ **实测：未登录返回 `-403 访问权限不足`**（见 `Endpoints.AI_CONCLUSION`）。
-     * 已登录时的成功分支**本项目未验证过** —— 本机没有可用登录态。
+     * ## 🔴 为什么必须签名
      *
-     * 所以这里按公开结构解析 + 全面容错，失败就抛异常让调用方降级，
-     * **绝不伪造**官方结果。
+     * 实测（2026-10-07，3 个视频一致）：
+     *
+     * | 调用方式 | 返回 |
+     * |---|---|
+     * | 不带签名 | `-403 访问权限不足` |
+     * | **带签名** | `-101 账号未登录` |
+     *
+     * 不带签名时服务端**一律**回 `-403`，与登录状态无关 ——
+     * 这正是"已登录却显示没有权限"的根因。
+     *
+     * ## ⚠️ 旧注释里的错误事实（已修正）
+     *
+     * 旧实现注释写「实测未登录返回 `-403 访问权限不足`」。
+     * 那次实测**也是不带签名的**，所以观察到的 `-403` 其实是
+     * **签名缺失**的表现。错误的事实被写进注释、又被当成规格实现 ——
+     * 这是本项目最值得记住的一类教训。
      */
-    private suspend fun official(bvid: String, cid: Long, upMid: Long): VideoSummary {
-        if (bvid.isEmpty() || cid <= 0L) throw BiliException(-1, "缺少视频标识")
-
-        val json = api.getRaw(
-            path = Endpoints.AI_CONCLUSION,
-            query = mapOf(
-                "bvid" to bvid,
-                "cid" to cid.toString(),
-                "up_mid" to upMid.toString(),
-            ),
-            signed = false,
-        )
-
-        val code = json.optInt("code", -1)
-        if (code != 0) {
-            throw BiliException(code, json.optString("message", "官方 AI 总结不可用"))
+    private suspend fun officialState(bvid: String, cid: Long, upMid: Long): AiSummaryState {
+        if (bvid.isEmpty() || cid <= 0L) {
+            return AiSummaryState.BadRequest("缺少视频标识")
         }
 
-        return SummaryParser.parseOfficial(json)
-            ?: throw BiliException(-1, "该视频没有官方 AI 总结")
+        val json = try {
+            api.getRaw(
+                path = Endpoints.AI_CONCLUSION,
+                query = mapOf(
+                    "bvid" to bvid,
+                    "cid" to cid.toString(),
+                    "up_mid" to upMid.toString(),
+                ),
+                // 🔴 v1.6.7：必须是 true —— 见方法说明
+                signed = true,
+            )
+        } catch (e: Exception) {
+            return AiSummaryClassifier.classifyException(e)
+        }
+
+        return AiSummaryClassifier.classify(json)
     }
 
     // ---------------------------------------------------------------------
@@ -176,7 +294,7 @@ class AiSummaryRepository(
         title: String,
         desc: String,
         cfg: AiConfig,
-    ): Result<VideoSummary> {
+    ): AiSummaryState {
         // ---- 字幕 ----
         val body = runCatching {
             val tracks = subtitleRepository.tracks(aid = 0L, cid = cid)
@@ -184,14 +302,12 @@ class AiSummaryRepository(
                 ?: throw AiSummaryException("该视频没有可用字幕，无法生成总结")
             subtitleRepository.body(track)
         }.getOrElse { e ->
-            return Result.failure(
-                AiSummaryException("获取字幕失败：${readable(e)}"),
-            )
+            return AiSummaryState.ServerError(-1, "获取字幕失败：${readable(e)}")
         }
 
         val text = flatten(body)
         if (text.isBlank()) {
-            return Result.failure(AiSummaryException("字幕内容为空，无法生成总结"))
+            return AiSummaryState.ServerError(-1, "字幕内容为空，无法生成总结")
         }
 
         val (userPrompt, truncated) = SummaryPrompt.buildUser(
@@ -202,15 +318,15 @@ class AiSummaryRepository(
 
         // ---- 调模型 ----
         val content = runCatching { chat(cfg, userPrompt) }
-            .getOrElse { e -> return Result.failure(AiSummaryException(readable(e))) }
+            .getOrElse { e -> return AiSummaryClassifier.classifyException(e) }
 
         val parsed = SummaryParser.parseThirdParty(
             content = content,
             model = cfg.model,
             truncated = truncated,
-        ) ?: return Result.failure(AiSummaryException("模型返回了空内容"))
+        ) ?: return AiSummaryState.ParseError
 
-        return Result.success(parsed)
+        return AiSummaryState.Success(parsed)
     }
 
     /**

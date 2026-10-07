@@ -235,6 +235,18 @@ val pmRepository: PmRepository by lazy { PmRepository(api, authStore) }
     val favoritesSync: FavoritesSync = FavoritesSync()
 
     /**
+     * 一次性「分享给站内好友」的待发送内容（v1.6.7）。
+     *
+     * 全应用唯一 —— 分享面板写入、私信会话页取走。
+     *
+     * ⚠️ **只放内存、取走即清空** —— 它是瞬时意图不是状态：
+     * 重开 App 后不该自动发出上次分享的内容，也不该重复发送。
+     * 详见 [PendingShare] 的说明。
+     */
+    val pendingShare: com.example.biliv3.data.PendingShare =
+        com.example.biliv3.data.PendingShare()
+
+    /**
      * 应用级播放器持有者。
      *
      * ⚠️ **不再是页面级** —— PiP 小窗 / 切页继续播放 / 锁屏播控

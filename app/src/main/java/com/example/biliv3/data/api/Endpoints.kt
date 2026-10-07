@@ -97,6 +97,14 @@ object Endpoints {
     /** 收藏夹列表（取默认收藏夹 id）。 */
     const val FAV_FOLDERS = "x/v3/fav/folder/created/list-all"
 
+    /**
+     * 这个资源**已在哪些收藏夹里**（v1.6.7）。
+     *
+     * 收藏夹选择面板用它渲染"已收藏"勾选态。
+     * 参数与写接口一致：`rid` 要**数字 aid**、`type=2`（视频）。
+     */
+    const val FAV_RESOURCE_IDS = "x/v3/fav/resource/ids"
+
     /** 分享上报（仅埋点）。 */
     const val SHARE_ADD = "x/web-interface/share/add"
 

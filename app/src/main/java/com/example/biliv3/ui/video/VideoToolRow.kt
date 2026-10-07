@@ -264,6 +264,44 @@ private fun TabItem(
  * 用户要求"真正的简介位于视频标题的最右侧"。
  * 这样简介的**入口**紧挨着它所属的内容（标题），
  * 而不是像原先那样单独占一整块。
+ *
+ * ## 🔴 v1.6.7 修：与下方「三个点」不在同一条竖线上
+ *
+ * ### 实测（emulator-5554 / density 420，uiautomator bounds）
+ *
+ * | 元素 | 图标 bounds | 中心 x |
+ * |---|---|---|
+ * | 展开简介（倒 V） | `[965,1239][1028,1302]` | **996** |
+ * | 更多操作（三个点） | `[949,1385][1002,1438]` | **976** |
+ *
+ * **相差 20px**，肉眼可见地"没对齐"。
+ *
+ * ### 根因：**容器尺寸不一致**（不是 Row 的 alignment 问题）
+ *
+ * ```
+ * 倒 V 容器   = iconXl + x2 = 24 + 8 = 32dp
+ * 三个点容器 = minTouchTarget    = 48dp
+ * ```
+ *
+ * 两者都是所在 Row 的**最后一个元素**，所以它们的**右边缘对齐**。
+ * 但图标在容器里居中 → 容器越宽，图标中心离右边缘越远：
+ *
+ * ```
+ * 倒 V 图标中心   = 右边缘 − 32/2 = 右边缘 − 16dp
+ * 三个点图标中心 = 右边缘 − 48/2 = 右边缘 − 24dp
+ * 差值 = 8dp = 21px  ← 与实测的 20px 吻合
+ * ```
+ *
+ * ### 修法：**统一容器尺寸**（而不是加负 margin 硬凑）
+ *
+ * 两个按钮都用 `Space.minTouchTarget`（48dp）：
+ * - 图标中心都落在 `右边缘 − 24dp` → 天然对齐
+ * - 顺带满足 48dp 最小触摸目标（原来的 32dp 是偏小的）
+ * - **没有负 margin、没有 magic number** —— 只是让两个同类控件用同一个 token
+ *
+ * ⚠️ 图标本身尺寸仍不同（倒 V 24dp / 三个点 20dp）——
+ * 这是**刻意的**：两个图标形状不同，视觉重量要匹配，
+ * 强行同尺寸反而会让倒 V 显得比三个点小。对齐的是**中心**，不是外框。
  */
 @Composable
 fun DescToggleButton(
@@ -274,7 +312,9 @@ fun DescToggleButton(
     val colors = BiliTheme.colors
     Box(
         modifier = modifier
-            .size(Sizes.iconXl + Space.x2)
+            // ⚠️ 必须与「更多操作」用同一个容器尺寸，否则中心对不齐
+            //    （见上方长说明：8dp 容器差 = 21px 中心偏移）
+            .size(Space.minTouchTarget)
             .clip(CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,

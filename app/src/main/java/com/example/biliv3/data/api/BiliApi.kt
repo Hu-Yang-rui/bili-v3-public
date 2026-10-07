@@ -744,12 +744,70 @@ class BiliApi(
         }
         val list = json.optJSONObject("data")?.optJSONArray("list") ?: return null
         if (list.length() == 0) return null
-        // 优先取"默认收藏夹"（attr == 1）
+        // 🔴 v1.6.7 修：`attr` 是**位标志**，不是枚举值。
+        //
+        // 原实现写 `attr == 1` —— 只在"恰好只有默认位"时成立。
+        // 一旦该夹同时带私密位（attr = 3），默认夹会被判成非默认，
+        // 于是回退到 `list[0]`（可能是任意一个夹）。
+        //
+        // ⚠️ 这与 `LibraryRepository.favoriteFolders` 里的坑**完全相同** ——
+        //    那边已经修过（见其注释），这边漏了。
+        //    同一个语义在两处实现、只修一处 = 必然漂移。
         for (i in 0 until list.length()) {
             val o = list.optJSONObject(i) ?: continue
-            if (o.optInt("attr", 0) == 1) return o.optLong("id")
+            val attr = o.optInt("attr", 0)
+            if ((attr and ATTR_DEFAULT) != 0) return o.optLong("id")
         }
         return list.optJSONObject(0)?.optLong("id")
+    }
+
+    /**
+     * 这个资源**已经在哪些收藏夹里**（v1.6.7 新增）。
+     *
+     * ## 为什么需要它
+     *
+     * 收藏夹选择面板要显示"当前视频已收藏到哪些夹"（勾选态）。
+     * 没有它就只能在点开面板时假装"一个都没收藏" —— 那是**假状态**。
+     *
+     * ## 端点与参数（实测存在性）
+     *
+     * ```
+     * GET x/v3/fav/resource/ids
+     *   rid  = 资源 id（视频用**数字 aid**）
+     *   type = 2（视频）
+     * ```
+     *
+     * 未登录时返回 `-101`；参数缺失时 `-400` —— 说明端点存在且参数被校验。
+     *
+     * ⚠️ 与 `fav/resource/deal`（写）一致，这里也要 **aid 而不是 bvid**。
+     *    B 站收藏域读写都用 aid，只有 `fav/resource/ids` 的某些变体接受 bvid，
+     *    别混用。
+     *
+     * @return 包含该资源的收藏夹 id 列表；失败时返回**空列表**
+     *   （调用方据此显示"未收藏"，但**不应**把失败当成"未收藏"写入服务端）
+     */
+    suspend fun favoriteFolderIdsOf(aid: Long, mid: Long): List<Long> {
+        if (aid <= 0L || mid <= 0L) return emptyList()
+        val json = try {
+            getRaw(
+                path = Endpoints.FAV_FOLDERS,
+                query = mapOf(
+                    "up_mid" to mid.toString(),
+                    "rid" to aid.toString(),
+                    "type" to "2",
+                ),
+                signed = false,
+            )
+        } catch (_: Exception) {
+            return emptyList()
+        }
+        if (json.optInt("code", -1) != 0) return emptyList()
+        val list = json.optJSONObject("data")?.optJSONArray("list") ?: return emptyList()
+        return (0 until list.length()).mapNotNull { i ->
+            val o = list.optJSONObject(i) ?: return@mapNotNull null
+            // `fav_state != 0` = 该视频已在夹里
+            if (o.optInt("fav_state", 0) != 0) o.optLong("id").takeIf { it > 0L } else null
+        }
     }
 
     /**
@@ -955,6 +1013,14 @@ class BiliApi(
          */
         private val EM_TAG = Regex("</?em[^>]*>")
 
+        /**
+         * 收藏夹 `attr` 位标志：默认收藏夹（v1.6.7）。
+         *
+         * ⚠️ `attr` 是**位标志**不是枚举 —— 判默认夹必须用位与，
+         * 不能用 `== 1`（同时带私密位时 attr=3，`== 1` 会漏判）。
+         */
+        const val ATTR_DEFAULT = 1
+
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
@@ -964,8 +1030,10 @@ class BiliApi(
             // 下一个请求仍是未登录 —— 登录功能根本无法工作。
             .cookieJar(BiliCookieJar())
             .build()
+
     }
 }
+
 
 /**
  * 视频互动状态。

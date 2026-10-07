@@ -283,9 +283,32 @@ class AuthRepository(
     /**
      * 拉取设备指纹 `buvid3` / `buvid4`。
      *
-     * 首次启动调用一次即可。不带 buvid 的请求在 B 站看来是"全新设备"，
-     * 风控命中率显著更高（`Endpoints.FINGER_SPI` 的注释已说明，
-     * 但此前代码从未调用）。
+     * ## 🔴 为什么必须在**导入 Cookie 之后**也调用（v1.6.7 修的真实 bug）
+     *
+     * ### 现象
+     *
+     * 模拟器实测：能登录、能看硬币余额（5302.9），但**一投币就失败**：
+     * ```
+     * POST /x/web-interface/coin/add -> code=-401 非法访问
+     * cookies=[sid,SESSDATA,bili_jct,DedeUserID,DedeUserID__ckMd5]
+     * ```
+     * —— 登录凭据**都在**，唯独**没有 `buvid3`**。
+     *
+     * ### 根因
+     *
+     * `buvid3` 是**设备指纹**，不是登录凭据，所以它**不在**用户粘贴的
+     * Cookie 串里。而 `fetchBuvid()` 此前**只被 `LoginViewModel` 调用**
+     * （扫码登录路径）—— 于是**用 `importCookie` 登录的账号永远没有
+     * buvid3**，写操作全部 `-401`。
+     *
+     * 读接口对 buvid3 宽松，所以首页/余额/视频都正常 ——
+     * 这正是"看着一切正常、只有写操作坏"的原因。
+     *
+     * ### 修法
+     *
+     * 把调用点从"扫码登录"扩展到**所有获得登录态的路径**
+     * （见 [adoptCookie]）。本方法自身幂等（`hasBuvid` 时直接返回），
+     * 所以多点调用是安全的。
      */
     suspend fun fetchBuvid(): Pair<String, String>? {
         if (store.hasBuvid) return store.buvid3 to store.buvid4
@@ -324,6 +347,27 @@ class AuthRepository(
      */
     fun adoptCookie(cookie: String) {
         store.cookie = cookie
+    }
+
+    /**
+     * 采纳 Cookie **并补齐设备指纹**（v1.6.7）。
+     *
+     * ## 🔴 为什么必须补 buvid3
+     *
+     * 见 [fetchBuvid] 的长说明：用户粘贴的 Cookie 串里**没有** `buvid3`
+     * （它是设备指纹，不是登录凭据），而不带 buvid3 的**写操作**
+     * 一律返回 `-401 非法访问` —— 表现为"能看视频、一投币就失败"。
+     *
+     * 所以导入 Cookie 后**立刻**补一次设备指纹。
+     *
+     * ⚠️ 用 `runCatching` 包住：拿不到 buvid3 **不该阻断登录**
+     * （读功能仍可用），只是写操作会失败并如实报错。
+     *
+     * @return 是否成功补上设备指纹（供 UI 决定是否提示）
+     */
+    suspend fun adoptCookieWithFingerprint(cookie: String): Boolean {
+        store.cookie = cookie
+        return runCatching { fetchBuvid() }.getOrNull() != null
     }
 
     /** 保存用户展示信息（昵称/头像/mid）。 */
