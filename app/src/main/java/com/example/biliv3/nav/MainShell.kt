@@ -42,6 +42,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import androidx.navigation.navArgument
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -166,44 +168,54 @@ fun MainShell(
     val showBottomNav = !isInPip && windowSize.hasBottomNav && currentRoute in tabRoutes
     val selectedTab = tabRoutes.indexOf(currentRoute).coerceAtLeast(0)
 
-    Scaffold(
-        modifier = modifier,
-        containerColor = colors.bgBase,
-        // inset 由各页面自行消费（HomeScreen 的顶栏要 statusBars），
-        // 这里只处理底栏的 navigationBars。
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        // ⚠️ 这里**刻意不画顶部安全区**。
-        //
-        // 曾经在 Scaffold 的 topBar 上铺过一条全局黑带，想"一处生效、全页面覆盖"。
-        // 结果是错的：只有**视频播放页**需要它（那里本来就是纯黑播放器，
-        // 黑带是画面的自然延伸）；而首页/我的/搜索这些**浅色页面**
-        // 凭空多一条黑带非常突兀，像没画完。
-        //
-        // 需要黑带的是视频详情页 —— 见 `VideoDetailScreen` 里
-        // `PlayerSafeAreaTop` 的实现与说明。
-        bottomBar = {
-            if (showBottomNav) {
-                BottomNav(
-                    selectedIndex = selectedTab,
-                    onSelect = { index ->
-                        navController.navigate(tabRoutes[index]) {
-                            // 三个 Tab 之间切换不要堆栈，且保留各自状态
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
-                )
-            }
-        },
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Routes.HOME,
-            modifier = Modifier.padding(innerPadding),
+    /**
+     * Haze 状态（**真背景采样 + 折射**）。
+     *
+     * ## 🔴 为什么底栏从 `Scaffold.bottomBar` 挪出来
+     *
+     * `Scaffold.bottomBar` 的语义是"内容区**止于**底栏"—— 内容不会画到
+     * 底栏下面。而 Liquid Glass 的折射**必须采样底下的内容**：
+     * 没有内容从玻璃下面滚过去，玻璃就只是一块半透明色板
+     * （这正是我上一版"四层合成"方案的局限）。
+     *
+     * 所以改成：
+     * - 内容区**占满全屏**（含底栏区域）
+     * - 底栏**浮在内容之上**（`Box` 叠加，不是 `Scaffold` 槽位）
+     * - 内容通过 `contentPadding` 留出底部空间，**视觉上不遮内容**
+     *   但滚动过程中内容会**从玻璃下面经过** → 折射有东西可采样
+     *
+     * ⚠️ 这是"用现成的 Haze"与"自己糊"的**结构性差异** ——
+     * 不只是换个材质实现，而是布局关系必须改。
+     */
+    val hazeState = dev.chrisbanes.haze.rememberHazeState()
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = colors.bgBase,
+            // inset 由各页面自行消费（HomeScreen 的顶栏要 statusBars），
+            // 这里只处理底栏的 navigationBars。
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            // ⚠️ 这里**刻意不画顶部安全区**。
+            //
+            // 曾经在 Scaffold 的 topBar 上铺过一条全局黑带，想"一处生效、全页面覆盖"。
+            // 结果是错的：只有**视频播放页**需要它（那里本来就是纯黑播放器，
+            // 黑带是画面的自然延伸）；而首页/我的/搜索这些**浅色页面**
+            // 凭空多一条黑带非常突兀，像没画完。
+            //
+            // 需要黑带的是视频详情页 —— 见 `VideoDetailScreen` 里
+            // `PlayerSafeAreaTop` 的实现与说明。
+        ) { innerPadding ->
+            // 内容层：被 Haze 采样（`hazeSource`）
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeSource(hazeState),
+            ) {
+                NavHost(
+                    navController = navController,
+                    startDestination = Routes.HOME,
+                    modifier = Modifier.padding(innerPadding),
             // ---- 页面转场：只做「横向滑动 + 淡入」，刻意压短 ----
             //
             // ⚠️ 之前用的是 NavHost 默认转场（约 400ms 的横向滑入）。
@@ -2031,6 +2043,34 @@ fun MainShell(
                     },
                 )
             }
+            }   // ← 关 NavHost 的 content lambda
+            }   // ← 关内容层 Box（hazeSource）
+        }       // ← 关 Scaffold
+
+        // ---- 悬浮式 Liquid Glass 底部导航 ----
+        //
+        // ⚠️ 它在 `Scaffold` **之外**（`Box` 的直接子级），这是有意的：
+        //    内容层与导航栏必须是**兄弟关系**，导航栏才能"浮"在内容之上
+        //    并让内容从它下面经过（折射才有东西可采样）。
+        //
+        // 详见上方 `hazeState` 的说明。
+        if (showBottomNav) {
+            BottomNav(
+                selectedIndex = selectedTab,
+                onSelect = { index ->
+                    navController.navigate(tabRoutes[index]) {
+                        // 三个 Tab 之间切换不要堆栈，且保留各自状态
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.navigationBars),
+            )
         }
     }
 }

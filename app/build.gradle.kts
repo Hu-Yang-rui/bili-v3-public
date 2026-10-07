@@ -2,6 +2,13 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
+    // 🔴 AGP 9 的「内置 Kotlin」与 KSP **不兼容**（报错原文见 gradle.properties）。
+    // 本项目用 KSP 跑 Moshi 代码生成，所以：
+    //   `android.builtInKotlin=false`（gradle.properties）
+    //   + 保留 `kotlin.android` 插件（这里）
+    //
+    // ⚠️ 网上/报错提示说"AGP 9 不再需要 kotlin.android 插件"是**对了一半** ——
+    //    那只适用于**不用 KSP** 的项目。用了 KSP 就必须关内置并保留插件。
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
@@ -34,12 +41,13 @@ val hasReleaseKeystore = releaseStoreFile != null &&
 
 android {
     namespace = "com.example.biliv3"
-    compileSdk = 35
+    // Haze 2.x 的 AAR 元数据要求 compileSdk ≥ 37（工具链升级的原因）
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.example.biliv3"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 37
         versionCode = 44
         versionName = "1.6.7"
     }
@@ -92,10 +100,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+    // ⚠️ `kotlinOptions { jvmTarget = "17" }` 在 Kotlin 2.2 已 **deprecated**
+    // （构建会打 `'jvmTarget: String' is deprecated` 警告）。
+    // AGP 9 时代改为顶层 `kotlin { compilerOptions { } }`。
+    // 见文件末尾的 kotlin 块。
 
     buildFeatures {
         compose = true
@@ -167,6 +175,21 @@ if (project.hasProperty("composeMetrics")) {
     }
 }
 
+/**
+ * Kotlin 编译器配置（AGP 9 / Kotlin 2.2 的**新位置**）。
+ *
+ * ⚠️ 旧写法是 `android { kotlinOptions { jvmTarget = "17" } }` ——
+ * 那条 DSL 已被 Kotlin 2.2 标记 deprecated，构建会打警告。
+ * 新写法是顶层 `kotlin { compilerOptions { } }`。
+ *
+ * 本项目的门禁是「0 error 0 warning」，所以这个警告必须消掉。
+ */
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -211,6 +234,9 @@ dependencies {
     // 后台播放 / 系统媒体中心（v1.3.0）。⚠️ 必须显式声明：
     // media3-exoplayer 不传递依赖 media3-session，缺了会 Unresolved reference。
     implementation(libs.androidx.media3.session)
+
+    implementation(libs.haze)
+    implementation(libs.haze.glass)
 
     testImplementation(libs.junit)
     testImplementation(libs.truth)

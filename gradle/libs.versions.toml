@@ -1,7 +1,17 @@
 [versions]
-agp = "8.7.3"
-kotlin = "2.0.21"
-ksp = "2.0.21-1.0.28"
+# 🔴 工具链升级（AGP 9 线）：为了能消费 Haze 2.x（要求 compileSdk 37 + AGP 9.1）。
+# 这条链是**环环相扣**的，改一个必须一起改：
+#   Gradle 9.3.1  ← AGP 9.1.0 要求的最低版本
+#   AGP 9.1.0     ← Haze 拉进的 Compose 1.12.1 要求
+#   Kotlin 2.2.21 ← KSP 版本必须与之严格配对
+#   compileSdk 37 ← Haze 的 AAR 元数据要求
+agp = "9.1.0"
+# ⚠️ Kotlin 必须 ≥ 2.4：2.2.21 的 `kotlin.android` 插件仍会 cast 到
+#    `com.android.build.gradle.BaseExtension`，而 AGP 9 已移除该类
+#    （报错：ApplicationExtensionImpl cannot be cast to BaseExtension）。
+kotlin = "2.4.0"
+# KSP 2.1.20 起改为**独立版本号**（不再跟 Kotlin 版本拼接）
+ksp = "2.3.12"
 composeBom = "2024.09.02"
 coreKtx = "1.13.1"
 lifecycle = "2.8.6"
@@ -22,6 +32,8 @@ coroutinesTest = "1.9.0"
 json = "20240303"
 
 [libraries]
+haze = { module = "dev.chrisbanes.haze:haze", version = "2.0.1" }
+haze-glass = { module = "dev.chrisbanes.haze:haze-glass", version = "2.0.1" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }

@@ -497,9 +497,21 @@ fun PluginDetailScreen(
                 InfoRow("最近耗时", "${runtime.lastDurationMs}ms")
                 InfoRow(
                     "最近执行",
+                    // ⚠️ `Locale.getDefault()` **不能**在组合期直接读（lint
+                    // `NonObservableLocale`）：它是进程级可变状态，改了不会触发重组，
+                    // 值算出来就永远不更新。
+                    //
+                    // 这里用 `remember(lastRunAt)` 把它绑到真正会变的那一项上 ——
+                    // 时间戳变了才重算，且不在每次重组时读 locale。
+                    //
+                    // ⚠️ 格式固定为 `MM-dd HH:mm:ss`（**纯数字**），
+                    // 所以其实不受 locale 影响；用 `Locale.ROOT` 更稳 ——
+                    // 避免某些地区用非公历历法导致月份显示异常。
                     if (runtime.lastRunAt > 0L) {
-                        java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.getDefault())
-                            .format(java.util.Date(runtime.lastRunAt))
+                        androidx.compose.runtime.remember(runtime.lastRunAt) {
+                            java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.ROOT)
+                                .format(java.util.Date(runtime.lastRunAt))
+                        }
                     } else {
                         "从未"
                     },
