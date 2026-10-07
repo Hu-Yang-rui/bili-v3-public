@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -105,9 +106,13 @@ fun LiveUserMenu(
 ) {
     val colors = BiliTheme.colors
 
-    // 这个菜单能对目标做什么（数据层判定，UI 只消费）
-    val available = remember(target.uid, permissions) {
-        LivePermissions.Action.entries.filter { permissions.canActOn(target.uid, it) }
+    // 菜单项由纯函数算出（v1.6.6）—— 见 `LiveUserMenuModel`。
+    //
+    // ⚠️ 这里**不再**预先算一份 `available` 动作列表：
+    //    那样会出现"动作列表"与"渲染时又判断一次"两处判定，
+    //    而两处必然漂移。现在唯一的判定点是 `LiveUserMenuModel.items`。
+    val items = remember(target, permissions) {
+        LiveUserMenuModel.items(target, permissions)
     }
 
     Dialog(
@@ -132,6 +137,12 @@ fun LiveUserMenu(
                     // 深色下投影不可见，分层只能靠提亮
                     .background(colors.surfaceElevated)
                     .clickable(enabled = false) {}
+                    // 🔴 v1.6.6：底部弹层必须补 `navigationBarsPadding()`。
+                    //
+                    // 此前漏了（`ui/live/` 下 0 处，对照 `ItemMoreMenu`
+                    // 早就有）。后果是**最后一行「取消」落在手势条区域内** ——
+                    // 手势导航机型上要么点不中，要么直接被系统手势抢走。
+                    .navigationBarsPadding()
                     .heightIn(max = MENU_MAX_H)
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = Space.x3),
@@ -185,35 +196,38 @@ fun LiveUserMenu(
 
                 RuleLine(color = Rule.subtle)
 
-                // ---- 通用项（所有人可见）----
-                MenuRow(
-                    label = "查看发送者",
-                    enabled = target.uid > 0L,
-                    onClick = { onViewSender(target) },
-                )
-                MenuRow(
-                    label = "进入个人主页",
-                    enabled = target.uid > 0L,
-                    onClick = { onOpenProfile(target.uid) },
-                )
-                MenuRow(
-                    label = "复制弹幕内容",
-                    enabled = target.text.isNotEmpty(),
-                    onClick = { onCopyText(target.text) },
-                )
-                MenuRow(
-                    label = "复制用户名",
-                    enabled = target.uname.isNotEmpty(),
-                    onClick = { onCopyName(target.uname) },
-                )
-                MenuRow(
-                    label = "填入输入框",
-                    enabled = target.uname.isNotEmpty(),
-                    onClick = { onFillInput("${target.uname} ") },
-                )
+                // ---- 菜单项：**由纯函数算出**（v1.6.6）----
+                //
+                // 🔴 为什么不再在这里写死一堆 `MenuRow`
+                //
+                // 此前"哪些项可见"散落在渲染代码里，既**没法单测**，
+                // 也导致过真实 bug：`LiveChatPanel` 曾用
+                // `canModerate && hasUser` 决定能不能点开菜单，
+                // 而下面这些通用项本来就与权限无关 →
+                // **普通用户点弹幕完全没反应**。
+                //
+                // 现在"能不能点"（有发送者即可）与"看到什么"（按权限算）
+                // 彻底分开，后者可被 `LiveUserMenuModelTest` 钉死。
+                items.filter { !it.isModeration }.forEach { item ->
+                    MenuRow(
+                        label = itemLabel(item),
+                        enabled = true,
+                        onClick = {
+                            when (item) {
+                                LiveUserMenuModel.Item.VIEW_SENDER -> onViewSender(target)
+                                LiveUserMenuModel.Item.OPEN_PROFILE -> onOpenProfile(target.uid)
+                                LiveUserMenuModel.Item.COPY_TEXT -> onCopyText(target.text)
+                                LiveUserMenuModel.Item.COPY_NAME -> onCopyName(target.uname)
+                                LiveUserMenuModel.Item.FILL_INPUT -> onFillInput("${target.uname} ")
+                                else -> Unit
+                            }
+                        },
+                    )
+                }
 
-                // ---- 管理项（**只有有权限时才渲染**）----
-                if (available.isNotEmpty()) {
+                // ---- 管理项（**只有有权限时才出现**）----
+                val moderation = items.filter { it.isModeration }
+                if (moderation.isNotEmpty()) {
                     RuleLine(color = Rule.subtle)
                     Text(
                         text = "管理操作",
@@ -229,27 +243,17 @@ fun LiveUserMenu(
                         ),
                     )
 
-                    // 固定顺序：先"解除"后"施加"会让用户困惑，
-                    // 所以按"动作强度"递增排列
-                    val ordered = listOf(
-                        LivePermissions.Action.UNMUTE,
-                        LivePermissions.Action.UNBLOCK,
-                        LivePermissions.Action.MUTE,
-                        LivePermissions.Action.BLOCK,
-                        LivePermissions.Action.KICK,
-                    ).filter { it in available }
-
-                    ordered.forEach { action ->
-                        val label = LiveRoomViewModel.actionLabel(action)
-                        val dangerous = action == LivePermissions.Action.KICK ||
-                            action == LivePermissions.Action.BLOCK
+                    moderation.forEach { item ->
+                        val action = LiveUserMenuModel.actionOf(item) ?: return@forEach
+                        val dangerous = item == LiveUserMenuModel.Item.KICK ||
+                            item == LiveUserMenuModel.Item.BLOCK
                         MenuRow(
-                            label = label,
-                            // 有操作在途时禁用全部 —— 防连点（需求第 11 条）
+                            label = LiveRoomViewModel.actionLabel(action),
+                            // 有操作在途时禁用全部 —— 防连点
                             enabled = moderating == null,
                             dangerous = dangerous,
                             onClick = {
-                                if (action == LivePermissions.Action.MUTE) {
+                                if (item == LiveUserMenuModel.Item.MUTE) {
                                     // 禁言要先选时长
                                     onRequestMute()
                                 } else {
@@ -261,7 +265,11 @@ fun LiveUserMenu(
                 }
 
                 // ---- 无权限时的说明（**如实告知，不显示灰按钮**）----
-                if (available.isEmpty() && target.uid > 0L) {
+                //
+                // ⚠️ 判据是"没有任何管理项"，不是"整个菜单为空" ——
+                //    通用项（查看发送者/复制…）普通用户也有，
+                //    用整菜单判空会导致**这句说明永远不出现**。
+                if (moderation.isEmpty() && target.uid > 0L) {
                     RuleLine(color = Rule.subtle)
                     Text(
                         text = if (!permissions.loggedIn) {
@@ -576,3 +584,19 @@ private fun MenuRow(
 
 /** 菜单高度上限（避免长菜单顶出屏幕）。 */
 private val MENU_MAX_H = 460.dp
+
+/**
+ * 通用项的文案。
+ *
+ * ⚠️ 管理项的文案**不在这里** —— 它复用
+ * `LiveRoomViewModel.actionLabel(action)`，与 Snackbar 提示
+ * 用同一个来源（否则会出现"菜单写禁言、提示写静默"这类不一致）。
+ */
+private fun itemLabel(item: LiveUserMenuModel.Item): String = when (item) {
+    LiveUserMenuModel.Item.VIEW_SENDER -> "查看发送者"
+    LiveUserMenuModel.Item.OPEN_PROFILE -> "进入个人主页"
+    LiveUserMenuModel.Item.COPY_TEXT -> "复制弹幕内容"
+    LiveUserMenuModel.Item.COPY_NAME -> "复制用户名"
+    LiveUserMenuModel.Item.FILL_INPUT -> "填入输入框"
+    else -> ""
+}

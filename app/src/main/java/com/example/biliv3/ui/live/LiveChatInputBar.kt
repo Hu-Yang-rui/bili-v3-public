@@ -9,23 +9,32 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.example.biliv3.data.live.DanmakuDraft
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
@@ -71,6 +80,16 @@ fun LiveChatInputBar(
     modifier: Modifier = Modifier,
 ) {
     val colors = BiliTheme.colors
+
+    // 自动聚焦（v1.6.6）。
+    //
+    // ⚠️ 只在**已经登录**（即真的渲染了输入框）时请求焦点 ——
+    //    未登录时输入框不存在，`requestFocus()` 会抛
+    //    `IllegalStateException: FocusRequester is not initialized`。
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(canSend) {
+        if (canSend) runCatching { focus.requestFocus() }
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
         // ---- 失败原因（如实显示，不吞）----
@@ -162,36 +181,80 @@ fun LiveChatInputBar(
                 }
                 BasicTextField(
                     value = text,
-                    onValueChange = onTextChange,
+                    // 🔴 在输入时就钳到上限（v1.6.6）——
+                    // 见 `DanmakuDraft` 的说明：不拦的话用户打完
+                    // 一长段才被服务端拒绝，还得自己删字重试。
+                    onValueChange = { onTextChange(DanmakuDraft.clamp(it)) },
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = FontSize.bodySm,
                         color = colors.textPrimary,
                     ),
                     cursorBrush = SolidColor(colors.brandPrimary),
-                    modifier = Modifier.fillMaxWidth(),
+                    // 回车 = 发送（与搜索页同一写法）
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(
+                        onSend = { if (DanmakuDraft.canSend(text) && !sending) onSend() },
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // 自动聚焦：从烂梗库「填入」返回后不必再点一次输入框
+                        .focusRequester(focus),
+                )
+            }
+
+            // ---- 字数计数：只在接近上限时出现 ----
+            //
+            // 常驻显示 `0/20` 是纯噪音；到 16 字再提示才有信息量。
+            if (DanmakuDraft.remaining(text) <= COUNTER_SHOW_AT) {
+                Spacer(Modifier.width(Space.x1))
+                Text(
+                    text = "${text.length}/${DanmakuDraft.MAX_LEN}",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontSize = FontSize.badge,
+                        // 到上限用错误色 —— 用户一眼知道"打不进去了"
+                        color = if (DanmakuDraft.atLimit(text)) {
+                            colors.stateError
+                        } else {
+                            colors.textTertiary
+                        },
+                    ),
+                    maxLines = 1,
                 )
             }
 
             Spacer(Modifier.width(Space.x2))
 
             // ---- 发送 ----
-            val enabled = !sending && text.isNotBlank()
-            Text(
-                text = if (sending) "发送中" else "发送",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    fontWeight = FontWeight.Medium,
-                    color = if (enabled) colors.textBrandSafe else colors.textTertiary,
-                ),
-                maxLines = 1,
+            //
+            // ⚠️ `heightIn(min = Space.minTouchTarget)` 是**触摸热区**，
+            //    不是视觉尺寸 —— 文字大小不变，只是可点区域到 48dp。
+            //    此前是 `vertical = Space.x2`(8dp) + 12sp ≈ 33dp，
+            //    在手机上是明显的"点不中"。
+            val enabled = !sending && DanmakuDraft.canSend(text)
+            Box(
                 modifier = Modifier
+                    .heightIn(min = Space.minTouchTarget)
                     .clip(RoundedCornerShape(Radius.interactive))
                     .clickable(enabled = enabled, onClick = onSend)
-                    .padding(horizontal = Space.x3, vertical = Space.x2),
-            )
+                    .padding(horizontal = Space.x3),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = if (sending) "发送中" else "发送",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontSize = FontSize.label,
+                        fontWeight = FontWeight.Medium,
+                        color = if (enabled) colors.textBrandSafe else colors.textTertiary,
+                    ),
+                    maxLines = 1,
+                )
+            }
         }
 
         Spacer(Modifier.height(Space.micro))
     }
 }
+
+/** 剩余字数 ≤ 该值时显示 `12/20` 计数（常驻显示是噪音）。 */
+private const val COUNTER_SHOW_AT = 4

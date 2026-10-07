@@ -80,8 +80,6 @@ import kotlinx.coroutines.launch
 fun LiveChatPanel(
     messages: List<LiveMessage>,
     connState: LiveDanmakuClient.ConnectionState,
-    /** 当前登录用户是否可以对某人操作（决定能不能点开菜单）。 */
-    canModerate: Boolean,
     isSelf: (Long) -> Boolean,
     isKnownAdmin: (Long) -> Boolean,
     onUserClick: (LiveMessage) -> Unit,
@@ -101,9 +99,21 @@ fun LiveChatPanel(
     }
 
     // 新消息到达且用户在底部 → 自动跟随
+    //
+    // 🔴 v1.6.6：跟随改用 **`scrollToItem`（无动画）**，
+    //    不再用 `animateScrollToItem`。
+    //
+    //    原因：`animateScrollToItem` 会启动一个**动画协程**，而
+    //    `LaunchedEffect(messages.size, ...)` 每来一条新消息都会
+    //    **重启**这个协程 → 上一个动画被取消、新的从头开始。
+    //    弹幕密时（实测热门房间 20 秒 68 条 ≈ 3.4 条/秒）表现为
+    //    列表持续抖动、始终追不到底。
+    //
+    //    跟随的语义本来就是"瞬间贴到底"，动画只会添乱；
+    //    动画留给用户主动点的「回到最新」（那里有明确起止点）。
     LaunchedEffect(messages.size, atBottom) {
         if (messages.isNotEmpty() && atBottom) {
-            listState.animateScrollToItem(messages.lastIndex)
+            listState.scrollToItem(messages.lastIndex)
         }
     }
 
@@ -153,7 +163,16 @@ fun LiveChatPanel(
                         msg = m,
                         self = isSelf(m.uid),
                         knownAdmin = isKnownAdmin(m.uid),
-                        clickable = canModerate && m.hasUser,
+                        // 🔴 v1.6.6：**只要有发送者就能点**，不再要求管理权限。
+                        //
+                        // 此前是 `canModerate && m.hasUser` —— 后果是
+                        // **普通用户点弹幕完全没反应**，而菜单里的
+                        // 「查看发送者 / 复制弹幕内容 / 复制用户名 /
+                        // 填入输入框」本来就与权限无关。
+                        //
+                        // 管理项是否出现由菜单自己按权限决定（见
+                        // `LiveUserMenuModel`），**不该用"能不能点"来代替**。
+                        clickable = m.hasUser,
                         onClick = { onUserClick(m) },
                     )
                 }

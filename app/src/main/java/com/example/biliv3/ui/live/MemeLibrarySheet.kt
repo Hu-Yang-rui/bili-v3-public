@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -114,6 +115,8 @@ fun MemeLibrarySheet(
                     .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
                     .background(colors.surfaceElevated)
                     .clickable(enabled = false) {}
+                    // v1.6.6：底部弹层补导航栏避让（否则最后一行被手势条压住）
+                    .navigationBarsPadding()
                     .heightIn(max = SHEET_MAX_H),
             ) {
                 // ---- 标题栏 ----

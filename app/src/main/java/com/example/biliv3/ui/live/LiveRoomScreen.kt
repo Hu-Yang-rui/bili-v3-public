@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -115,6 +117,7 @@ fun LiveRoomScreen(
     val stream by viewModel.stream.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
+    val liveEnded by viewModel.liveEnded.collectAsStateWithLifecycle()
     val player = viewModel.player
 
     // 聊天（v1.6.4）
@@ -132,12 +135,49 @@ fun LiveRoomScreen(
     var muteTarget by remember { mutableStateOf<LiveMessage?>(null) }
     var showMemes by remember { mutableStateOf(false) }
 
+    // 🔴 直播间**刻意不提供倍速**（v1.6.6 实测结论）
+    //
+    // 曾打算把 `SpeedTiers.LIVE`（≤2×）接到直播间，实测后**放弃**：
+    //
+    //   实测 B 站 HLS 直播的播放列表（房间 545068 / 6，多次采样一致）：
+    //     EXT-X-ENDLIST  = false        ← 真直播，不是"已完结"
+    //     MEDIA-SEQUENCE = …569 → …573  ← 12 秒内递增 = 窗口在滑动
+    //     分片数         = 3 段 × 3 秒
+    //     窗口总时长     = **9 秒**
+    //
+    // 客户端缓冲本身就有几秒。倍速一旦 > 1×，播放位置会**持续逼近
+    // 窗口右边缘**，追上后只能等新分片 → 频繁 rebuffer。
+    // 即"直播加速"在 9 秒窗口下**结构性不可用** ——
+    // 不是"设不进去"（`setPlaybackSpeed` 会照常接受），
+    // 而是设进去之后表现出来就是卡。
+    //
+    // 所以**不做这个入口**，而不是做一个看起来能用、实际会卡的按钮。
+    //
+    // ⚠️ `SpeedTiers.LIVE` 保留在数据层：它描述的是"播放器层面安全的
+    //    档位"，对将来的**时移 / 回看**场景仍然有效。当前无 UI 消费它，
+    //    已在 `SpeedTiers` 的 KDoc 里注明，避免被当成死代码删掉。
+
     // 发送与烂梗库状态（v1.6.5）
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val sending by viewModel.sending.collectAsStateWithLifecycle()
     val sendError by viewModel.sendError.collectAsStateWithLifecycle()
     val memes by viewModel.memes.collectAsStateWithLifecycle()
     val senderState by viewModel.senderProfile.collectAsStateWithLifecycle()
+
+    /**
+     * 键盘是否可见（v1.6.6）。
+     *
+     * 用它决定**是否收起「画面 + 房间信息」** —— 见布局处的长说明。
+     *
+     * ⚠️ `WindowInsets.isImeVisible` 在 foundation 1.7.2 上仍标着
+     * `@ExperimentalLayoutApi`，所以要显式 opt-in（不是我们用了什么
+     * 不稳定写法，是 API 本身还没转正）。
+     *
+     * 回退方案（若将来该 API 变动）：
+     * `WindowInsets.ime.getBottom(density) > 0`。
+     */
+    @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+    val imeVisible = WindowInsets.isImeVisible
 
     // 一次性提示
     val snackbar = remember { SnackbarHostState() }
@@ -158,6 +198,15 @@ fun LiveRoomScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            // ⚠️ `imePadding()` 必须加在**根 Column** 上（v1.6.6）。
+            //
+            // 直播间此前完全没有键盘避让（`ui/live/` 下 0 处），
+            // 而 manifest 里的 `adjustResize` 只负责缩 window，
+            // **Compose 侧不接就仍然会被键盘盖住**。
+            //
+            // 与 `CommentInputSheet` 踩过的坑同源：IME 相关的
+            // padding 必须加在**真正被压缩的那一层**。
+            .imePadding()
             .background(colors.bgBase),
     ) {
         // ---- 顶栏 ----
@@ -196,6 +245,8 @@ fun LiveRoomScreen(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+            // ⚠️ 这里**没有**倍速按钮 —— 原因见上方「刻意不提供倍速」的长说明。
+            //
             // 刷新：直播流地址会过期（实测 `expires` 约 2 小时），
             // 长时间挂着断了之后需要一个明确的重连入口。
             Box(
@@ -214,167 +265,213 @@ fun LiveRoomScreen(
             }
         }
 
-        // ---- 画面区（16:9）----
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f)
-                .background(colors.playerBackground),
-            contentAlignment = Alignment.Center,
-        ) {
-            when {
-                error != null -> ErrorState(
-                    title = "直播取流失败",
-                    description = error,
-                    onRetry = { viewModel.reload() },
-                    modifier = Modifier.fillMaxSize(),
-                    compact = true,
-                )
-
-                loading -> TerminalLoadingState(
-                    text = "正在取流…",
-                    modifier = Modifier.fillMaxSize(),
-                )
-
-                // 未开播是**正常状态**，用空态而不是错误态
-                stream == null || stream?.playable == false -> EmptyState(
-                    title = "主播还没有开播",
-                    description = "开播后点右上角刷新即可观看",
-                    actionLabel = "刷新",
-                    onAction = { viewModel.reload() },
-                    modifier = Modifier.fillMaxSize(),
-                    compact = true,
-                )
-
-                else -> {
-                    LiveVideoSurface(
-                        player = player,
-                        holder = viewModel.holder,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-            }
-
-            // 直播中角标（压在画面左上角）
-            if (stream?.playable == true && !loading) {
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(Space.compactHorizontal)
-                        .clip(RoundedCornerShape(Radius.badge))
-                        .background(colors.stateLive)
-                        .padding(
-                            horizontal = Space.tagHorizontal,
-                            vertical = Space.tagVertical,
-                        ),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "直播中",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
-                            color = colors.onOverlay,
-                            fontWeight = FontWeight.Medium,
-                        ),
-                    )
-                }
-            }
-        }
-
-        // ---- 房间信息（通栏，无卡片）----
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(
-                    start = Space.x4,
-                    end = Space.x4,
-                    top = Rhythm.between,
-                ),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(
-                    model = room.faceUrl(96),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(Sizes.upAvatar + Space.x8)
-                        .clip(CircleShape)
-                        .background(colors.avatarPlaceholder),
-                )
-                Spacer(Modifier.width(Space.x3))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = room.uname,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.body,
-                            fontWeight = FontWeight.Medium,
-                            color = colors.textPrimary,
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(Modifier.height(Space.micro))
-                    Text(
-                        text = buildString {
-                            if (room.online > 0) {
-                                append(formatCount(room.online))
-                                append(" 人气")
-                            }
-                            if (room.areaName.isNotEmpty()) {
-                                if (isNotEmpty()) append(" · ")
-                                append(room.areaName)
-                            }
-                            if (stream?.qualityLabel?.isNotEmpty() == true) {
-                                if (isNotEmpty()) append(" · ")
-                                append(stream?.qualityLabel)
-                            }
-                        },
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
-                            color = colors.textSecondarySafe,
-                        ),
-                    )
-                }
-            }
-
-            // ---- 聊天（v1.6.4）----
-            //
-            // 复用现有架构：WebSocket 在 Repository/Client 层，
-            // ViewModel 持有消息列表与权限，这里只负责渲染。
-            //
-            // ⚠️ 聊天区高度用 `weight(1f)` 吃掉剩余空间 —— 它必须能滚，
-            //    固定高度会让长消息被裁掉。
-            LiveChatPanel(
-                messages = messages,
-                connState = connState,
-                canModerate = perms.actions.isNotEmpty(),
-                isSelf = { uid -> viewModel.isSelf(uid) },
-                isKnownAdmin = { uid -> viewModel.isKnownAdmin(uid) },
-                onUserClick = { msg ->
-                    // 点弹幕 → 打开用户菜单（已有）；
-                    // 「查看发送者」在菜单里进入（不改变原有交互）
-                    menuTarget = msg
-                },
-                onRetryChat = { viewModel.retryChat() },
+        // ---- 画面 + 房间信息（键盘弹起时整体收起）----
+        //
+        // 🔴 v1.6.6：**键盘弹起时整块收起**。
+        //
+        // ## 为什么必须收（而不是只加 imePadding）
+        //
+        // 小屏（360×640dp）固定内容高度 ≈ 472dp（顶栏 52 + 画面 202 +
+        // 房间信息 118 + 输入条 ~100）。键盘占 ~290dp 后可用高度只剩
+        // ~360dp → **溢出 112dp**，被裁掉的恰好是最后的输入条 ——
+        // 也就是"加完 imePadding 仍然打不了字"。
+        //
+        // 只收紧房间信息也不够（118 → 40 仍溢出 34dp），且信息会挤成一团。
+        //
+        // ## 为什么收起画面可接受
+        //
+        // 与"听视频"语义一致：**画面收起但音频继续播** ——
+        // 播放器是 Activity 级的，不随这块 UI 销毁；打完字画面立刻回来。
+        //
+        // 收起后布局是「顶栏 + 聊天(weight 1f) + 输入条」，
+        // 聊天用 weight 吸收剩余空间 → **任何屏宽下输入条都可见**。
+        if (!imeVisible) {
+            // ---- 画面区（16:9）----
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-            )
+                    .aspectRatio(16f / 9f)
+                    .background(colors.playerBackground),
+                contentAlignment = Alignment.Center,
+            ) {
+                when {
+                    // 🔴 直播已结束（v1.6.6）—— 放在**最前面**：
+                    // 它是比"取流失败"更明确的事实（我们确实收到了
+                    // 播放器的 STATE_ENDED），不该被别的分支盖住。
+                    //
+                    // ⚠️ 只在真的收到 ENDED 时才会为 true，不猜（见 VM 的 watchEnded）。
+                    liveEnded -> EmptyState(
+                        title = "直播已结束",
+                        description = "主播已经下播。若主播重新开播，点刷新即可继续观看",
+                        actionLabel = "刷新",
+                        onAction = { viewModel.reload() },
+                        modifier = Modifier.fillMaxSize(),
+                        compact = true,
+                    )
 
-            // ---- 弹幕输入条（v1.6.5）----
-            LiveChatInputBar(
-                text = draft,
-                onTextChange = { viewModel.setDraft(it) },
-                canSend = viewModel.canSend,
-                sending = sending,
-                error = sendError,
-                onSend = { viewModel.sendDraft() },
-                onOpenMemes = { showMemes = true },
-                onLoginRequired = onLoginRequired,
-                modifier = Modifier.padding(horizontal = Space.x2),
-            )
+                    error != null -> ErrorState(
+                        title = "直播取流失败",
+                        description = error,
+                        onRetry = { viewModel.reload() },
+                        modifier = Modifier.fillMaxSize(),
+                        compact = true,
+                    )
+
+                    loading -> TerminalLoadingState(
+                        text = "正在取流…",
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                    // 未开播是**正常状态**，用空态而不是错误态
+                    stream == null || stream?.playable == false -> EmptyState(
+                        title = "主播还没有开播",
+                        description = "开播后点右上角刷新即可观看",
+                        actionLabel = "刷新",
+                        onAction = { viewModel.reload() },
+                        modifier = Modifier.fillMaxSize(),
+                        compact = true,
+                    )
+
+                    else -> {
+                        LiveVideoSurface(
+                            player = player,
+                            holder = viewModel.holder,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
+
+                // 直播中角标（压在画面左上角）
+                if (stream?.playable == true && !loading) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(Space.compactHorizontal)
+                            .clip(RoundedCornerShape(Radius.badge))
+                            .background(colors.stateLive)
+                            .padding(
+                                horizontal = Space.tagHorizontal,
+                                vertical = Space.tagVertical,
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "直播中",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontSize = FontSize.badge,
+                                color = colors.onOverlay,
+                                fontWeight = FontWeight.Medium,
+                            ),
+                        )
+                    }
+                }
+            }
+
+            // ---- 房间信息（通栏，无卡片）----
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(
+                        start = Space.x4,
+                        end = Space.x4,
+                        top = Rhythm.between,
+                    ),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AsyncImage(
+                        model = room.faceUrl(96),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(Sizes.upAvatar + Space.x8)
+                            .clip(CircleShape)
+                            .background(colors.avatarPlaceholder),
+                    )
+                    Spacer(Modifier.width(Space.x3))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = room.uname,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = FontSize.body,
+                                fontWeight = FontWeight.Medium,
+                                color = colors.textPrimary,
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(Space.micro))
+                        Text(
+                            text = buildString {
+                                if (room.online > 0) {
+                                    append(formatCount(room.online))
+                                    append(" 人气")
+                                }
+                                if (room.areaName.isNotEmpty()) {
+                                    if (isNotEmpty()) append(" · ")
+                                    append(room.areaName)
+                                }
+                                if (stream?.qualityLabel?.isNotEmpty() == true) {
+                                    if (isNotEmpty()) append(" · ")
+                                    append(stream?.qualityLabel)
+                                }
+                            },
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontSize = FontSize.label,
+                                color = colors.textSecondarySafe,
+                            ),
+                        )
+                    }
+                }
+
+            }
         }
+
+        // ---- 聊天（v1.6.4）----
+        //
+        // 复用现有架构：WebSocket 在 Repository/Client 层，
+        // ViewModel 持有消息列表与权限，这里只负责渲染。
+        //
+        // ⚠️ 聊天区高度用 `weight(1f)` 吃掉剩余空间 —— 它必须能滚，
+        //    固定高度会让长消息被裁掉。
+        //
+        // 🔴 v1.6.6 修复：**这一段此前被嵌在「房间信息」那个
+        //    `verticalScroll` 的 Column 内部**（v1.6.4 引入）。
+        //    后果是 `LiveChatPanel` 里的 `LazyColumn` 被放进一个
+        //    可滚动容器 → 测量时拿到**无限高约束** →
+        //    运行期抛 `IllegalStateException: Vertically scrollable
+        //    component was measured with an infinity maximum height`。
+        //
+        //    编译期查不出来（Compose 的约束错误只在运行期暴露），
+        //    所以躲过了 lint 与单测。**判据：`LazyColumn` 的任何祖先
+        //    都不能有 `verticalScroll`。**
+        LiveChatPanel(
+            messages = messages,
+            connState = connState,
+            isSelf = { uid -> viewModel.isSelf(uid) },
+            isKnownAdmin = { uid -> viewModel.isKnownAdmin(uid) },
+            onUserClick = { msg ->
+                // 点弹幕 → 打开用户菜单（v1.6.6 起任何有发送者的消息都可点）
+                menuTarget = msg
+            },
+            onRetryChat = { viewModel.retryChat() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        )
+
+        // ---- 弹幕输入条（v1.6.5）----
+        LiveChatInputBar(
+            text = draft,
+            onTextChange = { viewModel.setDraft(it) },
+            canSend = viewModel.canSend,
+            sending = sending,
+            error = sendError,
+            onSend = { viewModel.sendDraft() },
+            onOpenMemes = { showMemes = true },
+            onLoginRequired = onLoginRequired,
+            modifier = Modifier.padding(horizontal = Space.x2),
+        )
 
         // ---- 烂梗库（v1.6.5）----
         if (showMemes) {

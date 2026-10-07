@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/Kotlin-2.0.21-4FD1C5?style=flat-square&labelColor=171B22" alt="Kotlin">
   <img src="https://img.shields.io/badge/Compose-BOM%202024.09-4FD1C5?style=flat-square&labelColor=171B22" alt="Compose">
   <img src="https://img.shields.io/badge/Media3-1.4.1-4FD1C5?style=flat-square&labelColor=171B22" alt="Media3">
-  <img src="https://img.shields.io/badge/tests-621%20passing-4FD1C5?style=flat-square&labelColor=171B22" alt="621 tests">
+  <img src="https://img.shields.io/badge/tests-646%20passing-4FD1C5?style=flat-square&labelColor=171B22" alt="646 tests">
 </p>
 
 <p>
@@ -32,7 +32,7 @@ A third-party Bilibili client built around **video playback, audio experience, c
 Not a clone of the official app. The goal is to take one path — *watching something* — and make it feel considered all the way through: a dark, quiet interface, motion that exists only to give feedback, and a playback core that behaves the same whether you are watching, listening, or with the screen off.
 
 <div align="center">
-<sub><b>Kotlin</b> · <b>Jetpack Compose</b> · <b>Media3</b> · <b>621 unit tests</b></sub>
+<sub><b>Kotlin</b> · <b>Jetpack Compose</b> · <b>Media3</b> · <b>646 unit tests</b></sub>
 </div>
 
 ---
@@ -309,7 +309,7 @@ The second is the dangerous one: it needs no root and no user trust. Same packag
   <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/Hu-Yang-rui/bili-v3-public?style=for-the-badge&label=DOWNLOAD%20APK&color=FF8FB0&labelColor=171B22" alt="Download the latest release APK"></a>
 </p>
 
-**`bili-v3-v1.6.5-release.apk`** · 3.58 MB · `versionCode 42`
+**`bili-v3-v1.6.6-release.apk`** · 3.60 MB · `versionCode 43`
 
 </div>
 
@@ -318,7 +318,7 @@ The second is the dangerous one: it needs no root and no user trust. Same packag
 | Certificate | `CN=BiliV3 Release` / RSA 4096 |
 | Signing | v1 + v2 + v3 |
 | Validity | 30 years |
-| SHA-256 | `D48865E767EEF5AFB3534FE44235C5F4C6B83D0D6A87CEBCFD019C0C0B49B687` |
+| SHA-256 | `ABCAFC31BB1007E34AA201B151A5136F5AD4F94D17959105391B8A6D33F0CC1C` |
 
 ### Install
 

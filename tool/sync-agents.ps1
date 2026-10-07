@@ -1,22 +1,35 @@
-# Sync AGENTS-P2.md (the archive volume) to a PRIVATE GitHub repo.
+# Sync the prompt system to the PRIVATE repo bili-v3-agents.
 #
-# ## Why ONLY AGENTS-P2.md is synced (not AGENTS.md)
+# ## What gets synced
 #
-# AGENTS.md is the **front-loaded rule file** -- it is auto-loaded into the
-# agent's workspace instructions, so it MUST stay local. Deleting it would
-# silently disable every project convention.
+#   AGENTS.md            the front-loaded rule file (auto-loaded)
+#   AGENTS-P2.md         the archive volume (consulted on demand)
+#   prompts/*.md         the five rule volumes
 #
-# AGENTS-P2.md is the **archive volume** (interface tables, historical
-# pitfalls, aicu details). It is NOT auto-loaded; it is consulted on demand.
-# That makes it the right candidate to live in a private repo.
+# ## Why this is safe now (it was NOT before)
 #
-# Result: each file has exactly ONE home -- no two-place drift
-# (see AGENTS.md 2.4 / the "0.6.1 vs 0.6.4" incident).
+# AGENTS.md contains local absolute paths and signing-key fingerprints, so it
+# must never reach the PUBLIC repo -- it is gitignored there for that reason.
+#
+# bili-v3-agents is **private**, so those same facts stay private. The earlier
+# version of this script synced only AGENTS-P2.md out of caution; the repo is
+# now the single private mirror for the whole prompt system.
+#
+# ## One home, no drift
+#
+# The LOCAL files are authoritative. This repo is a **backup / mirror** -- it is
+# never edited on GitHub. `-Pull` exists only to restore local files if the
+# working copy is lost. If you find yourself editing on GitHub, stop: edit
+# locally and push.
+#
+# ## ASCII-only on purpose
+#
+# Windows PowerShell 5.1 reads .ps1 as ANSI/GBK, which mangles non-ASCII and
+# breaks string terminators. The prompt volumes have CHINESE FILENAMES, so the
+# script must never hard-code them -- it enumerates the directory instead and
+# URL-encodes names for the API. Do not add non-ASCII literals here.
 #
 # Token comes from git credential manager (never printed).
-#
-# ASCII-only on purpose: Windows PowerShell 5.1 reads .ps1 as ANSI/GBK,
-# which mangles non-ASCII and breaks string terminators.
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File tool\sync-agents.ps1          # push
@@ -37,8 +50,12 @@ $owner = 'Hu-Yang-rui'
 $repo  = 'bili-v3-agents'
 $root  = 'D:\deep\bili-v3'
 
-# Archive volume only. Do NOT add AGENTS.md here (see header).
-$files = @('AGENTS-P2.md')
+# Files mirrored at the repo root.
+$rootFiles = @('AGENTS.md', 'AGENTS-P2.md')
+
+# Directories mirrored as <dir>/<name>. Enumerated at runtime -- see header
+# for why the Chinese filenames must not appear as literals here.
+$dirs = @('prompts')
 
 function Get-Token {
     $cred = "protocol=https`nhost=github.com`n`n" | git credential fill 2>&1
@@ -46,6 +63,86 @@ function Get-Token {
     if (-not $tok) { throw 'no token from credential manager' }
     return $tok
 }
+
+# Build the manifest: pairs of (local absolute path, repo-relative path).
+#
+# ## 🔴 Pull must NOT be driven by the local directory listing
+#
+# The first version enumerated local files and then looped over that list for
+# BOTH directions. That works for push but is **fundamentally broken for pull**:
+# a file that was deleted locally is not in the listing, so it is never
+# restored -- i.e. the exact disaster-recovery case `-Pull` exists for.
+#
+# (Verified by test: delete prompts/项目结构说明.md, run -Pull, file stays gone,
+#  and the script still prints a cheerful "done".)
+#
+# So the two directions use different sources of truth:
+#   push -> local filesystem (enumerate)
+#   pull -> REMOTE directory listing (the repo is authoritative for what exists)
+$manifest = @()
+
+function Add-LocalFiles {
+    param([string]$DirName)
+    $dp = Join-Path $root $DirName
+    if (-not (Test-Path $dp)) { return }
+    Get-ChildItem -Path $dp -Filter *.md -File | Sort-Object Name | ForEach-Object {
+        $script:manifest += , @{ local = $_.FullName; rel = ("{0}/{1}" -f $DirName, $_.Name) }
+    }
+}
+
+if ($Pull) {
+    # ---- source of truth = the remote repo ----
+    $tokForList = Get-Token
+    $hdrForList = @{
+        Authorization = "token $tokForList"
+        'User-Agent'  = 'dsh'
+        Accept        = 'application/vnd.github+json'
+    }
+
+    $rootApi = "https://api.github.com/repos/$owner/$repo/contents/"
+    try {
+        $rootEntries = Invoke-RestMethod -Uri $rootApi -Headers $hdrForList -TimeoutSec 30
+    } catch {
+        throw "cannot list $owner/$repo -- does it exist and is the token valid?"
+    }
+
+    foreach ($e in $rootEntries) {
+        if ($e.type -eq 'file' -and $e.name -like '*.md') {
+            $manifest += , @{ local = (Join-Path $root $e.name); rel = $e.name }
+        } elseif ($e.type -eq 'dir' -and $e.name -eq 'prompts') {
+            $dirApi = "https://api.github.com/repos/$owner/$repo/contents/$($e.name)"
+            $sub = Invoke-RestMethod -Uri $dirApi -Headers $hdrForList -TimeoutSec 30
+            foreach ($s in $sub) {
+                if ($s.type -eq 'file' -and $s.name -like '*.md') {
+                    $manifest += , @{
+                        local = (Join-Path (Join-Path $root $e.name) $s.name)
+                        rel   = ("{0}/{1}" -f $e.name, $s.name)
+                    }
+                }
+            }
+        }
+    }
+} else {
+    # ---- source of truth = the local filesystem ----
+    foreach ($f in $rootFiles) {
+        $p = Join-Path $root $f
+        if (Test-Path $p) {
+            $manifest += , @{ local = $p; rel = $f }
+        } else {
+            Write-Host ("skip {0} (not present locally)" -f $f)
+        }
+    }
+    foreach ($d in $dirs) {
+        $dp = Join-Path $root $d
+        if (-not (Test-Path $dp)) {
+            Write-Host ("skip {0}/ (not present locally)" -f $d)
+            continue
+        }
+        Add-LocalFiles -DirName $d
+    }
+}
+
+if ($manifest.Count -eq 0) { throw 'nothing to sync -- check the local paths' }
 
 $tok = Get-Token
 $hdr = @{
@@ -66,7 +163,7 @@ if (-not $exists) {
     $body = @{
         name        = $repo
         private     = $true
-        description = 'BiliV3 archive volume (AGENTS-P2.md) - consulted on demand'
+        description = 'BiliV3 prompt system (AGENTS.md + AGENTS-P2.md + prompts/) - private mirror'
         has_issues  = $false
         has_wiki    = $false
     } | ConvertTo-Json
@@ -76,23 +173,32 @@ if (-not $exists) {
     Write-Host 'created.'
 }
 
-foreach ($f in $files) {
-    $path = Join-Path $root $f
-    $api  = "https://api.github.com/repos/$owner/$repo/contents/$f"
+$pushed = 0
+$skipped = 0
+
+foreach ($item in $manifest) {
+    $path = $item.local
+    $rel  = $item.rel
+
+    # Chinese filenames must be URL-encoded for the contents API.
+    $apiRel = ($rel -split '/' | ForEach-Object { [System.Uri]::EscapeDataString($_) }) -join '/'
+    $api = "https://api.github.com/repos/$owner/$repo/contents/$apiRel"
 
     if ($Pull) {
-        # ---- pull back (restore the archive locally when needed) ----
+        # ---- pull back (restore locally when the working copy is lost) ----
         $cur = Invoke-RestMethod -Uri $api -Headers $hdr -TimeoutSec 30
         $raw = [Convert]::FromBase64String(($cur.content -replace '\s', ''))
+
+        # Make sure the parent directory exists before writing.
+        $parent = Split-Path $path -Parent
+        if (-not (Test-Path $parent)) {
+            New-Item -ItemType Directory -Path $parent -Force | Out-Null
+        }
         [System.IO.File]::WriteAllBytes($path, $raw)
-        Write-Host ("pulled {0} ({1} bytes)" -f $f, $raw.Length)
+        Write-Host ("pulled {0} ({1} bytes)" -f $rel, $raw.Length)
         continue
     }
 
-    if (-not (Test-Path $path)) {
-        Write-Host ("skip {0} (not present locally)" -f $f)
-        continue
-    }
     $bytes = [System.IO.File]::ReadAllBytes($path)
     $b64   = [Convert]::ToBase64String($bytes)
 
@@ -114,13 +220,14 @@ foreach ($f in $files) {
             }
         }
         if ($same) {
-            Write-Host ("unchanged {0}" -f $f)
+            Write-Host ("unchanged {0}" -f $rel)
+            $skipped++
             continue
         }
     }
 
     $payload = @{
-        message = ("sync {0} from local" -f $f)
+        message = ("sync {0} from local" -f $rel)
         content = $b64
     }
     if ($sha) { $payload['sha'] = $sha }
@@ -128,5 +235,10 @@ foreach ($f in $files) {
 
     Invoke-RestMethod -Method Put -Uri $api -Headers $hdr -Body $json `
         -ContentType 'application/json; charset=utf-8' -TimeoutSec 60 | Out-Null
-    Write-Host ("pushed {0} ({1} bytes)" -f $f, $bytes.Length)
+    Write-Host ("pushed {0} ({1} bytes)" -f $rel, $bytes.Length)
+    $pushed++
 }
+
+Write-Host ''
+Write-Host ("done: {0} pushed, {1} unchanged, {2} total" -f $pushed, $skipped, $manifest.Count)
+Write-Host ("repo: https://github.com/{0}/{1}" -f $owner, $repo)

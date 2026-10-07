@@ -15,6 +15,7 @@ import com.example.biliv3.data.live.LiveRoleResolver
 import com.example.biliv3.data.live.ModerationResult
 import com.example.biliv3.player.PlayerHolder
 import com.example.biliv3.ui.component.userMessageFor
+import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -89,6 +90,21 @@ class LiveRoomViewModel(
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    /**
+     * 直播是否已结束（v1.6.6）。
+     *
+     * 由播放器的 `STATE_ENDED` 置位 —— 见 [watchEnded] 的说明
+     * （**只在真的收到时才为 true，不猜**）。
+     */
+    private val _liveEnded = MutableStateFlow(false)
+    val liveEnded: StateFlow<Boolean> = _liveEnded.asStateFlow()
+
+    /** 结束监听器（用于 [onCleared] 里移除，避免泄漏）。 */
+    private var endedListener: androidx.media3.common.Player.Listener? = null
+
+    /** 挂监听器的播放器（同一个，只为移除时用）。 */
+    private var endedPlayer: ExoPlayer? = null
 
     val player get() = holder?.player
 
@@ -200,6 +216,9 @@ class LiveRoomViewModel(
         viewModelScope.launch {
             _loading.value = true
             _error.value = null
+            // 重新取流 = 用户认为主播可能又开播了 → 清掉"已结束"，
+            // 否则刷新后仍显示"直播已结束"，看起来像刷新没用。
+            _liveEnded.value = false
 
             reportEntryIfNeeded()
 
@@ -248,6 +267,50 @@ class LiveRoomViewModel(
                 _error.value = "播放器初始化失败：${r.message}"
             else -> Unit
         }
+
+        watchEnded(p)
+    }
+
+    /**
+     * 观察"直播结束"（v1.6.6）。
+     *
+     * ## 为什么需要它
+     *
+     * 主播下播后 HLS 列表不再更新，播放器会把已缓冲内容播完然后停在
+     * 最后一帧 —— 界面**看起来像卡死**，用户不知道发生了什么，
+     * 只能反复点刷新。
+     *
+     * ## 复用共享播放器，不建第二套监听体系
+     *
+     * 直接给 `holder.player` 加一个 `Player.Listener`，
+     * 只关心 `STATE_ENDED`。**不新建播放器、不新建 Controller**。
+     *
+     * ## ⚠️ 只在真的收到 ENDED 时才提示（不猜）
+     *
+     * HLS 直播下播时**未必**上报 `STATE_ENDED`（也可能表现为
+     * 播放停滞在缓冲、或列表不再更新）。本项目**没有真机验证过**
+     * 这个分支，所以：
+     * - 收到 `STATE_ENDED` → 显示"直播已结束"
+     * - 收不到 → 保持现状（现有逻辑已覆盖"未开播"的空态）
+     *
+     * **绝不**用"多久没更新"这类启发式去猜"结束了" ——
+     * 那会在主播短暂卡顿时误报。
+     *
+     * ## 生命周期
+     *
+     * 监听器在 `onCleared` 时移除。播放器本身**不释放**（Activity 级）。
+     */
+    private fun watchEnded(p: ExoPlayer) {
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == androidx.media3.common.Player.STATE_ENDED) {
+                    _liveEnded.value = true
+                }
+            }
+        }
+        runCatching { p.addListener(listener) }
+        endedListener = listener
+        endedPlayer = p
     }
 
     fun onPlayerError(message: String) {
@@ -512,7 +575,14 @@ class LiveRoomViewModel(
                         repo.block(room.roomId, target.uid, csrf)
                     LivePermissions.Action.UNBLOCK ->
                         repo.unblock(room.roomId, target.uid, csrf)
-                    // 房管管理：接口**未找到**，如实说明而不是假装成功
+                    // 房管管理：接口**未找到**，如实说明而不是假装成功。
+                    //
+                    // ⚠️ 这个分支现在是**防御性**的 —— 菜单已由
+                    //    `LiveUserMenuModel.IMPLEMENTED` 拦掉，
+                    //    正常路径**不会**走到这里。
+                    //    留着是为了万一有人直接调 `requestAction`
+                    //    （或将来放开了菜单但忘了实现端点）时，
+                    //    仍然得到一个**明确的失败**而不是静默成功。
                     LivePermissions.Action.MANAGE_ADMIN ->
                         ModerationResult.Failure(
                             kind = ModerationResult.Failure.Kind.ENDPOINT_UNAVAILABLE,
@@ -688,6 +758,17 @@ class LiveRoomViewModel(
     override fun onCleared() {
         super.onCleared()
         client.stop()
+
+        // 移除结束监听器（v1.6.6）—— 不移除会让 listener 持有 VM，
+        // 而播放器是 Activity 级的、活得比 VM 久 → 泄漏。
+        val lp = endedPlayer
+        val ll = endedListener
+        if (lp != null && ll != null) {
+            runCatching { lp.removeListener(ll) }
+        }
+        endedPlayer = null
+        endedListener = null
+
         // ⚠️ **不释放播放器** —— 它是 Activity 级的（与视频详情页同一约定）
     }
 
