@@ -1,0 +1,16 @@
+{
+    "id":  "builtin_sakura",
+    "name":  "樱（示例）",
+    "preview":  "",
+    "color":  "#FF8FB1",
+    "color_mode":  "dark",
+    "color_second_page":  "#3A1B26",
+    "tail_color":  "#9A8A90",
+    "tail_color_selected":  "#FF8FB1",
+    "side_bg_color":  "",
+    "tail_icon_ani":  "false",
+    "tail_icon_ani_mode":  "",
+    "resources":  {
+
+                  }
+}

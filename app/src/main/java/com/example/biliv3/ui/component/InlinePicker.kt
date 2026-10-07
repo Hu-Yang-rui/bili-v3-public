@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -176,6 +177,7 @@ fun <K> InlinePicker(
                         label = opt.label,
                         description = opt.description,
                         badge = opt.badge,
+                        locked = opt.locked,
                         selected = opt.key == selectedKey,
                         onClick = { onSelect(opt.key) },
                     )
@@ -198,6 +200,13 @@ private fun PickerRow(
     badge: String?,
     selected: Boolean,
     onClick: () -> Unit,
+    /**
+     * 是否因权限受限（未发版）。
+     *
+     * ⚠️ **受限项仍然可点** —— 点了由调用方弹「需要大会员」提示。
+     * 做成禁用的话用户不知道原因（需求第四条要求区分状态）。
+     */
+    locked: Boolean = false,
 ) {
     val colors = BiliTheme.colors
     Row(
@@ -210,12 +219,28 @@ private fun PickerRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // 🔒 锁形图标：**小面积信息，不抢主视觉**（需求第五条）
+                if (locked) {
+                    Icon(
+                        imageVector = Icons.Filled.Lock,
+                        contentDescription = "需要大会员",
+                        tint = colors.textTertiary,
+                        modifier = Modifier.size(Sizes.iconSm),
+                    )
+                    Spacer(Modifier.width(Space.x1))
+                }
                 Text(
                     text = label,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = FontSize.body,
                         fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-                        color = if (selected) colors.brandPrimary else colors.textPrimary,
+                        // 受限项用次级色：表达"看得到但用不了"，
+                        // 但**不是** disabled 灰（它仍可点）
+                        color = when {
+                            selected -> colors.brandPrimary
+                            locked -> colors.textSecondarySafe
+                            else -> colors.textPrimary
+                        },
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -233,6 +258,17 @@ private fun PickerRow(
                             .clip(RoundedCornerShape(Radius.badge))
                             .background(colors.brandPrimary)
                             .padding(horizontal = Space.compactHorizontal, vertical = Space.tagVertical),
+                    )
+                }
+                // 「大会员」标记：纯文字小角标（不用品牌色块，避免抢视觉）
+                if (locked) {
+                    Spacer(Modifier.width(Space.x2))
+                    Text(
+                        text = "大会员",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = FontSize.badge,
+                            color = colors.accentCoin,
+                        ),
                     )
                 }
             }
@@ -289,10 +325,26 @@ fun PickerArrow(expanded: Boolean) {
  * @param label 主文本
  * @param description 次要说明（可空）
  * @param badge 角标，如「AI 翻译」
+ * @param locked 是否**因权限受限**（未发版）
  */
 data class PickerOption<K>(
     val key: K,
     val label: String,
     val description: String? = null,
     val badge: String? = null,
+    /**
+     * 是否**因权限受限**（未发版）。
+     *
+     * ## 为什么是"受限"而不是"禁用"
+     *
+     * 会员清晰度（4K / 1080P60）**保留在列表里并可点击** ——
+     * 点了弹「需要大会员」提示（需求第三条）。
+     *
+     * 如果做成 `enabled = false`，用户只会看到一个点不动的灰项，
+     * **不知道原因**（"是网络问题？还是不支持？"）——
+     * 那正是需求第四条要求区分的状态。
+     *
+     * 所以 UI 上：显示 🔒 + **保持可点**。
+     */
+    val locked: Boolean = false,
 )

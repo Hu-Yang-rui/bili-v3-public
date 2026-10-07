@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.lifecycle.Lifecycle
@@ -147,6 +148,18 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        // 恢复本地装扮（Fake Skin，未发版）。
+        //
+        // 任务书第二十四条的启动流程：
+        //   selectedSkinId → SkinRepository → 加载本地装扮 → SkinState
+        //
+        // ⚠️ 装扮已被删除时 `SkinRepository.selectedId()` 会**自动回退默认**，
+        //    所以不会卡在"选中了但不存在的装扮"。
+        //
+        // ⚠️ 用**应用级 scope**（`skinState` 内部），不是 `lifecycleScope` ——
+        //    装扮影响底部导航等长生命周期 UI，不该随 Activity 销毁而中断。
+        container.skinState.load()
 
         // 状态栏图标颜色：**全应用恒为浅色图标**（配深色底）。
         //
@@ -440,7 +453,20 @@ private fun BiliApp(
     // 因此不再读 `settings.themeMode` —— 用户没有可选项。
     // 注意：`Settings.themeMode` 字段本身保留（兼容旧数据），
     // 但**不再有任何消费者**。
-    BiliTheme(windowSize = windowSize) {
+    //
+    // ---- 本地装扮（Fake Skin，未发版）----
+    //
+    // 🔴 **只覆盖强调色**（`SkinThemeAdapter.applyTo` 保证）。
+    //    背景明度分层 / 文字色 / 发丝线**都不受装扮影响** ——
+    //    否则浅色装扮会让深色底上的文字看不见。
+    //
+    // ⚠️ 装扮状态变化时这里会**自动重组**（`collectAsStateWithLifecycle`），
+    //    所以应用装扮**立即生效，不需要重启**（任务书第十六条）。
+    val skinUi by container.skinState.state.collectAsStateWithLifecycle()
+    val themedColors = remember(skinUi.adapter) {
+        skinUi.adapter.applyTo(com.example.biliv3.design.tokens.DarkColors)
+    }
+    BiliTheme(windowSize = windowSize, colors = themedColors) {
         Surface(modifier = Modifier.fillMaxSize()) {
             MainShell(
                 windowSize = windowSize,

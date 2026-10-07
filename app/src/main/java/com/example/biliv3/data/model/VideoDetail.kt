@@ -151,10 +151,36 @@ data class PlayInfo(
     val height: Int,
     /** 总时长（秒）。 */
     val durationSeconds: Int,
+    /**
+     * 清晰度档位（**含权限状态**，未发版）。
+     *
+     * ## 🔴 为什么必须带它，而不是只留 `acceptQuality`
+     *
+     * `acceptQuality` 会**撒谎**：实测（真实登录账号、非大会员）
+     *
+     * ```
+     * accept_quality = [120,116,80,64,32,16]   ← 列了 4K / 1080P60
+     * dash.video ids = [        80,64,32,16]   ← 但不给对应流
+     * support_formats:  qn=120 limit_watch_reason=1
+     *                   qn=116 limit_watch_reason=1
+     * ```
+     *
+     * 只渲染 `acceptQuality` 就会让用户看到「4K」并选中，
+     * 而实际拿到的是 1080P —— **UI 与实际不符**。
+     *
+     * 所以档位改由 [com.example.biliv3.data.quality.QualityParser]
+     * 交叉三份数据得出，并带上 `limited` / `playable`。
+     *
+     * ⚠️ **保留 `acceptQuality` / `acceptDescription`** 是为了兼容
+     * 既有调用方与旧测试；新代码请用本字段。
+     */
+    val qualities: List<QualityOption> = emptyList(),
 ) {
     /** 当前清晰度的中文名。找不到时回退到 `清晰度 {id}`。 */
     val currentQualityLabel: String
         get() {
+            // 优先用新模型的名称（它带 new_description，比 accept_description 准）
+            qualities.firstOrNull { it.id == currentQuality }?.let { return it.fullLabel }
             val idx = acceptQuality.indexOf(currentQuality)
             return if (idx >= 0 && idx < acceptDescription.size) {
                 acceptDescription[idx]
@@ -162,4 +188,18 @@ data class PlayInfo(
                 "清晰度 $currentQuality"
             }
         }
+
+    /**
+     * **实际**在播的档位（未发版）。
+     *
+     * ## 🔴 需求第八条：UI 显示必须与实际取流一致
+     *
+     * 用户可能选了 4K（受限档），但服务端只给了 1080P ——
+     * 这时要如实显示 1080P，而不是显示用户点过的 4K。
+     *
+     * 判据是**真实分辨率**（`width`/`height` 来自 `dash.video`），
+     * 不是用户的选择。
+     */
+    val actualQuality: QualityOption?
+        get() = qualities.firstOrNull { it.id == currentQuality && it.playable }
 }

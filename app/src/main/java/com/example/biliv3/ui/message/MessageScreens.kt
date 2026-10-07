@@ -303,7 +303,7 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     var draft by remember { mutableStateOf("") }
 
-    // ---- 表情面板状态（v1.6.8）----
+    // ---- 表情面板状态（未发版）----
     val emotePackages by viewModel.emotePackages.collectAsStateWithLifecycle()
     val emoteLoading by viewModel.emoteLoading.collectAsStateWithLifecycle()
     val emoteError by viewModel.emoteError.collectAsStateWithLifecycle()
@@ -311,7 +311,7 @@ fun ChatScreen(
     val pendingEmote by viewModel.pendingEmote.collectAsStateWithLifecycle()
 
     /**
-     * 表情插入（v1.6.8）。
+     * 表情插入（未发版）。
      *
      * ## 🔴 为什么用"一次性信号 + 消费"
      *
@@ -330,7 +330,7 @@ fun ChatScreen(
     }
 
     /**
-     * 表情 token → 图片地址（v1.6.8）。
+     * 表情 token → 图片地址（未发版）。
      *
      * ## 为什么需要它
      *
@@ -515,7 +515,7 @@ fun ChatScreen(
                 items(state.messages, key = { it.msgKey }) { m ->
                     MessageBubble(
                         message = m,
-                        // 表情 token → 图片地址（v1.6.8）。
+                        // 表情 token → 图片地址（未发版）。
                         // 从已加载的表情面板建映射；拿不到时返回 null
                         // → 气泡保持显示原始 token（不显示空框）。
                         emoteUrl = { token -> emoteUrlMap[token] },
@@ -527,7 +527,7 @@ fun ChatScreen(
         // ---- 输入区（仅登录后显示）----
         if (state.loggedIn) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // ---- 表情面板（v1.6.8）----
+                // ---- 表情面板（未发版）----
                 //
                 // 放在输入条**上方**：展开时把输入条顶上去，
                 // 而不是盖住它（盖住的话用户看不到自己正在写什么）。
@@ -555,7 +555,7 @@ fun ChatScreen(
                         .padding(horizontal = Space.x4, vertical = Space.x2),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // ---- 表情入口（v1.6.8）----
+                    // ---- 表情入口（未发版）----
                     //
                     // ⚠️ 只有 `emoteRepo` 注入时才渲染 —— 没注入时
                     //    按钮点了没反应是死入口（§1.6）。
@@ -666,7 +666,7 @@ fun ChatScreen(
 private fun MessageBubble(
     message: PmMessage,
     /**
-     * 表情 token → 图片地址（v1.6.8）。
+     * 表情 token → 图片地址（未发版）。
      *
      * ## 🔴 为什么气泡需要它
      *

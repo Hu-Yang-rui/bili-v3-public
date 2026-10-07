@@ -79,6 +79,17 @@ fun PlayerSettingsSheet(
     player: ExoPlayer?,
     onSelectQuality: (Int) -> Unit,
     onDismiss: () -> Unit,
+    /**
+     * 点了**受限清晰度**（需要大会员）时回调（未发版）。
+     *
+     * 参数是该档的显示名（如「4K 超高清」），用于弹层副标题。
+     *
+     * ## 🔴 为什么由调用方处理，而不是本组件自己弹
+     *
+     * 弹层要渲染在**页面根 Box 之后**（与投币 / AI 总结同一约定），
+     * 本组件是在底部弹层内部的，自己弹会被盖住。
+     */
+    onVipBlocked: (String) -> Unit = {},
     subtitleTracks: List<SubtitleTrack> = emptyList(),
     activeSubtitle: SubtitleBody? = null,
     subtitleLoading: Boolean = false,
@@ -250,19 +261,38 @@ fun PlayerSettingsSheet(
                 //
                 // 现在收成一个「清晰度  高清 1080P  ▸」的单行，
                 // 点开才展开列表；选完自动收起。
-                if (info != null && info.acceptQuality.isNotEmpty()) {
-                    val currentIndex = info.acceptQuality.indexOf(info.currentQuality)
-                        .takeIf { it >= 0 } ?: 0
-                    val currentLabel = info.acceptDescription.getOrNull(currentIndex)
-                        ?: "清晰度 ${info.currentQuality}"
+                // 🔴 清晰度列表（未发版重做）
+                //
+                // ## 为什么不能再用 accept_quality
+                //
+                // 实测（真实登录账号、非大会员）：
+                // ```
+                // accept_quality = [120,116,80,64,32,16]   ← 列了 4K / 1080P60
+                // dash.video ids = [        80,64,32,16]   ← 但不给流
+                // support_formats:  qn=120 limit_watch_reason=1
+                //                   qn=116 limit_watch_reason=1
+                // ```
+                // 只渲染 `acceptQuality` 会让用户看到「4K」并选中，
+                // 而实际拿到 1080P —— **UI 与实际不符**（需求第八条）。
+                //
+                // 现在用 `info.qualities`（三份数据交叉 + 带权限状态）。
+                if (info != null && info.qualities.isNotEmpty()) {
+                    // 当前档：优先"实际在播的"，而不是用户点过的
+                    // （点了受限档时两者不同 —— 见 PlayInfo.actualQuality）
+                    val currentQ = info.actualQuality
+                    val currentLabel = currentQ?.fullLabel
+                        ?: info.currentQualityLabel
 
                     InlinePicker(
                         label = "清晰度",
                         currentLabel = currentLabel,
-                        options = info.acceptQuality.mapIndexed { i, q ->
+                        options = info.qualities.map { q ->
                             PickerOption(
-                                key = q,
-                                label = info.acceptDescription.getOrNull(i) ?: "清晰度 $q",
+                                key = q.id,
+                                // 名称 + 角标（如「1080P 60帧」）
+                                label = q.fullLabel,
+                                // 受限项**保留在列表里并标记**，不隐藏（需求第三条）
+                                locked = q.limited,
                             )
                         },
                         selectedKey = info.currentQuality,
@@ -271,9 +301,19 @@ fun PlayerSettingsSheet(
                             picker = if (picker == PickerKindId.Quality) null
                             else PickerKindId.Quality
                         },
-                        onSelect = {
-                            onSelectQuality(it)
-                            picker = null
+                        onSelect = { qn ->
+                            // 受限档 → 弹会员提示，**不发取流请求**
+                            //
+                            // ⚠️ 这里必须拦住：不拦的话会把 qn=120 发出去，
+                            //    服务端悄悄给回 1080P，用户以为切到 4K 了。
+                            val opt = info.qualities.firstOrNull { it.id == qn }
+                            if (opt != null && opt.limited) {
+                                onVipBlocked(opt.fullLabel)
+                                picker = null
+                            } else {
+                                onSelectQuality(qn)
+                                picker = null
+                            }
                         },
                     )
                 }

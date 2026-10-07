@@ -49,7 +49,7 @@ import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.tokens.Space
 
 /**
- * 表情选择面板（v1.6.8）。
+ * 表情选择面板（**未发版**）。
  *
  * ---
  *

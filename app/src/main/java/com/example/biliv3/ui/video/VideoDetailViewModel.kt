@@ -1803,7 +1803,9 @@ class VideoDetailViewModel(
 
         viewModelScope.launch {
             _playState.value = PlayState.Loading
-            runCatching { repo.playInfo(detail.bvid, cid, quality) }
+            // `loggedIn` 只影响"无档位时怎么解释"（未登录 vs 视频不支持），
+            // 不影响取流本身 —— 见 VideoRepository.playInfo 的说明
+            runCatching { repo.playInfo(detail.bvid, cid, quality, loggedIn = isLoggedIn) }
                 .onSuccess {
                     _playState.value = PlayState.Ready(it)
                     // 取流成功 → 顺手拉进度条预览（同一 cid，失败静默）

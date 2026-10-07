@@ -7,7 +7,7 @@ import org.json.JSONObject
 import org.junit.Test
 
 /**
- * 表情面板解析测试（v1.6.8）。
+ * 表情面板解析测试（未发版）。
  *
  * ## 样本来源
  *

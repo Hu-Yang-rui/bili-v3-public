@@ -195,6 +195,10 @@ fun MainShell(
                             restoreState = true
                         }
                     },
+                    // 本地装扮（未发版）：只换底栏**背景与图标**。
+                    // 没有对应资源时 BottomNav 内部回退到默认渲染。
+                    skin = container.skinState.state
+                        .collectAsStateWithLifecycle().value.assets,
                     modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
                 )
             }
@@ -1817,7 +1821,7 @@ fun MainShell(
                         talkerId,
                         // 分享自动发送（v1.6.7）：VM 会 take() 一次并自动发出
                         container.pendingShare,
-                        // 表情面板（v1.6.8）：null 时 UI 不渲染表情入口
+                        // 表情面板（**未发版**）：null 时 UI 不渲染表情入口
                         container.emoteRepository,
                     ),
                 )
@@ -1906,6 +1910,64 @@ fun MainShell(
             }
 
             // ---------- 设置 ----------
+            // ---------- 本地装扮（Fake Skin，未发版）----------
+            //
+            // 🔴 这里**只做本地 UI 映射** —— 不调任何网络接口、
+            //    不改账号真实装扮、不影响视频清晰度与会员权限。
+            composable(Routes.SKIN) {
+                val skinUi by container.skinState.state.collectAsStateWithLifecycle()
+                var importError by remember { mutableStateOf<String?>(null) }
+                val skinScope = rememberCoroutineScope()
+
+                // 🔴 预览图**预先异步加载**到内存，而不是在组合里读 IO。
+                //
+                // `previewOf` 是在 Composable 里同步调用的，不能 suspend；
+                // 而读 assets / 文件都是 IO。所以在装扮列表变化时**一次性**读好。
+                //
+                // key 用 id 集合：只有列表真的变了才重读（避免每次重组都读盘）。
+                var previews by remember { mutableStateOf<Map<String, ByteArray>>(emptyMap()) }
+                val ids = skinUi.installed.map { it.id }
+                LaunchedEffect(ids) {
+                    val map = HashMap<String, ByteArray>()
+                    for (s in skinUi.installed) {
+                        skinPreviewBytes(context, container, s)?.let { map[s.id] = it }
+                    }
+                    previews = map
+                }
+
+                // 文件选择器：选装扮描述 JSON
+                val pickJson = rememberLauncherForActivityResult(
+                    ActivityResultContracts.OpenDocument(),
+                ) { uri ->
+                    if (uri != null) {
+                        skinScope.launch {
+                            importError = doSkinImport(
+                                context = context,
+                                container = container,
+                                uri = uri,
+                            )
+                        }
+                    }
+                }
+
+                com.example.biliv3.ui.skin.SkinScreen(
+                    installed = skinUi.installed,
+                    currentId = skinUi.skin?.id.orEmpty(),
+                    loading = skinUi.loading,
+                    error = importError ?: skinUi.error,
+                    onBack = safeBack,
+                    onApply = { id -> container.skinState.apply(id) },
+                    onRestoreDefault = { container.skinState.restoreDefault() },
+                    onImport = {
+                        importError = null
+                        // 只挑 JSON（装扮描述）；ZIP 由描述里的资源需求决定
+                        pickJson.launch(arrayOf("application/json", "*/*"))
+                    },
+                    onDelete = { id -> container.skinState.delete(id) },
+                    previewOf = { s -> previews[s.id] },
+                )
+            }
+
             composable(Routes.SETTINGS) {
                 // 图片缓存占用：异步算一次，算完通过参数传给设置页
                 // （设置页不做 IO，见 SettingsScreen 的参数说明）。
@@ -1922,6 +1984,11 @@ fun MainShell(
                 }
 
                 LaunchedEffect(Unit) { recalcCache() }
+
+                // 当前装扮名（设置页只显示，不做 IO）
+                val skinUiForSettings by container.skinState.state
+                    .collectAsStateWithLifecycle()
+                val skinNameForSettings = skinUiForSettings.currentName
 
                 // ---- 开发者工具：Cookie 导入 / 导出 ----
                 //
@@ -1987,6 +2054,9 @@ fun MainShell(
 
                 SettingsScreen(
                     onBack = safeBack,
+                    // 本地装扮（未发版）—— 只改本地 UI，不碰账号
+                    onOpenSkin = { navController.navigate(Routes.SKIN) },
+                    currentSkinName = skinNameForSettings,
                     cacheLabel = cacheLabel,
                     onClearImageCache = {
                         cacheScope.launch {
@@ -2068,4 +2138,75 @@ private fun openExternalUrl(context: android.content.Context, url: String) {
                 .makeText(context, "没有可用的浏览器", android.widget.Toast.LENGTH_SHORT)
                 .show()
         }
+}
+
+/**
+ * 导入装扮（Fake Skin，未发版）。
+ *
+ * ## 流程
+ *
+ * 1. 读用户选中的文件（应当是装扮描述 JSON）
+ * 2. 如果**同目录**有 `*_package.zip` → 用它当资源
+ *    （Android 的 `OpenDocument` 只给一个 URI，拿不到同目录文件，
+ *     所以这里只处理"用户选了 JSON"的情形；
+ *     资源缺失时**所有背景回退默认**，装扮仍然可导入）
+ * 3. 交给 `SkinState.import`
+ *
+ * @return 错误文案（null = 成功）
+ */
+private suspend fun doSkinImport(
+    context: android.content.Context,
+    container: AppContainer,
+    uri: android.net.Uri,
+): String? {
+    val text = runCatching {
+        context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+    }.getOrNull()
+
+    if (text.isNullOrBlank()) return "无法读取该文件"
+
+    // 目录名兜底：从 URI 取最后一段
+    val fallback = runCatching { uri.lastPathSegment.orEmpty() }
+        .getOrDefault("").substringBeforeLast('.').ifEmpty { "导入的装扮" }
+
+    return when (val r = container.skinState.import(text, fallback, zip = null)) {
+        is com.example.biliv3.data.skin.ImportOutcome.Ok -> {
+            // 顺手选中 —— 用户导入通常就是想用它
+            container.skinState.apply(r.skin.id)
+            null
+        }
+        // 🔴 任务书第十四条指定文案
+        com.example.biliv3.data.skin.ImportOutcome.Unsupported ->
+            "当前装扮格式暂不支持"
+        is com.example.biliv3.data.skin.ImportOutcome.Failed -> r.message
+    }
+}
+
+/**
+ * 读装扮预览图字节。
+ *
+ * ## 两个来源
+ *
+ * | 来源 | 读法 |
+ * |---|---|
+ * | 内置 | APK **assets**（不是 File）|
+ * | 导入 | `files/fake_skin/imported/<id>/` |
+ *
+ * ⚠️ 读不到返回 null → UI **不画占位框**（任务号第十条：不显示空白）。
+ */
+private suspend fun skinPreviewBytes(
+    context: android.content.Context,
+    container: AppContainer,
+    skin: com.example.biliv3.data.skin.FakeSkin,
+): ByteArray? {
+    val name = skin.resource(com.example.biliv3.data.skin.SkinResource.PREVIEW)
+        ?: return null
+    return if (skin.source == com.example.biliv3.data.skin.SkinSource.Builtin) {
+        runCatching {
+            context.assets.open("fake_skin/${skin.id}/$name").use { it.readBytes() }
+        }.getOrNull()
+    } else {
+        val f = container.skinRepository.resourceFile(skin.id, com.example.biliv3.data.skin.SkinResource.PREVIEW)
+        runCatching { f?.readBytes() }.getOrNull()
+    }
 }

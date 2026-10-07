@@ -16,7 +16,7 @@ private val Context.emoteDataStore: DataStore<Preferences> by preferencesDataSto
 )
 
 /**
- * 表情仓库（v1.6.8）。
+ * 表情仓库（**未发版**）。
  *
  * ---
  *

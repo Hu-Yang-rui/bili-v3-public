@@ -4,7 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * 一个表情（v1.6.8）。
+ * 一个表情（**未发版**）。
  *
  * ---
  *

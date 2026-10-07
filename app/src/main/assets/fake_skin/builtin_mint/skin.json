@@ -1,0 +1,16 @@
+{
+    "id":  "builtin_mint",
+    "name":  "薄荷（示例）",
+    "preview":  "",
+    "color":  "#4ADE80",
+    "color_mode":  "dark",
+    "color_second_page":  "#0E2A1C",
+    "tail_color":  "#8A9A90",
+    "tail_color_selected":  "#4ADE80",
+    "side_bg_color":  "",
+    "tail_icon_ani":  "false",
+    "tail_icon_ani_mode":  "",
+    "resources":  {
+
+                  }
+}

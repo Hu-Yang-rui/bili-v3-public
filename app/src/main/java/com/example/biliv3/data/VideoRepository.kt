@@ -4,6 +4,8 @@ import com.example.biliv3.data.api.BiliApi
 import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.api.Endpoints
 import com.example.biliv3.data.model.PlayInfo
+import com.example.biliv3.data.model.QualityAvailability
+import com.example.biliv3.data.quality.QualityParser
 import com.example.biliv3.data.model.VideoDetail
 import com.example.biliv3.data.model.VideoItem
 import com.example.biliv3.data.model.VideoPage
@@ -176,6 +178,21 @@ class VideoRepository(
         bvid: String,
         cid: Long,
         quality: Int = 0,
+        /**
+         * 当前是否登录（未发版）。
+         *
+         * ## 为什么由调用方传入，而不是本类自己判断
+         *
+         * [VideoRepository] **没有** `AuthStore` 依赖 —— 它的其它方法
+         * （详情 / 相关推荐）都是公开接口，加一个 auth 依赖只为这一个参数
+         * 会扩大耦合面。
+         *
+         * 而调用方 `VideoDetailViewModel` 本来就知道登录态。
+         *
+         * ⚠️ 它只影响**"无档位时怎么解释"**（未登录 → 「登录后查看」，
+         * 已登录 → 「当前视频不支持」），**不影响取流本身**。
+         */
+        loggedIn: Boolean = true,
     ): PlayInfo {
         val query = mutableMapOf(
             "bvid" to bvid,
@@ -236,6 +253,11 @@ class VideoRepository(
                 width = video.optInt("width"),
                 height = video.optInt("height"),
                 durationSeconds = optIntLoose(dash, "duration"),
+                // 档位（含权限状态）—— 见 QualityParser 的说明
+                qualities = when (val q = QualityParser.parse(d, loggedIn = loggedIn)) {
+                    is QualityAvailability.Ok -> q.options
+                    else -> emptyList()
+                },
             )
         }
 
@@ -261,6 +283,12 @@ class VideoRepository(
             durationSeconds = optIntLoose(first, "length").let {
                 // durl 的 length 单位是**毫秒**，转成秒
                 if (it > 0) it / 1000 else optIntLoose(d, "timelength") / 1000
+            },
+            // 退化路径（整段流）没有 dash.video，所以只能靠 support_formats
+            // 判断受限档 —— 解析器会处理"没有 dash"的情况。
+            qualities = when (val q = QualityParser.parse(d, loggedIn = loggedIn)) {
+                is QualityAvailability.Ok -> q.options
+                else -> emptyList()
             },
         )
     }

@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -159,6 +160,18 @@ fun BottomNav(
     selectedIndex: Int = 0,
     onSelect: (Int) -> Unit = {},
     onDisabledTap: () -> Unit = {},
+    /**
+     * 装扮资源（Fake Skin，未发版）。
+     *
+     * ## 🔴 只影响**背景与图标**，不影响结构
+     *
+     * - `tailBg` 有 → 铺一张背景图；没有 → 保持原来的发丝线 + 同明度
+     * - 图标有 → 用装扮图；没有 → 用原来的 vector 图标
+     *
+     * 即"装扮负责材质，不改变 UI 架构"（任务书第二十一条）。
+     */
+    skin: com.example.biliv3.data.skin.SkinAssets =
+        com.example.biliv3.data.skin.SkinAssets.EMPTY,
 ) {
     val colors = BiliTheme.colors
 
@@ -166,6 +179,25 @@ fun BottomNav(
         BottomNavItem("首页", Icons.Filled.Home, enabled = true),
         BottomNavItem("动态", Icons.Outlined.ChatBubbleOutline, enabled = true),
         BottomNavItem("我的", Icons.Outlined.Person, enabled = true),
+    )
+
+    /**
+     * 每个 Tab 对应的装扮图标逻辑名。
+     *
+     * ⚠️ 本项目底部导航只有 **3 项**（首页/动态/我的）——
+     * 所以**不用** `tail_icon_channel` / `tail_icon_shop`
+     * （前者没有对应页面，后者是「会员购」，本项目没有）。
+     * 任务书第十八条：没有对应 Tab 就**不要硬塞入口**。
+     */
+    val iconNames = listOf(
+        com.example.biliv3.data.skin.SkinResource.TAIL_ICON_MAIN,
+        com.example.biliv3.data.skin.SkinResource.TAIL_ICON_DYNAMIC,
+        com.example.biliv3.data.skin.SkinResource.TAIL_ICON_MYSELF,
+    )
+    val iconNamesSelected = listOf(
+        com.example.biliv3.data.skin.SkinResource.TAIL_ICON_SELECTED_MAIN,
+        com.example.biliv3.data.skin.SkinResource.TAIL_ICON_SELECTED_DYNAMIC,
+        com.example.biliv3.data.skin.SkinResource.TAIL_ICON_SELECTED_MYSELF,
     )
 
     Row(
@@ -179,12 +211,41 @@ fun BottomNav(
             //
             // 现在：与页面同明度，只靠**上边一条发丝线**分隔。
             // 底栏"融入页面"，而不是"浮在页面上"。
-            .ruleTop(color = Rule.color),
+            .ruleTop(color = Rule.color)
+            // 装扮背景图：铺在底栏内容之下。
+            //
+            // ⚠️ 只在有图时才画 —— 没有图就保持原来的"同明度 + 发丝线"，
+            //    不会出现一块空白/黑块（任务书第十条）。
+            .then(
+                if (skin.tailBg != null) {
+                    Modifier.drawBehind {
+                        drawImage(
+                            image = skin.tailBg!!,
+                            dstSize = androidx.compose.ui.unit.IntSize(
+                                size.width.toInt().coerceAtLeast(1),
+                                size.height.toInt().coerceAtLeast(1),
+                            ),
+                            // 底栏是宽扁条，低质量过滤足够（省性能）
+                            filterQuality = androidx.compose.ui.graphics.FilterQuality.Low,
+                        )
+                    }
+                } else {
+                    Modifier
+                },
+            ),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         items.forEachIndexed { i, item ->
             val selected = i == selectedIndex && item.enabled
+
+            // 装扮图标（选中态优先用 selected 版本）
+            val custom = if (selected) {
+                skin.navIcon(iconNamesSelected[i])
+            } else {
+                skin.navIcon(iconNames[i])
+            }
+
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
@@ -194,18 +255,29 @@ fun BottomNav(
                     }
                     .padding(vertical = Space.x1),
             ) {
-                Icon(
-                    imageVector = item.icon,
-                    contentDescription = item.label,
-                    // 选中用品牌粉（图标是图形，不是文字，2.6:1 对图形可接受；
-                    // 且此处有文字标签作为第二信息载体）
-                    tint = when {
-                        !item.enabled -> colors.textTertiary
-                        selected -> colors.brandPrimary
-                        else -> colors.textSecondary
-                    },
-                    modifier = Modifier.size(Sizes.iconXl),
-                )
+                if (custom != null) {
+                    // 装扮图标：**原样渲染，不 tint** ——
+                    // 装扮图标自带配色，tint 会把它染成单色（失去设计意图）。
+                    androidx.compose.foundation.Image(
+                        bitmap = custom,
+                        contentDescription = item.label,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                        modifier = Modifier.size(Sizes.iconXl),
+                    )
+                } else {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.label,
+                        // 选中用品牌粉（图标是图形，不是文字，2.6:1 对图形可接受；
+                        // 且此处有文字标签作为第二信息载体）
+                        tint = when {
+                            !item.enabled -> colors.textTertiary
+                            selected -> colors.brandPrimary
+                            else -> colors.textSecondary
+                        },
+                        modifier = Modifier.size(Sizes.iconXl),
+                    )
+                }
                 Spacer(Modifier.height(Space.micro))
                 Text(
                     text = item.label,

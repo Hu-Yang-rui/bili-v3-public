@@ -106,7 +106,7 @@ object Endpoints {
     const val FAV_RESOURCE_IDS = "x/v3/fav/resource/ids"
 
     /**
-     * 表情面板（v1.6.8）。
+     * 表情面板（**未发版**）。
      *
      * 实测：`business` 是**必填** —— 不带它返回 `-400 请求错误`。
      * `business=reply`（评论区与私信通用）。

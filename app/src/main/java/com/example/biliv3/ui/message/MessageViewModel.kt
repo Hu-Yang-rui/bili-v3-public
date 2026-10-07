@@ -96,7 +96,7 @@ class ChatViewModel(
      */
     private val pendingShare: com.example.biliv3.data.PendingShare? = null,
     /**
-     * 表情仓库（v1.6.8）。
+     * 表情仓库（未发版）。
      *
      * null = 表情功能不可用（预览/测试环境），此时 UI 不渲染表情入口。
      */
@@ -136,7 +136,7 @@ class ChatViewModel(
     private var shareAttempted = false
 
     // ---------------------------------------------------------------------
-    // 表情（v1.6.8）
+    // 表情（未发版）
     // ---------------------------------------------------------------------
     //
     // ⚠️ **这些字段必须声明在 `init` 之前** —— Kotlin 的属性初始化器
@@ -227,7 +227,7 @@ class ChatViewModel(
     }
 
     /**
-     * 待插入输入框的表情 token（v1.6.8）。
+     * 待插入输入框的表情 token（未发版）。
      *
      * ## 🔴 为什么走"一次性信号"而不是直接改草稿
      *
@@ -512,7 +512,7 @@ class ChatVmFactory(
     private val talkerId: Long,
     /** 待发送的分享内容（v1.6.7）。null = 普通聊天。 */
     private val pendingShare: com.example.biliv3.data.PendingShare? = null,
-    /** 表情仓库（v1.6.8）。null = 不渲染表情入口。 */
+    /** 表情仓库（未发版）。null = 不渲染表情入口。 */
     private val emoteRepo: com.example.biliv3.data.emote.EmoteRepository? = null,
 ) : androidx.lifecycle.ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

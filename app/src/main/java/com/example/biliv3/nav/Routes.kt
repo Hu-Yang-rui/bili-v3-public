@@ -261,6 +261,14 @@ fun chat(mid: Long, name: String): String =
 const val SETTINGS = "settings"
 
     /**
+     * 本地装扮（Fake Skin，未发版）。
+     *
+     * ⚠️ 命名用 `skin` 而不是 `garb` / `dress` ——
+     * UI 上写「本地装扮」，**不声称**是官方装扮系统（任务书第二十七条）。
+     */
+    const val SKIN = "skin"
+
+    /**
      * aicu 查成分（第三方站点 aicu.cc 的聚合查询）。
      *
      * ## 参数为什么做成可选查询参数

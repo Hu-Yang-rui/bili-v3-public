@@ -519,6 +519,16 @@ fun VideoDetailScreen(
     var showSettings by remember { mutableStateOf(false) }
 
     /**
+     * 被点中的**受限清晰度**名（未发版）。
+     *
+     * 非 null 时渲染 [VipRequiredSheet]。
+     *
+     * 它只负责**解释**为什么不可用，不做任何解锁 ——
+     * 不伪造会员状态、不调接口、不给购买入口（需求第六条 / 第二十九条）。
+     */
+    var vipBlockedFeature by remember { mutableStateOf<String?>(null) }
+
+    /**
      * 「更多」菜单开关（下载 / 稍后再看 / 分享渠道）。
      *
      * ⚠️ 这个菜单此前**不存在**，导致：
@@ -1188,6 +1198,15 @@ fun VideoDetailScreen(
                 viewModel.selectQuality(it)
                 showSettings = false
             },
+            // 受限清晰度（需要大会员）→ 记下档位名，关弹层后弹提示。
+            //
+            // ⚠️ **不调用 selectQuality** —— 那会把 qn=120 发出去，
+            //    服务端悄悄给回 1080P，用户以为切到 4K 了。
+            //    这里直接拦住（需求第八条：UI 必须与实际一致）。
+            onVipBlocked = { name ->
+                vipBlockedFeature = name
+                showSettings = false
+            },
             onSelectSubtitle = { track ->
                 viewModel.selectSubtitle(track)
             },
@@ -1297,6 +1316,21 @@ fun VideoDetailScreen(
                     runCatching { p.seekTo(seconds.coerceAtLeast(0) * 1000L) }
                 }
             },
+        )
+    }
+
+    // ---- 会员专享提示（未发版）----
+    //
+    // 与投币 / AI 总结同一约定：放在根 Box **之后**渲染，保证盖在页面之上。
+    //
+    // 🔴 它**只解释**，不做任何解锁：
+    //    - 不伪造 `isVip`
+    //    - 不调"解锁"接口
+    //    - 不给购买页面（需求第六条禁止伪造购买页）
+    vipBlockedFeature?.let { feature ->
+        VipRequiredSheet(
+            featureName = feature,
+            onDismiss = { vipBlockedFeature = null },
         )
     }
 }
