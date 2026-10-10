@@ -55,12 +55,14 @@ import com.example.biliv3.design.v3.V3Type
  * 不再用"居中"这种含糊语义。要哪条边就调哪个：
  * [ruleTop] / [ruleBottom] / [ruleStart] / [ruleEnd]。
  */
+@Composable
 fun Modifier.ruleTop(color: Color = Rule.color, width: Dp = Rule.width): Modifier =
     drawBehind {
         val w = width.toPx()
         drawLine(color, Offset(0f, w / 2f), Offset(size.width, w / 2f), w)
     }
 
+@Composable
 fun Modifier.ruleBottom(color: Color = Rule.color, width: Dp = Rule.width): Modifier =
     drawBehind {
         val w = width.toPx()
@@ -73,6 +75,7 @@ fun Modifier.ruleBottom(color: Color = Rule.color, width: Dp = Rule.width): Modi
     }
 
 /** 竖线（左侧）。 */
+@Composable
 fun Modifier.ruleStart(color: Color = Rule.color, width: Dp = Rule.width): Modifier =
     drawBehind {
         val w = width.toPx()
@@ -85,6 +88,7 @@ fun Modifier.ruleStart(color: Color = Rule.color, width: Dp = Rule.width): Modif
  * ⚠️ 保留它只是为了让"插一条 1dp 线"这种常见写法读起来顺。
  * **给高组件画边时不要用它**，请明确写 `ruleTop` / `ruleBottom`。
  */
+@Composable
 fun Modifier.rule(
     color: Color = Rule.color,
     width: Dp = Rule.width,
@@ -111,15 +115,49 @@ fun RuleLine(
  * ② 明度带 —— 全宽、直角、无描边。
  *
  * 这是替代卡片的**主要手段**。左右贴屏幕边，只有上下两条边界。
+ *
+ * ⚠️ `level.color` 现在是 `@Composable` getter（见 [BandLevel]），
+ * 所以本函数也必须 `@Composable`。
  */
-fun Modifier.band(level: BandLevel = BandLevel.Raised): Modifier = drawBehind {
-    drawRect(color = level.color)
+@Composable
+fun Modifier.band(level: BandLevel = BandLevel.Raised): Modifier {
+    // ⚠️ 必须在 `drawBehind` **之外**取值：`drawBehind` 的 lambda 是
+    //    `DrawScope.() -> Unit`，**不是** `@Composable` 作用域，
+    //    在里面读 `level.color`（@Composable getter）会编译失败。
+    val c = level.color
+    return drawBehind { drawRect(color = c) }
 }
 
-enum class BandLevel(val color: Color) {
-    Flat(Band.flat),
-    Raised(Band.raised),
-    Sunken(Band.sunken),
+/**
+ * 明度带的档位。
+ *
+ * ## 🔴 v1.6.9：`color` 从构造参数改为**按主题解析的 getter**
+ *
+ * 原来写成 `enum class BandLevel(val color: Color) { Flat(Band.flat), … }` ——
+ * 颜色在**枚举构造时**求值。
+ *
+ * 这在主题化之后**行不通**：枚举常量的构造发生在类初始化阶段，
+ * **没有 `@Composable` 上下文**，拿不到当前主题
+ * （编译器直接报 "Composable invocations can only happen from the
+ * context of a @Composable function"）。
+ *
+ * ✅ 改为 `@Composable get()`：颜色在**使用时**求值，此时一定在
+ * Compose 作用域内，能读到 `BiliV3.colors`。
+ *
+ * ⚠️ 语义没变，仍然是三档；变的只是"什么时候决定颜色"。
+ */
+enum class BandLevel {
+    Flat,
+    Raised,
+    Sunken;
+
+    /** 该档位在当前主题下的实际颜色。 */
+    val color: Color
+        @Composable get() = when (this) {
+            Flat -> Band.flat
+            Raised -> Band.raised
+            Sunken -> Band.sunken
+        }
 }
 
 /**
@@ -182,6 +220,7 @@ fun Modifier.grain(enabled: Boolean = true): Modifier =
  *
  * 这是方案 2（时间轴）最自然的落点。
  */
+@Composable
 fun Modifier.ruler(color: Color = Rule.subtle): Modifier = drawBehind {
     val w = Rule.width.toPx()
     drawLine(

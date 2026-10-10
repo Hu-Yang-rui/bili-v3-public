@@ -19,6 +19,10 @@ import com.example.biliv3.design.v3.V3DarkColors
 import com.example.biliv3.design.v3.V3WindowSize
 import com.example.biliv3.design.v3.V3Radius
 import com.example.biliv3.design.v3.V3Type
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.graphics.luminance
+import com.example.biliv3.design.tokens.LightColors
+import com.example.biliv3.design.v3.V3LightColors
 
 /**
  * 中文字形回落链。
@@ -31,7 +35,7 @@ import com.example.biliv3.design.v3.V3Type
 val CjkFontFamily = FontFamily.SansSerif
 
 /** 提供 [BiliColors]。 */
-val LocalBiliColors = staticCompositionLocalOf { DarkColors }
+val LocalBiliColors = staticCompositionLocalOf { LightColors }
 
 /** 提供屏幕尺寸断点。 */
 val LocalWindowSize = staticCompositionLocalOf { WindowSize.Mobile }
@@ -103,10 +107,25 @@ fun WindowSize.toV3(): V3WindowSize = when (this) {
 @Composable
 fun BiliTheme(
     windowSize: WindowSize = WindowSize.Mobile,
-    colors: BiliColors = DarkColors,
+    colors: BiliColors = LightColors,
     content: @Composable () -> Unit,
 ) {
-    val scheme = darkColorScheme(
+    // ⚠️ 按主题明暗选 scheme —— 浅色主题配 `darkColorScheme` 会让
+    //    Material 组件（水波纹、默认分割线）与页面底色相反。
+    //    判据用 `bgBase` 的亮度，不另存布尔标志（避免"改了底色忘了改标志"）。
+    val scheme = if (colors.bgBase.luminance() > 0.5f) lightColorScheme(
+        primary = colors.brandPrimary,
+        onPrimary = colors.textOnBrand,
+        secondary = colors.brandSecondary,
+        background = colors.bgBase,
+        onBackground = colors.textPrimary,
+        surface = colors.bgCard,
+        onSurface = colors.textPrimary,
+        surfaceVariant = colors.bgHover,
+        onSurfaceVariant = colors.textSecondarySafe,
+        outline = colors.borderHairline,
+        error = colors.stateError,
+    ) else darkColorScheme(
         primary = colors.brandPrimary,
         onPrimary = colors.textOnBrand,
         secondary = colors.brandSecondary,
@@ -128,9 +147,14 @@ fun BiliTheme(
     //
     // ⚠️ **迁移完成后**：删掉本文件，全部改用 `BiliV3Theme`。
     //    新代码请直接用 `BiliV3.colors`，不要再往旧表加字段。
+    //
+    // 🔴 传入的 `colors` 必须**映射到对应的 v3 表**：
+    //    原实现写死 `V3DarkColors` —— 那样浅色主题下，
+    //    页面底是浅色（旧令牌）而所有 `BiliV3.colors` 取色仍是深色，
+    //    结果就是"白底 + 深色文字块"的半成品观感。
     BiliV3Theme(
         windowSize = windowSize.toV3(),
-        colors = V3DarkColors,
+        colors = if (colors.bgBase.luminance() > 0.5f) V3LightColors else V3DarkColors,
     ) {
         CompositionLocalProvider(
             LocalBiliColors provides colors,

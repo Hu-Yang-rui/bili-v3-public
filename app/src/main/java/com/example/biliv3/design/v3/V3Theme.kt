@@ -12,9 +12,15 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.design.v3.V3Type
+import androidx.compose.material3.lightColorScheme
 
-/** 提供 [V3Colors]。 */
-val LocalV3Colors = staticCompositionLocalOf { V3DarkColors }
+/**
+ * 提供 [V3Colors]。
+ *
+ * ⚠️ 默认值是 [V3LightColors]（**浅色是默认主题**）。
+ * 深色表仍保留（[V3DarkColors]），供主题切换/预览使用。
+ */
+val LocalV3Colors = staticCompositionLocalOf { V3LightColors }
 
 /** 提供屏幕断点。 */
 val LocalV3WindowSize = staticCompositionLocalOf { V3WindowSize.Compact }
@@ -61,12 +67,15 @@ enum class V3WindowSize {
  *
  * ---
  *
- * # 只有深色
+ * # 🔴 主题：浅色为默认（v1.6.9 起）
  *
- * 与旧系统一致：**本项目只做深色**。理由没有变，且新系统让它更成立 ——
- * 玻璃材质的质感**依赖底部的明暗对比**，纯黑底让玻璃的提亮效果最明显。
+ * v1.1.3 曾决定"只做深色"，理由是「静态页背后是纯色底，玻璃只能靠比底色更白
+ * 来假装层次」。**该理由针对的是"把玻璃用在页面背景上"**——
+ * 而本项目从未那样用：玻璃只用于**浮动层**（底部导航 / Sheet / Dialog /
+ * 播放器控件），底下**始终有内容在滚**，所以浅色下同样有东西可模糊。
  *
- * ⚠️ 不要加回浅色。真要加，先解决"静态页背后没有东西可模糊"这个物理问题。
+ * 现在两套表并存（[V3LightColors] / [V3DarkColors]），默认浅色。
+ * `colors` 参数可显式覆盖（预览 / 截图 / 测试用）。
  *
  * ---
  *
@@ -78,11 +87,31 @@ enum class V3WindowSize {
 @Composable
 fun BiliV3Theme(
     windowSize: V3WindowSize = V3WindowSize.Compact,
-    colors: V3Colors = V3DarkColors,
+    colors: V3Colors = V3LightColors,
     content: @Composable () -> Unit,
 ) {
-    val scheme = darkColorScheme(
+    // ⚠️ Material3 的 `darkColorScheme` / `lightColorScheme` 只影响
+    //    Material 组件的默认取色，而本项目的组件都走 `BiliV3.colors`。
+    //    所以这里按**主题明暗**选对的那个 —— 否则 Material 的
+    //    默认水波纹、分割线等会与主题相反。
+    val scheme = if (colors.isLight) lightColorScheme(
         // 主色 = 交互蓝（旧系统用品牌粉，见 V3Colors.brand 的说明）
+        primary = colors.brand,
+        onPrimary = colors.labelOnBrand,
+        secondary = colors.brandBili,
+        onSecondary = colors.labelOnBrand,
+        background = colors.bgPrimary,
+        onBackground = colors.labelPrimary,
+        surface = colors.bgSecondary,
+        onSurface = colors.labelPrimary,
+        surfaceVariant = colors.fillSecondary,
+        onSurfaceVariant = colors.labelSecondary,
+        outline = colors.separator,
+        outlineVariant = colors.separator,
+        error = colors.stateError,
+        onError = colors.labelPrimary,
+        scrim = colors.scrim,
+    ) else darkColorScheme(
         primary = colors.brand,
         onPrimary = colors.labelOnBrand,
         secondary = colors.brandBili,

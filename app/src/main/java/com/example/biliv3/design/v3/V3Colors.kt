@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.luminance
 
 /**
  * **BiliV3 设计系统 v3 —— 颜色令牌**（全量 UI 重构）。
@@ -331,13 +332,37 @@ data class V3Colors(
      * Sheet / Dialog / 浮动按钮）。普通内容一律实体。
      */
     val materials: V3Materials,
-)
+
+) {
+    /**
+     * 本套颜色是否为**浅色**（按页面底亮度判断）。
+     *
+     * ## 为什么用"算"而不是"存字段"
+     *
+     * 存一个 `val isLight: Boolean` 会让"改底色忘了改标志"成为可能 ——
+     * 那是典型的**静默失效**：编译过、测试过、界面就是不对。
+     * 这里从 [bgPrimary] 的相对亮度推导，**改了底色就自动跟随**。
+     *
+     * 阈值 0.5：`#FFFFFF` 亮度 1.0、`#000000` 亮度 0.0，
+     * 两套表相距极远，中间值（灰）不属于任何一套。
+     *
+     * 用途：`BiliV3Theme` 据此选 Material 的 `lightColorScheme` /
+     * `darkColorScheme`，以及少数"浅色下要反过来"的绘制逻辑
+     * （如投影 vs 描边）。
+     */
+    val isLight: Boolean
+        get() = bgPrimary.luminance() > 0.5f
+}
 
 /**
- * 深色（**本项目唯一主题**）。
+ * 深色。
  *
  * 数值取自 iOS 27 UI Kit 27.0.2 的语义色表（sRGB 近似值），
  * 品牌位替换为 B 站真值。
+ *
+ * ⚠️ **v1.1.3–v1.6.8 期间这是本项目唯一主题。**
+ * 浅色主题已按用户要求加回（见 [V3LightColors]），
+ * 两套表并存，由 `BiliV3` 的主题入口选择。
  */
 val V3DarkColors = V3Colors(
     // ---- Background ----
@@ -438,6 +463,267 @@ val V3DarkColors = V3Colors(
     // ---- 玻璃 ----
     materials = V3Materials(),
 )
+
+/**
+ * 浅色（**v1.6.9 起为默认主题**）。
+ *
+ * ---
+ *
+ * # 🔴 这一节推翻了 v1.1.3 的决定
+ *
+ * v1.1.3 曾移除浅色主题，理由是「静态页背后是纯色底，玻璃只能靠比底色更白
+ * 来假装层次，那不是玻璃而是白色卡片」。**该理由针对的是"把玻璃用在页面背景上"**——
+ * 而本项目从来没有把玻璃用在页面背景上：玻璃只用于**浮动层**
+ * （底部导航 / Sheet / Dialog / 播放器控件）。
+ *
+ * 浮动层底下**始终有内容在滚**（列表、封面、画面），所以浅色下同样有东西可模糊。
+ * 原来的顾虑不成立。
+ *
+ * ## 数值来源
+ *
+ * iOS 27 UI Kit 的**浅色**语义色表（sRGB 近似值），品牌位替换为 B 站真值。
+ * 与深色表**逐字段对应**，字段名与顺序完全一致 —— 这样任何新增令牌
+ * 都必须同时补两套，漏掉一个会编译失败（`V3Colors` 是 data class，
+ * 构造参数缺一不可）。
+ *
+ * ## 🔴 对比度是按"白底"重算的，不是把深色值反相
+ *
+ * 浅色下**不能**简单地把深色值调亮 —— 深色表的很多值在暗底上达标，
+ * 在白底上会严重不足。本表的每一处文字色都按**白底对比度**重算：
+ *
+ * | 令牌 | 白底对比度 | 要求 |
+ * |---|---|---|
+ * | [labelPrimary] `#000000` | 21:1 | 正文 ≥ 4.5 ✅ |
+ * | [labelSecondary] `#3C3C43 @0.70` | **4.50:1** | 正文级次要 ≥ 4.5 ✅ |
+ * | [labelTertiary] `#3C3C43 @0.56` | **3.05:1** | 辅助 ≥ 3.0 ✅ |
+ * | [brandText] `#0066CC` | **5.56:1** | 链接文字 ≥ 4.5 ✅ |
+ * | [brandBiliText] `#C2185B` | **5.87:1** | 链接文字 ≥ 4.5 ✅ |
+ * | [stateError] `#D70015` | **5.39:1** | ≥ 4.5 ✅ |
+ * | [stateSuccess] `#2E7D32` | **5.13:1** | ≥ 4.5 ✅ |
+ * | [stateWarning] `#C93400` | **5.28:1** | ≥ 4.5 ✅ |
+ *
+ * ⚠️ **`labelSecondary` 用 0.70 而不是 iOS 默认的 0.60**：
+ * 0.60 在白底上只有 **3.45:1**，低于本项目"正文级次要信息 ≥ 4.5:1"的要求
+ * （该要求见本文件顶部说明）。0.70 刚好到 4.50:1。
+ *
+ * ⚠️ **`labelTertiary` 用 0.56 而不是 0.50**：0.50 只有 2.69:1，
+ * 低于"辅助信息 ≥ 3:1"。0.56 是 3.05:1。
+ *
+ * ## 🔴 与主题**无关**的令牌（两套表里取值相同）
+ *
+ * 这些是"压在媒体上"的颜色，媒体本身不随主题变：
+ * [labelOnMedia] · [playerBackground] · [danmakuStroke] · [overlay] ·
+ * [controlOverlay] · [subtitleScrim] · [gradientMediaEnd] ·
+ * [controlFlat] · [controlFlatBorder] · [clearScrim] · [qrSurface] · [onQrSurface]
+ *
+ * ⚠️ 它们**不是"忘了改"** —— 白字压在视频画面上，无论 App 是深色还是浅色
+ * 都需要；把它们改成深色会让字幕/弹幕/角标在画面上不可读。
+ */
+/**
+ * 浅色玻璃材质。
+ *
+ * ---
+ *
+ * # 与深色玻璃的差别（不只是"把颜色调亮"）
+ *
+ * | 维度 | 深色 | 浅色 |
+ * |---|---|---|
+ * | 底色 | 中性深灰 `#1A1A1A @70%` | 近白 `#F7F7FA @72%` |
+ * | 边缘环 rim | 浅灰（**提亮**边缘） | 淡黑（**压出**边界） |
+ * | specular 上 | 白 20% | 白 **60%**（浅色玻璃的高光更明显） |
+ * | 投影 | 几乎不可见（黑底黑影） | **可见**（白底上投影才成立） |
+ *
+ * ## 🔴 为什么 rim 的方向要反过来
+ *
+ * 深色下玻璃比底色**亮**，边缘用浅灰是在"延续提亮"。
+ * 浅色下玻璃比内容**亮**（近白压在彩色封面上），
+ * 如果再画浅色 rim 就完全没有边界 —— 必须用**很淡的暗色**压出边界，
+ * 否则玻璃面板会"融"进白底页面里。
+ *
+ * ## 🔴 为什么浅色下投影终于有用了
+ *
+ * 深色表里 `shadow` 的注释写着「深色下投影几乎不可见」——
+ * 这是物理事实：黑底上的黑影看不出来。
+ * 浅色下正好相反：白底上的淡黑影是**分层的主要手段**，
+ * 所以这里的投影是真正在工作的（alpha 也调高了）。
+ *
+ * ## ⚠️ 与主题无关的部分
+ *
+ * [clearScrim] / [controlFlat] / [controlFlatBorder] 三者**压在媒体画面上**，
+ * 浅色下保持深色值 —— 它们要的是"在视频画面上保证白字可读"，
+ * 与 App 主题无关（详见各自 KDoc）。
+ */
+val V3LightMaterials = V3Materials(
+    /** 玻璃底色。浅色用近白（深色是近黑）。 */
+    tint = Color(0xB8F7F7FA),
+
+    /** 玻璃叠色。实测 light 用 `#bfbfbf @0.1`。 */
+    overlay = Color(0x1ABFBFBF),
+
+    /**
+     * 边缘环（rim）。浅色下用**淡黑**压出边界 ——
+     * 理由见 [V3LightMaterials] 的说明（浅色玻璃必须"框"出来才看得出）。
+     */
+    rim = Color(0x1F000000),
+
+    /**
+     * 边缘高光。浅色玻璃的高光比深色**明显得多**
+     * （近白材质上，顶部那道白光正是"玻璃感"的来源）。
+     */
+    specularTop = Color(0x99FFFFFF),
+    specularBottom = Color(0x0A000000),
+
+    /**
+     * 玻璃投影。**浅色下这是真正在工作的**（白底上的淡黑影才看得见）。
+     */
+    shadow = Color(0x1F000000),
+
+    shadowElevation = 8.dp,
+    shadowBlur = 24.dp,
+
+    /** clear 变体在媒体上的压暗层。**压在画面上，与主题无关**（保持深色值）。 */
+    clearScrim = Color(0x80101010),
+
+    /** 播放器控件扁平底。**压在动态画面上，与主题无关**（保持深色值）。 */
+    controlFlat = Color(0x59000000),
+
+    /** 播放器控件描边。同上。 */
+    controlFlatBorder = Color(0x24FFFFFF),
+
+    transparency = 0.5f,
+)
+
+val V3LightColors = V3Colors(
+    // ---- Background ----
+    // iOS 浅色：systemBackground #FFFFFF / secondary #F2F2F7 / tertiary #E5E5EA
+    //
+    // ⚠️ 与深色**方向相反**：深色靠"提亮"分层（纯黑 → 灰），
+    //    浅色靠"压暗"分层（纯白 → 浅灰）。层级语义（谁更靠前）不变。
+    bgPrimary = Color(0xFFFFFFFF),
+    bgSecondary = Color(0xFFF2F2F7),
+    bgTertiary = Color(0xFFE5E5EA),
+    bgElevated = Color(0xFFFFFFFF),
+    bgSecondaryElevated = Color(0xFFF2F2F7),
+
+    // ---- Fill ----
+    // iOS 浅色：基色同为 #787880，但 alpha 明显更低
+    // （深色 0.36/0.32/0.24/0.18 → 浅色 0.20/0.16/0.12/0.08）
+    //
+    // ⚠️ 浅色下填充必须**更淡**：同样的 alpha 在白色上会显得很重，
+    //    因为白底本身已经很亮，再加灰就"脏"。
+    fillPrimary = Color(0x33787880),
+    fillSecondary = Color(0x29787880),
+    fillTertiary = Color(0x1F767680),
+    fillQuaternary = Color(0x14767680),
+
+    // ---- Label ----
+    // iOS 浅色：基色 #3C3C43（深灰，不是纯黑 —— 纯黑太硬）
+    labelPrimary = Color(0xFF000000),
+    labelSecondary = Color(0xFF3C3C43).copy(alpha = 0.70f),
+    labelTertiary = Color(0xFF3C3C43).copy(alpha = 0.56f),
+    labelQuaternary = Color(0xFF3C3C43).copy(alpha = 0.30f),
+    // ⚠️ 品牌按钮在浅色下仍是**蓝底白字**（brand 在浅色下没变浅），
+    //    所以这里是白字；深色表里是黑字（深色下 brand 更亮）。
+    labelOnBrand = Color(0xFFFFFFFF),
+    labelOnMedia = Color(0xFFFFFFFF),
+
+    // ---- Separator ----
+    separatorOpaque = Color(0xFFC6C6C8),
+    // iOS 浅色 nonOpaque = #3C3C43 @0.29。本项目取略低值（0.18）——
+    // 理由与深色一致：无卡片架构下分隔线很多，0.29 会显"脏"。
+    separator = Color(0x2E3C3C43),
+
+    // ---- 品牌 ----
+    // 🔴 浅色下品牌色必须**变深**，否则白底上对比度不足：
+    //    #0091FF 在白底只有 2.6:1（不达标），#007AFF 是 4.1:1（仅够大字号）
+    brand = Color(0xFF007AFF),
+    brandBili = Color(0xFFFB7299),
+    // 文字专用（≥4.5:1）
+    brandText = Color(0xFF0066CC),
+    brandBiliText = Color(0xFFC2185B),
+    brandDim = Color(0x1A007AFF),
+
+    // ---- 状态 ----
+    // 同样全部改为浅色专用值（深色表的值在白底上普遍只有 2~3:1）
+    stateError = Color(0xFFD70015),
+    stateSuccess = Color(0xFF2E7D32),
+    stateWarning = Color(0xFFC93400),
+    stateLive = Color(0xFFD70036),
+
+    // ---- 遮罩（压在媒体/内容上，与主题无关）----
+    // ⚠️ 浅色下遮罩**仍然要暗**：它的作用是"压暗底下的东西让前景可读"，
+    //    改成白色会失去这个作用。
+    overlay = Color(0x8A000000),
+    scrim = Color(0x66000000),
+    controlOverlay = Color(0xB3000000),
+
+    // ---- 媒体 ----
+    playerBackground = Color(0xFF000000),
+    danmakuStroke = Color(0xCC000000),
+    // ⚠️ 进度条轨道：播放器内恒为亮色（压黑底），与主题无关
+    trackInactive = Color(0x3DFFFFFF),
+    // 封面/头像占位：浅色下用**浅灰**（深色表是深灰）
+    coverPlaceholder = Color(0xFFE5E5EA),
+    avatarPlaceholder = Color(0xFFE5E5EA),
+
+    // ---- 互动 ----
+    // 金币/收藏的"金"在白底上需要更深才看得清
+    accentCoin = Color(0xFFF5A623),
+    accentFavorite = Color(0xFFE6A700),
+    onAccentCoin = Color(0xFF1A1400),
+
+    // ---- 第三方渠道（他方品牌真值，不随主题变）----
+    channelWechat = Color(0xFF07C160),
+    channelMoments = Color(0xFF4CAF50),
+    channelDownload = Color(0xFF7E57C2),
+    channelCopyLink = Color(0xFF007AFF),
+
+    // ---- 二维码（**恒为近白底**，与主题无关：扫码需要高对比）----
+    qrSurface = Color(0xFFF7F8FA),
+    onQrSurface = Color(0xFF14181F),
+
+    // ---- 榜单名次 ----
+    // 浅色下用更深的橙红系（深色表的值在白底上偏"荧光"）
+    rankFirst = Color(0xFFFF3B30),
+    rankSecond = Color(0xFFFF9500),
+    rankThird = Color(0xFFB8860B),
+
+    // ---- 骨架屏 ----
+    // ⚠️ 与深色**方向相反**：深色是"底暗、高光更亮"，
+    //    浅色是"底浅灰、高光更白"。
+    skeletonBase = Color(0xFFE5E5EA),
+    skeletonHighlight = Color(0xFFF7F7FA),
+
+    // ---- 分区（12 个分区共用单色）----
+    categoryAccent = Color(0xFF6C6C70),
+
+    // ---- 极客点缀 ----
+    // 终端青在白底上必须变深（#4FD1C5 在白底只有 1.9:1）
+    accentTerminal = Color(0xFF0D9488),
+    accentTerminalDim = Color(0x1F0D9488),
+    // ⚠️ 网格线方向相反：深色是"白 6%"，浅色是"黑 6%"
+    gridLine = Color(0x0F000000),
+
+    // ---- 跳过区间（进度条上的第三义）----
+    skipSegment = Color(0xE60D9488),
+    skipSegmentActive = Color(0xFF0F766E),
+
+    // ---- 媒体（压在画面上，与主题无关）----
+    subtitleScrim = Color(0xB3000000),
+    gradientMediaEnd = Color(0x99000000),
+
+    // ---- 玻璃 ----
+    materials = V3LightMaterials,
+)
+
+
+/**
+ * 当前生效的主题表（**默认浅色**）。
+ *
+ * 页面**不要**直接引用本常量 —— 用 `BiliV3.colors`，
+ * 否则主题切换/预览覆盖会失效。
+ */
+val V3DefaultColors = V3LightColors
 
 /**
  * 玻璃材质参数（iOS 27 实测表 + Compose 落地换算）。

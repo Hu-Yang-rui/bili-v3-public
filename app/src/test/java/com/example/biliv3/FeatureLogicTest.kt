@@ -15,6 +15,9 @@ import com.example.biliv3.ui.video.playerAspectRatio
 import com.example.biliv3.ui.video.semanticMode
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
+import com.example.biliv3.design.tokens.LightColors
+import com.example.biliv3.design.v3.V3LightColors
+import com.example.biliv3.design.v3.V3DarkColors
 
 /**
  * 本轮补齐功能的核心逻辑测试。
@@ -142,31 +145,100 @@ class FeatureLogicTest {
     }
 
     // ---------------------------------------------------------------------
-    // 3. 主题（v1.1.3 起只有深色）
+    // 3. 主题（v1.6.9 起浅色为默认；深色表保留）
     // ---------------------------------------------------------------------
 
     /**
-     * 守住"只有深色"这个决定。
+     * 守住**两套主题表都存在且方向正确**。
      *
-     * ## 为什么用测试钉住
+     * ## 历史
      *
-     * 移除浅色主题不是随手改的 —— 原因是**静态页玻璃在物理上做不出来**
-     * （背后是纯色底，没有东西可模糊）。
+     * v1.1.3–v1.6.8 期间本项目只有深色，当时的测试是
+     * 「深色主题的底色必须是暗的」—— 用来防止有人"顺手把浅色加回来"。
      *
-     * 这个理由容易被遗忘，然后有人"顺手把浅色加回来"。
-     * 一旦加回来，就会重新出现"浅色下材质是假的"这个问题。
+     * **v1.6.9 浅色已按用户要求加回**，所以那条测试的意图（防止意外加回）
+     * 已经不适用。但它守护的**真正价值**要保留：**底色方向不能搞反**。
+     * 于是改写为"两套表各自方向正确 + 默认是浅色"。
      *
-     * 所以：`DarkColors` 必须确实是深色（底够暗），
-     * 否则说明有人动了令牌。
+     * ⚠️ 如果哪天有人把 `LightColors` 改成深色底（或反之），
+     * 这里会失败 —— 那正是它要拦的错。
      */
+    @Test
+    fun `浅色主题的底色必须是亮的`() {
+        val bg = LightColors.bgBase
+        // 相对亮度 > 0.5 才算"浅色底"（#FFFFFF 约 1.0）
+        assertThat(bg.luminance()).isGreaterThan(0.5f)
+        // 浅色下**卡片要比底色暗**（靠"压暗"分层）—— 与深色方向相反
+        assertThat(LightColors.bgCard.luminance())
+            .isLessThan(LightColors.bgBase.luminance())
+    }
+
+    /** 深色表仍必须真的是深色（它没被删，只是不再是默认）。 */
     @Test
     fun `深色主题的底色必须是暗的`() {
         val bg = DarkColors.bgBase
-        // 相对亮度 < 0.2 才算"深色底"（#0E1116 约 0.006）
         assertThat(bg.luminance()).isLessThan(0.2f)
-        // 卡片要比底色亮（深色下靠"提亮"分层，不是靠投影）
+        // 深色下卡片比底色**亮**（靠"提亮"分层）
         assertThat(DarkColors.bgCard.luminance())
             .isGreaterThan(DarkColors.bgBase.luminance())
+    }
+
+    /**
+     * v3 表的方向也必须正确（页面实际取的是这两张表）。
+     *
+     * `V3Colors.isLight` 是从 `bgPrimary` 推导的，所以这里顺带钉住
+     * **推导结果符合预期** —— 否则 `BiliV3Theme` 会选错 Material scheme。
+     */
+    @Test
+    fun `v3 两套表的方向与 isLight 推导一致`() {
+        assertThat(V3LightColors.isLight).isTrue()
+        assertThat(V3DarkColors.isLight).isFalse()
+    }
+
+    /**
+     * 浅色下**文字对比度必须达标**（≥4.5:1，正文级）。
+     *
+     * ## 为什么单独钉这条
+     *
+     * 深色表的值在白底上**普遍只有 2~3:1**。如果有人图省事
+     * "把深色表的值直接抄给浅色表"，界面会看着像能跑，但文字发灰、
+     * 强光下读不清 —— 属于**静默失效**（编译过、测试过、就是不对）。
+     *
+     * 对比度用 WCAG 相对亮度公式：
+     * `(L1 + 0.05) / (L2 + 0.05)`，L1 为较亮的一方。
+     */
+    @Test
+    fun `浅色主题的正文与次要文字对比度达标`() {
+        val bg = LightColors.bgBase
+
+        fun contrast(fg: androidx.compose.ui.graphics.Color): Float {
+            val a = fg.luminance()
+            val b = bg.luminance()
+            val hi = maxOf(a, b) + 0.05f
+            val lo = minOf(a, b) + 0.05f
+            return hi / lo
+        }
+
+        // 正文（labelPrimary = #000000）：21:1
+        assertThat(contrast(V3LightColors.labelPrimary)).isGreaterThan(4.5f)
+        // 次要文字（labelSecondary）：设计值 4.50:1，留一点浮点余量
+        assertThat(contrast(V3LightColors.labelSecondary)).isGreaterThan(4.4f)
+        // 链接文字（brandText）：5.56:1
+        assertThat(contrast(V3LightColors.brandText)).isGreaterThan(4.5f)
+        // 品牌粉文字（brandBiliText）：5.87:1
+        assertThat(contrast(V3LightColors.brandBiliText)).isGreaterThan(4.5f)
+        // 错误色：5.39:1
+        assertThat(contrast(V3LightColors.stateError)).isGreaterThan(4.5f)
+    }
+
+    /** 辅助文字（labelTertiary）按"非关键信息 ≥3:1"要求。 */
+    @Test
+    fun `浅色主题的辅助文字对比度达标`() {
+        val bg = LightColors.bgBase.luminance()
+        val fg = V3LightColors.labelTertiary.luminance()
+        val hi = maxOf(fg, bg) + 0.05f
+        val lo = minOf(fg, bg) + 0.05f
+        assertThat(hi / lo).isGreaterThan(3.0f)
     }
 
     /**
@@ -178,6 +250,12 @@ class FeatureLogicTest {
     @Test
     fun `深色主题的描边必须可见`() {
         assertThat(DarkColors.borderHairline.alpha).isGreaterThan(0f)
+    }
+
+    /** 浅色下描边同样必须可见（白底上靠它压出分组边界）。 */
+    @Test
+    fun `浅色主题的描边必须可见`() {
+        assertThat(LightColors.borderHairline.alpha).isGreaterThan(0f)
     }
 
     // ---------------------------------------------------------------------

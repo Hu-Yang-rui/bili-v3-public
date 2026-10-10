@@ -3,6 +3,7 @@ package com.example.biliv3.design.tokens
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import com.example.biliv3.design.v3.V3DarkColors
+import com.example.biliv3.design.v3.V3LightColors
 
 /**
  * 颜色令牌。
@@ -339,18 +340,136 @@ val DarkColors = BiliColors(
     channelCopyLink = V3DarkColors.channelCopyLink,
 )
 
+/**
+ * 浅色（**v1.6.9 起为默认**）。
+ *
+ * ---
+ *
+ * # 这是旧令牌表，取值**投影自 [V3LightColors]**
+ *
+ * 旧表 `BiliColors` 已进入维护期：新代码一律用 `BiliV3.colors`，
+ * 这里只为**尚未迁移完的消费者**保留。所以策略是
+ * **能投影就投影**（跟着新系统走，避免两处漂移），
+ * 只有新系统里没有对应字段的才写死值。
+ *
+ * ⚠️ **写死值必须按白底重算** —— 不能照抄深色表的十六进制。
+ * 深色表的很多值在暗底上达标，在白底上会严重不足
+ * （例如 `textSecondary = #8E8E93` 在白底只有 **3.0:1**，
+ * 而它承担"次要文字"职责，需要 ≥4.5:1）。
+ */
+val LightColors = BiliColors(
+    // ---- 品牌 ----
+    brandPrimary = V3LightColors.brand,
+    brandSecondary = V3LightColors.brandBili,
+    // hover / active 是旧表独有的两个态（新系统用 brandDim 表达）
+    brandPrimaryHover = Color(0xFF0062CC),
+    brandPrimaryActive = Color(0xFF004C99),
+    brandPrimaryDim = V3LightColors.brandDim,
+    brandSecondaryHover = Color(0xFFE91E63),
+
+    // ---- 极客点缀 ----
+    accentTerminal = V3LightColors.accentTerminal,
+    accentTerminalDim = V3LightColors.accentTerminalDim,
+    gridLine = V3LightColors.gridLine,
+
+    // ---- 文字安全变体 ----
+    textBrandSafe = V3LightColors.brandBiliText,
+    textLinkSafe = V3LightColors.brandText,
+    // ⚠️ 深色表是 #B8B8C0（浅灰，压暗底）；白底上必须用深灰：#5A5A60 ≈ 6.2:1
+    textSecondarySafe = Color(0xFF5A5A60),
+
+    // ---- 背景三级（新系统的投影）----
+    bgBase = V3LightColors.bgPrimary,
+    bgCard = V3LightColors.bgSecondary,
+    bgHover = V3LightColors.bgTertiary,
+    surfaceElevated = V3LightColors.bgSecondaryElevated,
+
+    // ---- 文字 ----
+    textPrimary = V3LightColors.labelPrimary,
+    // ⚠️ 深色表 #8E8E93（白底仅 3.0:1）→ 浅色用 #6C6C70（≈4.9:1）
+    textSecondary = Color(0xFF6C6C70),
+    textTertiary = Color(0xFF8E8E93),
+    textOnBrand = V3LightColors.labelOnBrand,
+    textOnMedia = V3LightColors.labelOnMedia,
+
+    // ---- 描边 ----
+    borderHairline = V3LightColors.separator,
+    // ⚠️ 深色表是"白 24%"（提亮边缘）；浅色必须反过来"黑 12%"（压出边界）
+    borderStrong = Color(0x1F000000),
+
+    // ---- 遮罩（压在内容上，与主题无关）----
+    overlayCover = V3LightColors.overlay,
+    scrim = V3LightColors.scrim,
+    scrimPanel = V3LightColors.scrim,
+    overlayControl = V3LightColors.controlOverlay,
+    onOverlay = Color(0xFFFFFFFF),
+    trackInactive = V3LightColors.trackInactive,
+    gradientMediaEnd = Color(0x99000000),
+
+    // ---- 状态 ----
+    stateError = V3LightColors.stateError,
+    stateSuccess = V3LightColors.stateSuccess,
+    stateLive = V3LightColors.stateLive,
+
+    // ---- 空降助手：进度条上的跳过区间 ----
+    skipSegment = V3LightColors.skipSegment,
+    skipSegmentActive = V3LightColors.skipSegmentActive,
+
+    // ---- 互动 ----
+    accentCoin = V3LightColors.accentCoin,
+    accentFavorite = V3LightColors.accentFavorite,
+    // ⚠️ 深色表是"更亮的金"（#FFD166，压暗底）；浅色下要更深才看得清
+    accentCoinBright = Color(0xFFD99400),
+    onAccentCoin = V3LightColors.onAccentCoin,
+
+    // ---- 播放器（压在画面上，与主题无关）----
+    danmakuStroke = V3LightColors.danmakuStroke,
+    subtitleScrim = Color(0xB3000000),
+    playerBackground = V3LightColors.playerBackground,
+
+    // ---- 二维码（恒近白底）----
+    qrSurface = Color(0xFFF7F8FA),
+    onQrSurface = Color(0xFF14181F),
+
+    // ---- 榜单 ----
+    rankFirst = V3LightColors.rankFirst,
+    rankSecond = V3LightColors.rankSecond,
+    rankThird = V3LightColors.rankThird,
+
+    // ---- 骨架 ----
+    skeletonBase = V3LightColors.skeletonBase,
+    skeletonHighlight = V3LightColors.skeletonHighlight,
+
+    // ---- 占位 ----
+    coverPlaceholder = V3LightColors.coverPlaceholder,
+    avatarPlaceholder = V3LightColors.avatarPlaceholder,
+
+    // ---- 分区 ----
+    categoryAccent = V3LightColors.categoryAccent,
+    categorySurface = V3LightColors.bgSecondary,
+
+    // ---- 第三方渠道品牌色（他方品牌真值）----
+    channelWechat = V3LightColors.channelWechat,
+    channelMoments = V3LightColors.channelMoments,
+    channelDownload = V3LightColors.channelDownload,
+    channelCopyLink = V3LightColors.channelCopyLink,
+)
+
 
 /*
- * 本项目**只有深色主题**。
+ * 🔴 主题：浅色为默认（v1.6.9 起）
  *
- * ## 为什么删掉浅色（v1.1.3）
+ * ## 为什么 v1.1.3 的"只做深色"被推翻
  *
- * 浅色下静态页面（首页/搜索/我的）背后是**纯色底，没有东西可模糊** ——
- * 玻璃拟态在纯色背景上只能靠"比底色更白"来假装层次，
- * 那不是玻璃，是白色卡片。物理上做不出来。
+ * 原来的理由：浅色下静态页面（首页/搜索/我的）背后是**纯色底，
+ * 没有东西可模糊** —— 玻璃拟态在纯色背景上只能靠"比底色更白"来假装层次。
  *
- * 于是变成"要么维护两套完全不同的材质策略、要么浅色下材质是假的"。
- * 两个都不好。选择：**只做深色，把它做透**。
+ * **该理由针对的是"把玻璃用在页面背景上"** —— 而本项目从未那样用：
+ * 玻璃只用于**浮动层**（底部导航 / Sheet / Dialog / 播放器控件），
+ * 底下**始终有内容在滚**（列表、封面、画面），所以浅色下同样有东西可模糊。
  *
- * ⚠️ 不要再加回浅色。真要加，先解决"静态页玻璃"这个物理问题。
+ * 原来的顾虑不成立，浅色主题已加回（[LightColors] / [V3LightColors]）。
+ *
+ * ⚠️ 两套表都必须维护：`V3Colors` 是 data class，新增令牌时
+ * **构造参数缺一不可**，所以漏掉一套会直接编译失败（这是有意的设计）。
  */

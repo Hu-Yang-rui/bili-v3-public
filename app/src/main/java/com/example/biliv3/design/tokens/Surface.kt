@@ -2,6 +2,8 @@ package com.example.biliv3.design.tokens
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.Composable
+import com.example.biliv3.design.v3.BiliV3
 
 /**
  * 明度带 —— 替代卡片的分组手段。
@@ -17,16 +19,47 @@ import androidx.compose.ui.unit.dp
  *
  * 深色下投影不可见 → 分层只能靠明度差。
  * 档位再多会变成"斑马纹"，三档是上限。
+ *
+ * ---
+ *
+ * ## 🔴 v1.6.9：改为**主题感知**
+ *
+ * 原来是硬编码的深色（`#0E1116` / `#141922` / `#0A0D12`）——
+ * 浅色主题下这三档全都会变成**黑块**。
+ *
+ * 现在按主题返回：
+ * - 深色：原来的深蓝黑三档（靠"提亮"分层）
+ * - 浅色：白 / 浅灰 / 更浅灰（靠"压暗"分层，方向相反）
+ *
+ * ⚠️ 语义**不变**：`flat` 恒等于"页面底"、`raised` 恒为"抬升一档"、
+ * `sunken` 恒为"下沉一档" —— 变的只是"抬升"在浅色下意味着**更暗**。
  */
 object Band {
     /** 最底一档。与页面底同值 —— 内容直接排在上面。 */
-    val flat = Color(0xFF0E1116)
+    val flat: Color
+        @Composable get() = if (BiliV3.colors.isLight) {
+            // 浅色：页面底就是纯白
+            Color(0xFFFFFFFF)
+        } else {
+            Color(0xFF0E1116)
+        }
 
     /** 抬升一档。用于需要与主区分开的区块。 */
-    val raised = Color(0xFF141922)
+    val raised: Color
+        @Composable get() = if (BiliV3.colors.isLight) {
+            // ⚠️ 浅色下"抬升"= **更暗**（靠压暗拉开距离），不是更亮
+            Color(0xFFF2F2F7)
+        } else {
+            Color(0xFF141922)
+        }
 
     /** 下沉一档。用于"凹进去"的区域（如播放器周边、输入区）。 */
-    val sunken = Color(0xFF0A0D12)
+    val sunken: Color
+        @Composable get() = if (BiliV3.colors.isLight) {
+            Color(0xFFE5E5EA)
+        } else {
+            Color(0xFF0A0D12)
+        }
 }
 
 /**
@@ -40,13 +73,65 @@ object Band {
  * 正确的用法是：明度带已经分组了，线只用在**带内部还需要细分**的地方。
  *
  * 优先用 [Rhythm] 的间距差分组，线是**兜底手段**。
+ *
+ * ---
+ *
+ * ## 🔴 v1.6.9：改为**主题感知**（原先是硬编码白色）
+ *
+ * 原来这里是 `Color(0x1AFFFFFF)` / `Color(0x0DFFFFFF)` ——
+ * **白色 10% / 5%，与主题无关**。
+ *
+ * 在深色下没问题（白线压在暗底上可见）。但浅色主题下，
+ * **白线画在白底上 = 完全不可见** —— 实测顶栏下方那条分隔线
+ * 在截图里是纯 `(255,255,255)`，对比度 **1.00:1**。
+ *
+ * 影响面：`Rule.color` / `Rule.subtle` 被 **62 处、34 个文件**引用，
+ * 全项目的分组边界一次性失效。
+ *
+ * ### 怎么改的
+ *
+ * 改成 `@Composable` getter，**按主题明暗返回对应颜色**：
+ * 深色 → 白线（提亮边界）；浅色 → 黑线（压出边界）。
+ *
+ * ⚠️ **调用方无需改动**：两种调用形态（默认参数 `= Rule.color`、
+ * 显式传参 `color = Rule.subtle`）都已在 `@Composable` 作用域内，
+ * 所以加 `@Composable` 不会破坏任何调用点 —— 这是选这个方案的原因。
+ *
+ * ⚠️ **不要在非 `@Composable` 上下文引用这两个值**（编译期会报错，
+ * 不会静默失效）。
  */
 object Rule {
-    /** 白 10%。比旧的 `borderHairline` 略亮 —— 它现在承担唯一的分组职责。 */
-    val color = Color(0x1AFFFFFF)
+    /**
+     * 主发丝线。
+     *
+     * - 深色：白 10%（`#1AFFFFFF`）—— 比旧 `borderHairline` 略亮，
+     *   它承担唯一的分组职责
+     * - 浅色：**黑 12%**（`#1F000000`）—— 方向必须反过来，
+     *   浅色下靠"压暗"表达边界
+     *
+     * ⚠️ 浅色取 0.12 而不是深色对应的 0.10：白底上的淡灰线
+     * 比暗底上的淡白线更难察觉（人眼对暗色的分辨力低于亮色），
+     * 实测 0.10 在白色上几乎看不见。
+     */
+    val color: Color
+        @Composable get() = if (BiliV3.colors.isLight) {
+            Color(0x1F000000)
+        } else {
+            Color(0x1AFFFFFF)
+        }
 
-    /** 更弱的一档，用于带内部细分。 */
-    val subtle = Color(0x0DFFFFFF)
+    /**
+     * 更弱的一档，用于带内部细分。
+     *
+     * - 深色：白 5%
+     * - 浅色：黑 8%
+     */
+    val subtle: Color
+        @Composable get() = if (BiliV3.colors.isLight) {
+            Color(0x14000000)
+        } else {
+            Color(0x0DFFFFFF)
+        }
 
     val width = 1.dp
 }
