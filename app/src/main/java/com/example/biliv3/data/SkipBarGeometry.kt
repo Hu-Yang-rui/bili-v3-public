@@ -1,5 +1,7 @@
 package com.example.biliv3.data
 
+import com.example.biliv3.design.v3.V3Space
+
 /**
  * 跳过区间在**进度条上的几何**（纯 Kotlin，可单测）。
  *
@@ -22,7 +24,7 @@ package com.example.biliv3.data
  *
  * ## 视觉约束
  *
- * 轨道只有 [com.example.biliv3.design.tokens.Space.trackHeight]（2dp）高。
+ * 轨道只有 [V3Space.trackHeight]（2dp）高。
  * 一个 3 秒的片段在 30 分钟视频里只占 1/600 宽 —— 大约 0.6px，
  * 画出来等于没有。所以：
  * - 区间**不裁剪**到不足一像素（那样等于隐藏），而是给一个最小宽度

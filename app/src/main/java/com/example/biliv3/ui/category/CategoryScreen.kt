@@ -44,17 +44,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.component.VideoCard
 import com.example.biliv3.ui.home.gridGutterFor
 import com.example.biliv3.ui.home.gridRowSpacingFor
 import com.example.biliv3.ui.home.pagePaddingFor
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 分区页。
@@ -85,7 +86,7 @@ fun CategoryScreen(
     modifier: Modifier = Modifier,
     viewModel: CategoryViewModel,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val videos by viewModel.videos.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
@@ -110,7 +111,7 @@ fun CategoryScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 顶栏 ----
         Row(
@@ -119,13 +120,13 @@ fun CategoryScreen(
                 // 顶栏不再是卡片：与页面同明度，只留底边一条发丝线
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -133,17 +134,16 @@ fun CategoryScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = title.ifEmpty { "分区" },
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -154,8 +154,8 @@ fun CategoryScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Space.x3, vertical = Space.x2),
-            horizontalArrangement = Arrangement.spacedBy(Space.x3),
+                .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
+            horizontalArrangement = Arrangement.spacedBy(V3Space.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SortChip("最新", sortLatest) { viewModel.setSortLatest(true) }
@@ -198,8 +198,8 @@ fun CategoryScreen(
                 contentPadding = PaddingValues(
                     start = pagePaddingFor(windowSize),
                     end = pagePaddingFor(windowSize),
-                    top = Space.x1,
-                    bottom = Space.x8,
+                    top = V3Space.xxs,
+                    bottom = V3Space.xxl,
                 ),
                 horizontalArrangement = Arrangement.spacedBy(gridGutterFor(windowSize)),
                 verticalArrangement = Arrangement.spacedBy(gridRowSpacingFor(windowSize)),
@@ -213,20 +213,19 @@ fun CategoryScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = Space.x5),
+                            .padding(vertical = V3Space.lg),
                         contentAlignment = Alignment.Center,
                     ) {
                         when {
                             loadingMore -> CircularProgressIndicator(
-                                color = colors.brandPrimary,
-                                strokeWidth = Space.trackHeight,
-                                modifier = Modifier.size(Sizes.iconXl),
+                                color = colors.brand,
+                                strokeWidth = V3Space.progressTrack,
+                                modifier = Modifier.size(V3Size.iconLg),
                             )
                             !hasMore -> Text(
                                 text = if (sortLatest) "没有更多了" else "热门榜只有这一页",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = FontSize.label,
-                                    color = colors.textTertiary,
+                                style = V3Type.caption1.copy(
+                                    color = colors.labelTertiary,
                                 ),
                             )
                         }
@@ -244,18 +243,17 @@ private fun SortChip(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = label,
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.label,
+        style = V3Type.caption1.copy(
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (selected) colors.textBrandSafe else colors.textSecondarySafe,
+            color = if (selected) colors.brandBiliText else colors.labelSecondary,
         ),
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.pill))
-            .background(if (selected) colors.brandPrimaryDim else colors.bgHover)
+            .clip(RoundedCornerShape(V3Radius.pill))
+            .background(if (selected) colors.brandDim else colors.bgTertiary)
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
     )
 }

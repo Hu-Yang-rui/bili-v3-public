@@ -31,13 +31,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.space.DynamicCard
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 动态页（底部导航第 2 个 Tab）。
@@ -64,7 +65,7 @@ fun DynamicScreen(
     modifier: Modifier = Modifier,
     viewModel: DynamicViewModel,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val items by viewModel.items.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
@@ -89,7 +90,7 @@ fun DynamicScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 标题栏（Tab 页也需要一个标题，否则内容直接顶到状态栏）----
         androidx.compose.foundation.layout.Column(
@@ -108,25 +109,24 @@ fun DynamicScreen(
                     .fillMaxWidth()
                     .ruleBottom(color = Rule.color)
                     .windowInsetsPadding(WindowInsets.statusBars)
-                    .height(Sizes.topBarMobile)
+                    .height(V3Size.topBar)
                     // ⚠️ 必须补这层横向 padding（v1.4.2 修）。
                     //
                     // 其它 20 个二级页的顶栏都是
-                    // `.height(Sizes.topBarMobile).padding(horizontal = Space.x2)`，
-                    // 本页漏了，只给标题单独 `padding(start = Space.x4)` ——
+                    // `.height(V3Size.topBar).padding(horizontal = V3Space.xs)`，
+                    // 本页漏了，只给标题单独 `padding(start = V3Space.md)` ——
                     // 结果标题比全站其它页**左移 36dp**（16dp 里再扣掉 8dp 内边距
                     // 与返回键占位）。页面间来回切换时标题会横向跳动。
                     //
                     // 现在与标准顶栏结构一致；标题不再单独加 padding。
-                    .padding(horizontal = Space.x2),
+                    .padding(horizontal = V3Space.xs),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 Text(
                     text = "动态",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = FontSize.titleMd,
+                    style = V3Type.subheadline.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
                 )
             }
@@ -146,9 +146,9 @@ fun DynamicScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(
-                        color = colors.brandPrimary,
-                        strokeWidth = Space.trackHeight,
-                        modifier = Modifier.size(Sizes.iconXl),
+                        color = colors.brand,
+                        strokeWidth = V3Space.progressTrack,
+                        modifier = Modifier.size(V3Size.iconLg),
                     )
                 }
 
@@ -169,8 +169,8 @@ fun DynamicScreen(
                 else -> LazyColumn(
                     state = listState,
                     contentPadding = PaddingValues(
-                        top = Space.x2,
-                        bottom = Space.x8,
+                        top = V3Space.xs,
+                        bottom = V3Space.xxl,
                     ),
                     modifier = Modifier.fillMaxSize(),
                 ) {
@@ -182,20 +182,19 @@ fun DynamicScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = Space.x4),
+                                .padding(vertical = V3Space.md),
                             contentAlignment = Alignment.Center,
                         ) {
                             when {
                                 loadingMore -> CircularProgressIndicator(
-                                    color = colors.brandPrimary,
-                                    strokeWidth = Space.trackHeight,
-                                    modifier = Modifier.size(Sizes.iconXl),
+                                    color = colors.brand,
+                                    strokeWidth = V3Space.progressTrack,
+                                    modifier = Modifier.size(V3Size.iconLg),
                                 )
                                 !hasMore -> Text(
                                     text = "没有更多了",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontSize = FontSize.label,
-                                        color = colors.textTertiary,
+                                    style = V3Type.caption1.copy(
+                                        color = colors.labelTertiary,
                                     ),
                                 )
                             }

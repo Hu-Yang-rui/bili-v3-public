@@ -37,8 +37,11 @@ import com.example.biliv3.design.tokens.FontFamilies
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 空态。
@@ -71,7 +74,7 @@ fun EmptyState(
      */
     terminalStyle: Boolean = false,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     if (terminalStyle) {
         TerminalEmptyState(
@@ -89,8 +92,8 @@ fun EmptyState(
         modifier = modifier
             .fillMaxWidth()
             .padding(
-                horizontal = Space.x8,
-                vertical = if (compact) Space.x5 else Space.x12,
+                horizontal = V3Space.xxl,
+                vertical = if (compact) V3Space.lg else V3Space.huge,
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -98,30 +101,29 @@ fun EmptyState(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = colors.textTertiary,
-            modifier = Modifier.size(if (compact) Sizes.iconXl else 48.dp),
+            tint = colors.labelTertiary,
+            modifier = Modifier.size(if (compact) V3Size.iconLg else 48.dp),
         )
-        Spacer(Modifier.height(if (compact) Space.x3 else Space.x4))
+        Spacer(Modifier.height(if (compact) V3Space.sm else V3Space.md))
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                color = colors.textSecondarySafe,
+            style = V3Type.callout.copy(
+                color = colors.labelSecondary,
             ),
             textAlign = TextAlign.Center,
         )
         if (description != null) {
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    color = colors.textSecondary,
+                style = V3Type.footnote.copy(
+                    color = colors.labelSecondary,
                 ),
                 textAlign = TextAlign.Center,
             )
         }
         if (actionLabel != null && onAction != null) {
-            Spacer(Modifier.height(Space.x5))
+            Spacer(Modifier.height(V3Space.lg))
             BrandButton(
                 label = actionLabel,
                 onClick = onAction,
@@ -145,14 +147,14 @@ fun ErrorState(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(
-                horizontal = Space.x8,
-                vertical = if (compact) Space.x5 else Space.x12,
+                horizontal = V3Space.xxl,
+                vertical = if (compact) V3Space.lg else V3Space.huge,
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -160,30 +162,29 @@ fun ErrorState(
         Icon(
             imageVector = Icons.Outlined.CloudOff,
             contentDescription = null,
-            tint = colors.textTertiary,
-            modifier = Modifier.size(if (compact) Sizes.iconXl else 48.dp),
+            tint = colors.labelTertiary,
+            modifier = Modifier.size(if (compact) V3Size.iconLg else 48.dp),
         )
-        Spacer(Modifier.height(if (compact) Space.x3 else Space.x4))
+        Spacer(Modifier.height(if (compact) V3Space.sm else V3Space.md))
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                color = colors.textSecondarySafe,
+            style = V3Type.callout.copy(
+                color = colors.labelSecondary,
             ),
             textAlign = TextAlign.Center,
         )
         if (description != null) {
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    color = colors.textSecondary,
+                style = V3Type.footnote.copy(
+                    color = colors.labelSecondary,
                 ),
                 textAlign = TextAlign.Center,
             )
         }
         if (onRetry != null) {
-            Spacer(Modifier.height(Space.x5))
+            Spacer(Modifier.height(V3Space.lg))
             BrandButton(
                 label = retryLabel,
                 onClick = onRetry,
@@ -226,14 +227,14 @@ private fun TerminalEmptyState(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(
-                horizontal = Space.x4,
-                vertical = if (compact) Space.x5 else Space.x8,
+                horizontal = V3Space.md,
+                vertical = if (compact) V3Space.lg else V3Space.xxl,
             ),
         verticalArrangement = Arrangement.Center,
     ) {
@@ -256,37 +257,37 @@ private fun TerminalEmptyState(
                     .height(14.dp)
                     .background(colors.accentTerminal),
             )
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelMedium.copy(
+                style = V3Type.footnote.copy(
                     fontFamily = FontFamilies.mono,
-                    fontSize = FontSize.label,
-                    lineHeight = FontSize.labelLine,
-                    color = colors.textSecondarySafe,
+                    fontSize = V3Type.caption1.fontSize,
+                    lineHeight = V3Type.caption1.lineHeight,
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         if (description != null) {
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             // 说明行与标题左对齐（标题已无符号，缩进随之取消）
             Row {
-                Spacer(Modifier.width(Space.x2 + 2.dp))
+                Spacer(Modifier.width(V3Space.xs + 2.dp))
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodySmall.copy(
+                    style = V3Type.subheadline.copy(
                         fontFamily = FontFamilies.mono,
-                        fontSize = FontSize.label,
-                        lineHeight = FontSize.labelLine,
-                        color = colors.textTertiary,
+                        fontSize = V3Type.caption1.fontSize,
+                        lineHeight = V3Type.caption1.lineHeight,
+                        color = colors.labelTertiary,
                     ),
                 )
             }
         }
         if (actionLabel != null && onAction != null) {
-            Spacer(Modifier.height(Space.x4))
+            Spacer(Modifier.height(V3Space.md))
             BrandButton(
                 label = actionLabel,
                 onClick = onAction,
@@ -320,13 +321,13 @@ fun TerminalLoadingState(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(
-                horizontal = Space.x4,
-                vertical = if (compact) Space.x4 else Space.x8,
+                horizontal = V3Space.md,
+                vertical = if (compact) V3Space.md else V3Space.xxl,
             ),
         contentAlignment = if (compact) Alignment.CenterStart else Alignment.Center,
     ) {
@@ -340,19 +341,19 @@ fun TerminalLoadingState(
                     .height(14.dp)
                     .background(colors.accentTerminal),
             )
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelMedium.copy(
+                style = V3Type.footnote.copy(
                     fontFamily = FontFamilies.mono,
-                    fontSize = FontSize.label,
-                    lineHeight = FontSize.labelLine,
-                    color = colors.textSecondarySafe,
+                    fontSize = V3Type.caption1.fontSize,
+                    lineHeight = V3Type.caption1.lineHeight,
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             BlockCursor(color = colors.accentTerminal)
         }
     }
@@ -419,26 +420,26 @@ fun BrandButton(
     leadingIcon: ImageVector? = null,
     contentPadding: PaddingValues? = null,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     val bg = when (variant) {
-        BrandButtonVariant.Filled -> colors.brandPrimary
-        BrandButtonVariant.Outline, BrandButtonVariant.Text -> colors.bgCard
+        BrandButtonVariant.Filled -> colors.brand
+        BrandButtonVariant.Outline, BrandButtonVariant.Text -> colors.bgSecondary
     }
     val fg = when (variant) {
-        BrandButtonVariant.Filled -> colors.textOnBrand
-        BrandButtonVariant.Outline, BrandButtonVariant.Text -> colors.textBrandSafe
+        BrandButtonVariant.Filled -> colors.labelOnBrand
+        BrandButtonVariant.Outline, BrandButtonVariant.Text -> colors.brandBiliText
     }
 
     Button(
         onClick = onClick,
         enabled = enabled,
-        shape = RoundedCornerShape(Radius.interactive),
+        shape = RoundedCornerShape(V3Radius.xs),
         colors = ButtonDefaults.buttonColors(
             containerColor = bg,
             contentColor = fg,
             disabledContainerColor = colors.skeletonBase,
-            disabledContentColor = colors.textTertiary,
+            disabledContentColor = colors.labelTertiary,
         ),
         elevation = ButtonDefaults.buttonElevation(
             defaultElevation = 0.dp,
@@ -447,14 +448,14 @@ fun BrandButton(
         border = if (variant == BrandButtonVariant.Outline) {
             androidx.compose.foundation.BorderStroke(
                 width = 1.dp,
-                color = colors.brandPrimary,
+                color = colors.brand,
             )
         } else {
             null
         },
         contentPadding = contentPadding ?: PaddingValues(
-            horizontal = Space.x4,
-            vertical = Space.rowVertical,
+            horizontal = V3Space.md,
+            vertical = V3Space.sm,
         ),
         modifier = modifier,
     ) {
@@ -462,14 +463,13 @@ fun BrandButton(
             Icon(
                 imageVector = leadingIcon,
                 contentDescription = null,
-                modifier = Modifier.size(Sizes.iconMd),
+                modifier = Modifier.size(V3Size.iconMd),
             )
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
         }
         Text(
             text = label,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontSize = FontSize.titleMd,
+            style = V3Type.subheadline.copy(
                 fontWeight = FontWeight.SemiBold,
                 color = fg,
             ),
@@ -497,12 +497,12 @@ fun SectionHeader(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = Space.x1),
+            .padding(bottom = V3Space.xxs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // 粉色竖条装饰
@@ -510,13 +510,13 @@ fun SectionHeader(
             modifier = Modifier
                 .size(width = 4.dp, height = 16.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(colors.brandPrimary),
+                .background(colors.brand),
         )
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge.copy(
-                color = colors.textPrimary,
+            style = V3Type.title3.copy(
+                color = colors.labelPrimary,
                 fontWeight = FontWeight.Bold,
             ),
         )
@@ -524,14 +524,13 @@ fun SectionHeader(
         if (actionLabel != null && onAction != null) {
             Text(
                 text = actionLabel,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    color = colors.textSecondarySafe,
+                style = V3Type.footnote.copy(
+                    color = colors.labelSecondary,
                 ),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.badge))
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     .clickable(onClick = onAction)
-                    .padding(horizontal = Space.x2, vertical = Space.x1),
+                    .padding(horizontal = V3Space.xs, vertical = V3Space.xxs),
             )
         }
     }

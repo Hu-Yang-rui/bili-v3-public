@@ -37,16 +37,20 @@ import com.example.biliv3.data.ai.SummarySource
 import com.example.biliv3.data.ai.VideoSummary
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
-import com.example.biliv3.design.SectionMark
 import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
 import com.example.biliv3.ui.component.BrandButtonVariant
 import com.example.biliv3.ui.component.TerminalLoadingState
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
+import com.example.biliv3.design.v3.v3GlassSurface
+import com.example.biliv3.design.v3.V3Glass
+import com.example.biliv3.design.v3.V3SectionTitle
 
 /**
  * AI 总结弹层（v1.6.3）。
@@ -55,9 +59,9 @@ import com.example.biliv3.ui.component.TerminalLoadingState
  *
  * | 需求 | 本实现 |
  * |---|---|---|
- * | 复用弹窗 | `Dialog` + `Radius.panel` + `surfaceElevated`（同 `PlayerSettingsSheet`） |
+ * | 复用弹窗 | `Dialog` + `V3Radius.lg` + `surfaceElevated`（同 `PlayerSettingsSheet`） |
  * | 无卡片 | 分组靠 `SectionMark` + `Rhythm` 间距，**不套容器** |
- * | 当前字体/颜色 | 全部走 `FontSize` / `BiliTheme.colors`，零硬编码 |
+ * | 当前字体/颜色 | 全部走 `FontSize` / `BiliV3.colors`，零硬编码 |
  * | 状态反馈 | `TerminalLoadingState` / `BrandButton`（与全站一致） |
  *
  * **没有为 AI 总结新造任何视觉体系** —— 它看起来就是本项目的一个普通弹层。
@@ -84,7 +88,7 @@ fun AiSummarySheet(
      */
     onSeek: ((Int) -> Unit)? = null,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -96,37 +100,46 @@ fun AiSummarySheet(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.scrimPanel)
+                .background(colors.scrim)
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
             Column(
                 modifier = Modifier
-                    .padding(horizontal = Space.x4)
+                    .padding(horizontal = V3Space.md)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(Radius.panel))
-                    // 弹层用 surfaceElevated（比卡片亮一档）—— 深色下分层靠提亮
-                    .background(colors.surfaceElevated)
+                    // 🔴 v3：面板材质从**实心深灰**改为 Liquid Glass。
+                    //
+                    // ⚠️ 用 `Modifier.v3GlassSurface` 而不是 `GlassSurface` 容器 ——
+                    //    前者是**一个表达式替换**（`.clip + .background` 换成
+                    //    `.v3GlassSurface`），**不动任何花括号**。
+                    //    容器形式要在几百行深的树里配一对括号，实测改坏过两次。
+                    //
+                    // 判据（§7.37 坑 219）：**模糊玻璃适合「大面积、静态、
+                    // 内容之上」的浮层** —— 弹层三条全中。
+                    .v3GlassSurface(
+                        shape = RoundedCornerShape(V3Radius.sheet),
+                        level = V3Glass.Level.UltraThin,
+                    )
                     .clickable(enabled = false) {}
                     .heightIn(max = MAX_SHEET_HEIGHT)
-                    .padding(bottom = Space.x3),
+                    .padding(bottom = V3Space.sm),
             ) {
                 // ---- 标题栏 ----
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Space.x4, vertical = Space.x3),
+                        .padding(horizontal = V3Space.md, vertical = V3Space.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "AI 总结",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontSize = FontSize.titleMd,
+                        style = V3Type.subheadline.copy(
                             fontWeight = FontWeight.SemiBold,
-                            color = colors.textPrimary,
+                            color = colors.labelPrimary,
                         ),
                     )
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                     // 来源标签（拿到结果后才显示）
                     (state as? AiSummaryUiState.Done)?.summary?.let { s ->
                         SourceTag(source = s.source, model = s.model)
@@ -134,16 +147,16 @@ fun AiSummarySheet(
                     Spacer(Modifier.weight(1f))
                     Box(
                         modifier = Modifier
-                            .size(Sizes.iconXl + Space.x2)
-                            .clip(RoundedCornerShape(Radius.interactive))
+                            .size(V3Size.iconLg + V3Space.xs)
+                            .clip(RoundedCornerShape(V3Radius.xs))
                             .clickable(onClick = onDismiss),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Close,
                             contentDescription = "关闭",
-                            tint = colors.textSecondarySafe,
-                            modifier = Modifier.size(Sizes.iconLg),
+                            tint = colors.labelSecondary,
+                            modifier = Modifier.size(V3Size.iconMd),
                         )
                     }
                 }
@@ -168,27 +181,24 @@ fun AiSummarySheet(
                         is AiSummaryUiState.Blocked -> Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = Space.x4),
+                                .padding(horizontal = V3Space.md),
                         ) {
                             Text(
                                 text = state.title,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontSize = FontSize.titleMd,
+                                style = V3Type.subheadline.copy(
                                     fontWeight = FontWeight.Medium,
-                                    color = colors.textPrimary,
+                                    color = colors.labelPrimary,
                                 ),
                             )
-                            Spacer(Modifier.height(Space.x2))
+                            Spacer(Modifier.height(V3Space.xs))
                             Text(
                                 text = state.detail,
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontSize = FontSize.bodySm,
-                                    lineHeight = FontSize.bodySmLine,
-                                    color = colors.textSecondarySafe,
+                                style = V3Type.footnote.copy(
+                                    color = colors.labelSecondary,
                                 ),
                             )
-                            Spacer(Modifier.height(Space.x4))
-                            Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+                            Spacer(Modifier.height(V3Space.md))
+                            Row(horizontalArrangement = Arrangement.spacedBy(V3Space.xs)) {
                                 when (state.action) {
                                     AiSummaryUiState.BlockedAction.LOGIN ->
                                         BrandButton(
@@ -214,18 +224,16 @@ fun AiSummarySheet(
                         is AiSummaryUiState.Error -> Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = Space.x4),
+                                .padding(horizontal = V3Space.md),
                         ) {
                             Text(
                                 text = state.message,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = FontSize.body,
-                                    lineHeight = FontSize.bodyLine,
-                                    color = colors.textSecondarySafe,
+                                style = V3Type.callout.copy(
+                                    color = colors.labelSecondary,
                                 ),
                             )
-                            Spacer(Modifier.height(Space.x4))
-                            Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+                            Spacer(Modifier.height(V3Space.md))
+                            Row(horizontalArrangement = Arrangement.spacedBy(V3Space.xs)) {
                                 BrandButton(
                                     label = "重试",
                                     onClick = onRetry,
@@ -244,7 +252,7 @@ fun AiSummarySheet(
 
                         is AiSummaryUiState.Done -> SummaryBody(state.summary, onSeek)
                     }
-                    Spacer(Modifier.height(Space.x4))
+                    Spacer(Modifier.height(V3Space.md))
                 }
             }
         }
@@ -273,33 +281,43 @@ private fun SummaryBody(
     summary: VideoSummary,
     onSeek: ((Int) -> Unit)? = null,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // ---- 概述 ----
     if (summary.overview.isNotBlank()) {
-        SectionMark(
-            index = 1,
+        // 🔴 v3：`SectionMark(index=…, title=…)` → `V3SectionTitle(title=…)`。
+        //
+        // ## 为什么去掉序号（§5.4.3 明确推翻）
+        //
+        // 旧 `SectionMark` 渲染成 `01 ── 视频概述`。序号是"极客点缀"，
+        // 但它有两个实际问题：
+        //
+        // 1. **序号要人工维护** —— 本文件原来就写着
+        //    `index = if (summary.outline.isEmpty()) 2 else 3`：
+        //    章节增删时序号会错位。本项目已因此出过**两次**
+        //    重复编号 bug（`…9, 10, 10, 11`）。
+        // 2. **iOS 的章节标题就是一行小号标签**，没有序号也没有装饰线。
+        //
+        // ⚠️ `topSpace` 语义与旧 `modifier.padding(top=…)` 一致：
+        //    间距**只由下方区块提供**（§5.1），不要两边都加。
+        V3SectionTitle(
             title = "视频概述",
-            modifier = Modifier.padding(top = Space.x1),
+            topSpace = V3Space.xxs,
         )
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
         Text(
             text = summary.overview,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                lineHeight = FontSize.bodyLine,
-                color = colors.textPrimary,
-            ),
-            modifier = Modifier.padding(horizontal = Space.x4),
+            style = V3Type.callout,
+            color = colors.labelPrimary,
+            modifier = Modifier.padding(horizontal = V3Space.md),
         )
     }
 
     // ---- 核心内容 ----
     if (summary.outline.isNotEmpty()) {
-        SectionMark(
-            index = 2,
+        V3SectionTitle(
             title = "核心内容",
-            modifier = Modifier.padding(top = Rhythm.between),
+            topSpace = Rhythm.between,
         )
         summary.outline.forEach { sec ->
             SummarySectionBlock(sec, onSeek)
@@ -308,20 +326,16 @@ private fun SummaryBody(
 
     // ---- 简短总结 ----
     if (summary.conclusion.isNotBlank()) {
-        SectionMark(
-            index = if (summary.outline.isEmpty()) 2 else 3,
+        V3SectionTitle(
             title = "简短总结",
-            modifier = Modifier.padding(top = Rhythm.between),
+            topSpace = Rhythm.between,
         )
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
         Text(
             text = summary.conclusion,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                lineHeight = FontSize.bodyLine,
-                color = colors.textPrimary,
-            ),
-            modifier = Modifier.padding(horizontal = Space.x4),
+            style = V3Type.callout,
+            color = colors.labelPrimary,
+            modifier = Modifier.padding(horizontal = V3Space.md),
         )
     }
 
@@ -331,15 +345,13 @@ private fun SummaryBody(
         RuleLine(color = Rule.subtle)
         Text(
             text = "⚠️ 字幕过长已截断，本总结仅基于视频前一部分内容。",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
-                lineHeight = FontSize.labelLine,
+            style = V3Type.caption1.copy(
                 color = colors.accentCoin,
             ),
             modifier = Modifier.padding(
-                start = Space.x4,
-                end = Space.x4,
-                top = Space.x2,
+                start = V3Space.md,
+                end = V3Space.md,
+                top = V3Space.xs,
             ),
         )
     }
@@ -351,15 +363,13 @@ private fun SummaryBody(
         Text(
             text = "以上内容由你自己配置的第三方 AI（${summary.model}）根据字幕生成，" +
                 "**不是 B 站官方总结**，可能有误，请自行判断。",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
-                lineHeight = FontSize.labelLine,
-                color = colors.textTertiary,
+            style = V3Type.caption1.copy(
+                color = colors.labelTertiary,
             ),
             modifier = Modifier.padding(
-                start = Space.x4,
-                end = Space.x4,
-                top = Space.x2,
+                start = V3Space.md,
+                end = V3Space.md,
+                top = V3Space.xs,
             ),
         )
     }
@@ -394,7 +404,7 @@ private fun SummarySectionBlock(
     sec: SummarySection,
     onSeek: ((Int) -> Unit)? = null,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val jumpable = sec.timestampSeconds > 0 && onSeek != null
 
     Column(
@@ -408,38 +418,37 @@ private fun SummarySectionBlock(
                     Modifier
                 },
             )
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // 时间用等宽（§5.1 允许的极客点缀：数字读数）
             if (sec.timeLabel.isNotEmpty()) {
                 Text(
                     text = sec.timeLabel,
-                    style = MaterialTheme.typography.labelMedium.copy(
+                    style = V3Type.footnote.copy(
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        fontSize = FontSize.badge,
-                        color = if (jumpable) colors.brandPrimary else colors.accentTerminal,
+                        fontSize = V3Type.caption2.fontSize,
+                        color = if (jumpable) colors.brand else colors.accentTerminal,
                     ),
                 )
                 // 可跳转时补一个图标 —— 表明"这里能点"
                 if (jumpable) {
-                    Spacer(Modifier.width(Space.x1))
+                    Spacer(Modifier.width(V3Space.xxs))
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
                         contentDescription = "跳转到 ${sec.timeLabel}",
-                        tint = colors.brandPrimary,
-                        modifier = Modifier.size(Sizes.iconSm),
+                        tint = colors.brand,
+                        modifier = Modifier.size(V3Size.iconXs),
                     )
                 }
-                Spacer(Modifier.width(Space.x2))
+                Spacer(Modifier.width(V3Space.xs))
             }
             if (sec.title.isNotEmpty()) {
                 Text(
                     text = sec.title,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.bodySm,
+                    style = V3Type.footnote.copy(
                         fontWeight = FontWeight.Medium,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -448,24 +457,21 @@ private fun SummarySectionBlock(
         }
 
         sec.points.forEach { point ->
-            Spacer(Modifier.height(Space.x1))
+            Spacer(Modifier.height(V3Space.xxs))
             Row(verticalAlignment = Alignment.Top) {
                 // 要点前缀用**短横线**而不是圆点符号：
                 // 与全站"左侧竖线/短横"的分组语言一致，且不引入 emoji 语义
                 Text(
                     text = "—",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textTertiary,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelTertiary,
                     ),
                 )
-                Spacer(Modifier.width(Space.x2))
+                Spacer(Modifier.width(V3Space.xs))
                 Text(
                     text = point,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = FontSize.bodySm,
-                        lineHeight = FontSize.bodySmLine,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.footnote.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
             }
@@ -481,26 +487,25 @@ private fun SummarySectionBlock(
  */
 @Composable
 private fun SourceTag(source: SummarySource, model: String) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val (label, tint) = when (source) {
-        SummarySource.OFFICIAL -> "B 站官方 AI" to colors.textLinkSafe
+        SummarySource.OFFICIAL -> "B 站官方 AI" to colors.brandText
         SummarySource.THIRD_PARTY ->
-            (model.ifEmpty { "第三方 AI" }) to colors.textSecondarySafe
+            (model.ifEmpty { "第三方 AI" }) to colors.labelSecondary
     }
 
     Text(
         text = label,
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.badge,
+        style = V3Type.caption2.copy(
             fontWeight = FontWeight.Medium,
             color = tint,
         ),
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.badge))
-            .background(colors.bgHover)
-            .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
+            .clip(RoundedCornerShape(V3Radius.xs))
+            .background(colors.bgTertiary)
+            .padding(horizontal = V3Space.tagHorizontal, vertical = V3Space.tagVertical),
     )
 }
 

@@ -42,11 +42,11 @@ import com.example.biliv3.data.emote.Emote
 import com.example.biliv3.data.emote.EmotePackage
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 表情选择面板（**未发版**）。
@@ -85,7 +85,7 @@ fun EmotePickerPanel(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     var query by remember { mutableStateOf("") }
 
     // 搜索：跨全部包（用户不记得在哪个包里）
@@ -104,36 +104,34 @@ fun EmotePickerPanel(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(max = PANEL_MAX_H)
-            .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
-            .background(colors.surfaceElevated)
+            .clip(RoundedCornerShape(topStart = V3Radius.lg, topEnd = V3Radius.lg))
+            .background(colors.bgSecondaryElevated)
             .navigationBarsPadding(),
     ) {
         // ---- 标题 ----
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Space.x4, vertical = Space.x3),
+                .padding(horizontal = V3Space.md, vertical = V3Space.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = "表情",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
             Spacer(Modifier.weight(1f))
             Text(
                 text = "收起",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption1.copy(
+                    color = colors.labelSecondary,
                 ),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.interactive))
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     .clickable(onClick = onDismiss)
-                    .padding(horizontal = Space.x3, vertical = Space.x2),
+                    .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
             )
         }
 
@@ -141,17 +139,16 @@ fun EmotePickerPanel(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Space.x4)
-                .clip(RoundedCornerShape(Radius.interactive))
-                .background(colors.bgHover)
-                .padding(horizontal = Space.x3, vertical = Space.x2),
+                .padding(horizontal = V3Space.md)
+                .clip(RoundedCornerShape(V3Radius.xs))
+                .background(colors.bgTertiary)
+                .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
         ) {
             if (query.isEmpty()) {
                 Text(
                     text = "搜索表情（支持别名与包名）",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.bodySm,
-                        color = colors.textTertiary,
+                    style = V3Type.footnote.copy(
+                        color = colors.labelTertiary,
                     ),
                 )
             }
@@ -159,11 +156,10 @@ fun EmotePickerPanel(
                 value = query,
                 onValueChange = { query = it },
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.bodySm,
-                    color = colors.textPrimary,
+                textStyle = V3Type.footnote.copy(
+                    color = colors.labelPrimary,
                 ),
-                cursorBrush = SolidColor(colors.brandPrimary),
+                cursorBrush = SolidColor(colors.brand),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -172,41 +168,37 @@ fun EmotePickerPanel(
         error?.let {
             Text(
                 text = it,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    lineHeight = FontSize.labelLine,
+                style = V3Type.caption2.copy(lineHeight = V3Type.caption1.lineHeight,
                     color = colors.accentCoin,
                 ),
                 modifier = Modifier.padding(
-                    start = Space.x4,
-                    end = Space.x4,
-                    top = Space.x2,
+                    start = V3Space.md,
+                    end = V3Space.md,
+                    top = V3Space.xs,
                 ),
             )
         }
 
         RuleLine(
             color = Rule.subtle,
-            modifier = Modifier.padding(top = Space.x2),
+            modifier = Modifier.padding(top = V3Space.xs),
         )
 
         when {
             loading && packages.isEmpty() -> Text(
                 text = "正在加载表情…",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    color = colors.textTertiary,
+                style = V3Type.footnote.copy(
+                    color = colors.labelTertiary,
                 ),
-                modifier = Modifier.padding(Space.x4),
+                modifier = Modifier.padding(V3Space.md),
             )
 
             filtered.isEmpty() -> Text(
                 text = if (query.isBlank()) "没有可用表情" else "没有匹配的表情",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    color = colors.textTertiary,
+                style = V3Type.footnote.copy(
+                    color = colors.labelTertiary,
                 ),
-                modifier = Modifier.padding(Space.x4),
+                modifier = Modifier.padding(V3Space.md),
             )
 
             else -> LazyColumn(modifier = Modifier.fillMaxWidth()) {
@@ -214,16 +206,15 @@ fun EmotePickerPanel(
                     item(key = "pkg-${pkg.id}") {
                         Text(
                             text = "${pkg.name}（${pkg.emotes.size}）",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
+                            style = V3Type.caption2.copy(
                                 fontWeight = FontWeight.Medium,
-                                color = colors.textTertiary,
+                                color = colors.labelTertiary,
                             ),
                             modifier = Modifier.padding(
-                                start = Space.x4,
-                                end = Space.x4,
-                                top = Space.x3,
-                                bottom = Space.compactVertical,
+                                start = V3Space.md,
+                                end = V3Space.md,
+                                top = V3Space.sm,
+                                bottom = V3Space.hairline,
                             ),
                         )
                     }
@@ -234,7 +225,7 @@ fun EmotePickerPanel(
             }
         }
 
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
     }
 }
 
@@ -256,7 +247,7 @@ private fun EmoteGrid(emotes: List<Emote>, onPick: (String) -> Unit) {
             //    否则嵌套滚动测量会拿到无限高约束（§7.24-150 同类问题）。
             //    按行数算一个确定高度。
             .height(gridHeight(emotes.size))
-            .padding(horizontal = Space.x2),
+            .padding(horizontal = V3Space.xs),
     ) {
         items(emotes, key = { it.token }) { e ->
             EmoteCell(e, onPick)
@@ -266,7 +257,7 @@ private fun EmoteGrid(emotes: List<Emote>, onPick: (String) -> Unit) {
 
 /** 网格高度 = 行数 × 单元高（留一点余量避免最后一行被裁）。 */
 private fun gridHeight(count: Int) =
-    (CELL + Space.x1) * ((count + GRID_COLUMNS - 1) / GRID_COLUMNS) + Space.x2
+    (CELL + V3Space.xxs) * ((count + GRID_COLUMNS - 1) / GRID_COLUMNS) + V3Space.xs
 
 /**
  * 单个表情格。
@@ -279,12 +270,12 @@ private fun gridHeight(count: Int) =
  */
 @Composable
 private fun EmoteCell(e: Emote, onPick: (String) -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Box(
         modifier = Modifier
             .size(CELL)
-            .clip(RoundedCornerShape(Radius.badge))
+            .clip(RoundedCornerShape(V3Radius.xs))
             // 未解锁：不挂 clickable（**死入口**问题）
             .then(
                 if (e.usable) {
@@ -299,13 +290,12 @@ private fun EmoteCell(e: Emote, onPick: (String) -> Unit) {
             // 颜文字：直接显示文字
             e.type == Emote.TYPE_KAOMOJI || !e.isImage -> Text(
                 text = e.token,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = if (e.usable) colors.textSecondarySafe else colors.textTertiary,
+                style = V3Type.caption2.copy(
+                    color = if (e.usable) colors.labelSecondary else colors.labelTertiary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = Space.micro),
+                modifier = Modifier.padding(horizontal = V3Space.hairline),
             )
 
             else -> AsyncImage(
@@ -316,7 +306,7 @@ private fun EmoteCell(e: Emote, onPick: (String) -> Unit) {
                 alpha = if (e.usable) 1f else 0.35f,
                 modifier = Modifier
                     .size(EMOTE_IMG)
-                    .clip(RoundedCornerShape(Radius.badge)),
+                    .clip(RoundedCornerShape(V3Radius.xs)),
             )
         }
 
@@ -327,8 +317,8 @@ private fun EmoteCell(e: Emote, onPick: (String) -> Unit) {
                     .size(CELL)
                     .border(
                         1.dp,
-                        colors.textTertiary.copy(alpha = 0.4f),
-                        RoundedCornerShape(Radius.badge),
+                        colors.labelTertiary.copy(alpha = 0.4f),
+                        RoundedCornerShape(V3Radius.xs),
                     ),
             )
         }

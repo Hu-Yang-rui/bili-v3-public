@@ -51,16 +51,17 @@ import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.home.gridGutterFor
 import com.example.biliv3.ui.home.gridRowSpacingFor
 import com.example.biliv3.ui.home.pagePaddingFor
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 直播列表页。
@@ -87,7 +88,7 @@ fun LiveScreen(
     modifier: Modifier = Modifier,
     viewModel: LiveViewModel,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val rooms by viewModel.rooms.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
@@ -118,7 +119,7 @@ fun LiveScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         Row(
             modifier = Modifier
@@ -126,13 +127,13 @@ fun LiveScreen(
                 // 顶栏不再是卡片：与页面同明度，只留底边一条发丝线
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -140,17 +141,16 @@ fun LiveScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = "直播",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
         }
@@ -186,8 +186,8 @@ fun LiveScreen(
                 contentPadding = PaddingValues(
                     start = pagePaddingFor(windowSize),
                     end = pagePaddingFor(windowSize),
-                    top = Space.x2,
-                    bottom = Space.x8,
+                    top = V3Space.xs,
+                    bottom = V3Space.xxl,
                 ),
                 horizontalArrangement = Arrangement.spacedBy(gridGutterFor(windowSize)),
                 verticalArrangement = Arrangement.spacedBy(gridRowSpacingFor(windowSize)),
@@ -201,20 +201,19 @@ fun LiveScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = Space.x5),
+                            .padding(vertical = V3Space.lg),
                         contentAlignment = Alignment.Center,
                     ) {
                         when {
                             loadingMore -> CircularProgressIndicator(
-                                color = colors.brandPrimary,
-                                strokeWidth = Space.trackHeight,
-                                modifier = Modifier.size(Sizes.iconXl),
+                                color = colors.brand,
+                                strokeWidth = V3Space.progressTrack,
+                                modifier = Modifier.size(V3Size.iconLg),
                             )
                             !hasMore -> Text(
                                 text = "没有更多了",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = FontSize.label,
-                                    color = colors.textTertiary,
+                                style = V3Type.caption1.copy(
+                                    color = colors.labelTertiary,
                                 ),
                             )
                         }
@@ -228,7 +227,7 @@ fun LiveScreen(
 /** 直播卡片：封面 + 直播中角标 + 标题 + 主播 + 人气。 */
 @Composable
 private fun LiveCard(room: LiveRoom, onClick: () -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = Modifier
@@ -252,22 +251,21 @@ private fun LiveCard(room: LiveRoom, onClick: () -> Unit) {
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(Space.compactHorizontal)
-                    .clip(RoundedCornerShape(Radius.badge))
+                    .padding(V3Space.xs)
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     .background(colors.stateLive)
                     // ⚠️ 用令牌而不是 `5.dp` / `1.dp`（v1.2.4）：
                     // 同一种「直播中」角标在 `SidePanel` 用的是
                     // `tagHorizontal`(4) + `tagVertical`(1)，这里却是 5+1 ——
                     // 两处差 1dp，肉眼看不出来但属于**同一语义两套值**。
                     // 统一到令牌，右侧是唯一定义处。
-                    .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
+                    .padding(horizontal = V3Space.tagHorizontal, vertical = V3Space.tagVertical),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "直播中",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.onOverlay,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelOnMedia,
                         fontWeight = FontWeight.Medium,
                     ),
                 )
@@ -277,33 +275,31 @@ private fun LiveCard(room: LiveRoom, onClick: () -> Unit) {
             if (room.online > 0) {
                 Text(
                     text = "${formatCount(room.online)} 人气",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.onOverlay,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelOnMedia,
                     ),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(Space.compactHorizontal)
-                        .clip(RoundedCornerShape(Radius.badge))
-                        .background(colors.overlayCover)
-                        .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
+                        .padding(V3Space.xs)
+                        .clip(RoundedCornerShape(V3Radius.xs))
+                        .background(colors.overlay)
+                        .padding(horizontal = V3Space.tagHorizontal, vertical = V3Space.tagVertical),
                 )
             }
         }
 
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
 
         Text(
             text = room.title,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.bodySm,
-                color = colors.textPrimary,
+            style = V3Type.footnote.copy(
+                color = colors.labelPrimary,
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
 
-        Spacer(Modifier.height(Space.micro))
+        Spacer(Modifier.height(V3Space.hairline))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
@@ -315,12 +311,11 @@ private fun LiveCard(room: LiveRoom, onClick: () -> Unit) {
                     .clip(CircleShape)
                     .background(colors.avatarPlaceholder),
             )
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = room.uname,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption2.copy(
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

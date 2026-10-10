@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.biliv3.design.v3.V3Type
 
 /** 提供 [V3Colors]。 */
 val LocalV3Colors = staticCompositionLocalOf { V3DarkColors }

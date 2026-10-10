@@ -45,12 +45,13 @@ import com.example.biliv3.data.download.DownloadTask
 import com.example.biliv3.data.download.DownloadedItem
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 离线缓存管理页。
@@ -92,7 +93,7 @@ fun DownloadScreen(
     modifier: Modifier = Modifier,
     viewModel: DownloadViewModel,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val items by viewModel.items.collectAsStateWithLifecycle()
     val tasks by viewModel.tasks.collectAsStateWithLifecycle()
 
@@ -102,7 +103,7 @@ fun DownloadScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 顶栏 ----
         Row(
@@ -111,13 +112,13 @@ fun DownloadScreen(
                 // 顶栏不再是卡片：与页面同明度，只留底边一条发丝线
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -125,27 +126,25 @@ fun DownloadScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = "离线缓存",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
             Spacer(Modifier.weight(1f))
             Text(
                 text = "已用 ${com.example.biliv3.util.ImageCache.formatBytes(items.sumOf { it.totalBytes })}",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption1.copy(
+                    color = colors.labelSecondary,
                 ),
-                modifier = Modifier.padding(end = Space.x3),
+                modifier = Modifier.padding(end = V3Space.sm),
             )
         }
 
@@ -161,7 +160,7 @@ fun DownloadScreen(
         }
 
         LazyColumn(
-            contentPadding = PaddingValues(vertical = Space.x2),
+            contentPadding = PaddingValues(vertical = V3Space.xs),
             modifier = Modifier.fillMaxSize(),
         ) {
             // ---- 进行中 ----
@@ -200,16 +199,15 @@ fun DownloadScreen(
 private fun GroupHeader(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.label,
+        style = V3Type.caption1.copy(
             fontWeight = FontWeight.SemiBold,
-            color = BiliTheme.colors.textTertiary,
+            color = BiliV3.colors.labelTertiary,
         ),
         modifier = Modifier.padding(
-            start = Space.x4,
-            end = Space.x4,
-            top = Space.x3,
-            bottom = Space.x2,
+            start = V3Space.md,
+            end = V3Space.md,
+            top = V3Space.sm,
+            bottom = V3Space.xs,
         ),
     )
 }
@@ -217,68 +215,64 @@ private fun GroupHeader(text: String) {
 /** 进行中的任务：标题 + 进度条 + 取消。 */
 @Composable
 private fun RunningRow(task: DownloadTask, onCancel: () -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         modifier = Modifier
             .fillMaxWidth()
             // ⚠️ 下载任务行**不再是卡片** —— 列表用留白分组，不用卡片分组。
-            .padding(horizontal = Space.x4, vertical = Space.x3),
+            .padding(horizontal = V3Space.md, vertical = V3Space.sm),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = task.title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = colors.textPrimary,
+                style = V3Type.callout.copy(
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
             Text(
                 text = "${(task.progress * 100).toInt()}%",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.brandPrimary,
+                style = V3Type.caption1.copy(
+                    color = colors.brand,
                 ),
             )
         }
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
         LinearProgressIndicator(
             progress = { task.progress.coerceIn(0f, 1f) },
-            color = colors.brandPrimary,
-            trackColor = colors.bgHover,
+            color = colors.brand,
+            trackColor = colors.bgTertiary,
             modifier = Modifier
                 .fillMaxWidth()
-                // ⚠️ 用 `Space.trackHeight`(2dp) 而不是 `Space.x1`(4dp)（v1.4.2 修）。
+                // ⚠️ 用 `V3Space.progressTrack`(2dp) 而不是 `V3Space.xxs`(4dp)（v1.4.2 修）。
                 // `trackHeight` 的令牌文档明写它是"进度条/细轨道视觉高度"，
                 // 全站其它进度条（黑胶/播放器/竖屏）都用它。
                 // 这里写 x1 会让下载进度条粗细是别处的两倍 —— 同屏可见的差异。
-                .height(Space.trackHeight)
+                .height(V3Space.progressTrack)
                 .clip(RoundedCornerShape(2.dp)),
         )
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = com.example.biliv3.util.ImageCache.formatBytes(task.downloadedBytes) +
                     " / " + com.example.biliv3.util.ImageCache.formatBytes(task.totalBytes),
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = colors.textTertiary,
+                style = V3Type.caption2.copy(
+                    color = colors.labelTertiary,
                 ),
             )
             Spacer(Modifier.weight(1f))
             Text(
                 text = "取消",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textBrandSafe,
+                style = V3Type.caption1.copy(
+                    color = colors.brandBiliText,
                 ),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.badge))
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     .clickable(onClick = onCancel)
-                    .padding(horizontal = Space.x2, vertical = Space.x1),
+                    .padding(horizontal = V3Space.xs, vertical = V3Space.xxs),
             )
         }
     }
@@ -287,31 +281,29 @@ private fun RunningRow(task: DownloadTask, onCancel: () -> Unit) {
 /** 失败的任务：说明原因 + 提示。 */
 @Composable
 private fun FailedRow(task: DownloadTask) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val msg = (task.state as? DownloadState.Failed)?.message ?: "下载失败"
     Row(
         modifier = Modifier
             .fillMaxWidth()
             // ⚠️ 列表行不再是卡片（同「列表用留白分组」原则）
-            .padding(horizontal = Space.x4, vertical = Space.x3),
+            .padding(horizontal = V3Space.md, vertical = V3Space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = task.title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = colors.textPrimary,
+                style = V3Type.callout.copy(
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(Space.micro))
+            Spacer(Modifier.height(V3Space.hairline))
             Text(
                 // 给出**可操作的原因**，不是"出错了"
                 text = "$msg（已下载的部分保留，可重试续传）",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
+                style = V3Type.caption2.copy(
                     color = colors.stateError,
                 ),
             )
@@ -327,13 +319,13 @@ private fun DownloadedRow(
     onOpenDetail: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
             // ⚠️ 列表行不再是卡片（同「列表用留白分组」原则）
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -348,20 +340,19 @@ private fun DownloadedRow(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        Spacer(Modifier.width(Space.x3))
+        Spacer(Modifier.width(V3Space.sm))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = item.title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = colors.textPrimary,
+                style = V3Type.callout.copy(
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.clickable(onClick = onOpenDetail),
             )
-            Spacer(Modifier.height(Space.micro))
+            Spacer(Modifier.height(V3Space.hairline))
             Text(
                 text = buildString {
                     append(item.authorName)
@@ -376,20 +367,19 @@ private fun DownloadedRow(
                     append(" · ")
                     append(com.example.biliv3.util.ImageCache.formatBytes(item.totalBytes))
                 },
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption2.copy(
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
 
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
 
         Box(
             modifier = Modifier
-                .size(Space.minTouchTarget)
+                .size(V3Size.touchMin)
                 .clip(CircleShape)
                 .clickable(onClick = onDelete),
             contentAlignment = Alignment.Center,
@@ -397,8 +387,8 @@ private fun DownloadedRow(
             Icon(
                 imageVector = Icons.Outlined.Delete,
                 contentDescription = "删除缓存",
-                tint = colors.textTertiary,
-                modifier = Modifier.size(Sizes.iconLg),
+                tint = colors.labelTertiary,
+                modifier = Modifier.size(V3Size.iconMd),
             )
         }
     }

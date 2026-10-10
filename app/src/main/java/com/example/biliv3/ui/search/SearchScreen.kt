@@ -55,12 +55,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.component.HideKeyboardOnDispose
@@ -68,6 +62,13 @@ import com.example.biliv3.ui.component.ProvideShimmer
 import com.example.biliv3.ui.component.SkeletonVideoCard
 import com.example.biliv3.ui.component.VideoCard
 import com.example.biliv3.ui.component.hideImeNow
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
+import com.example.biliv3.design.v3.V3ContentRow
+import com.example.biliv3.design.v3.V3SectionTitle
 
 /**
  * 搜索页。
@@ -100,7 +101,7 @@ fun SearchScreen(
     val query by viewModel.query.collectAsStateWithLifecycle()
     val history by viewModel.history.collectAsStateWithLifecycle()
     val hotSearch by viewModel.hotSearch.collectAsStateWithLifecycle()
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     val context = LocalContext.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -162,7 +163,7 @@ fun SearchScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 搜索栏 ----
         // 通栏：不再是卡片，内容直接排。
@@ -170,13 +171,13 @@ fun SearchScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable {
                         // ⚠️ 顺序很重要：先收键盘，再退出页面。
@@ -189,11 +190,11 @@ fun SearchScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
 
             SearchField(
                 value = query,
@@ -206,7 +207,7 @@ fun SearchScreen(
                 focusRequester = focusRequester,
                 modifier = Modifier.weight(1f),
             )
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
         }
 
         when (val s = state) {
@@ -275,49 +276,53 @@ private fun SearchField(
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = modifier
-            .height(Sizes.searchHeight)
-            // 🔴 与首页 `TopNav` 的搜索框**必须同构**（v1.2.4 统一）。
+            .height(V3Size.searchField)
+            // 🔴 与首页 `TopNav.SearchField` **必须同构**（v1.2.4 立的规则，
+            //    v3 全量重构时本页被漏掉，这次补齐）。
             //
-            // 上一版这里是 `clip(pill) + background(bgHover)` —— 一个完整的
-            // 圆角胶囊盒子。而首页 `TopNav.SearchBox` 在无卡片重构里已经改成
-            // **底线输入框**（无底色 / 无圆角 / 无四边框，只有一条底边线）。
+            // ## 这条规则的历史
             //
-            // 于是同一个 App 里出现两种搜索框：首页是底线，点进来变胶囊。
-            // **这正是「重构漏改」的典型**：改了一处，忘了另一处。
+            // 上一版本页是 `clip(pill) + background(bgHover)` 胶囊，而 TopNav
+            // 当时是**底线输入框** —— 同一个 App 出现两种搜索框。
+            // 那时把本页改成底线，是为了向 TopNav 看齐。
             //
-            // 实测证据（Pixel 7 / 1080px）：
-            // | | 首页 TopNav | 本页（改前） |
-            // |---|---|---|
-            // | 形态 | 1dp 底线，y=254..256 | 实心块，y=152..256（高 105px = 40dp） |
-            // | 取色 | maxV 37..46（细线） | medianV **48** = `bgHover #1F2530` 精确吻合 |
+            // ## 但 §5.4.3 随后**推翻了「底线」这个结论本身**
             //
-            // 改法：抄 `TopNav` 的写法 —— `ruleBottom` 承担边界，
-            // 去掉 `clip` / `background`。⚠️ 注意搜索页没有 hover 态
-            // （移动端无指针），所以用 `Rule.color` 固定值。
-            .ruleBottom(color = Rule.color)
-            .padding(horizontal = Space.x1),
+            // v3 的判断是：**搜索框是控件，不是内容容器** ——
+            // 按三层颜色系统，控件用 **Fill 层**才是正确语义；
+            // 且纯黑底上一条 12% 白的线几乎看不见，用户找不到搜索入口。
+            //
+            // 于是 TopNav 改回了**填充胶囊**，而本页仍停在底线 ——
+            // **同一条规则，两处实现又分叉了一次**。
+            //
+            // ⚠️ 判据：**"与某处保持同构"要连同"那处的规则是否已变"一起看**。
+            //    只对齐形态、不对齐**依据**，下一次规则变更还会分叉。
+            //    现在两处都走 Fill 层胶囊，依据也一致。
+            .clip(RoundedCornerShape(V3Radius.pill))
+            .background(colors.fillSecondary)
+            .padding(horizontal = V3Space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = Icons.Filled.Search,
             contentDescription = null,
-            tint = colors.textSecondary,
-            modifier = Modifier.size(Sizes.iconMd),
+            tint = colors.labelSecondary,
+            modifier = Modifier.size(V3Size.iconSm),
         )
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
 
         Box(modifier = Modifier.weight(1f)) {
             if (value.isEmpty()) {
                 Text(
                     text = "搜索视频、UP主",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
-                        color = colors.textSecondary,
-                    ),
+                    // 用 V3Type 语义档位，不再走 MaterialTheme 槽位 + fontSize 覆盖
+                    // （那种写法要同时给 fontSize/lineHeight，且槽位名读不出语义）
+                    style = V3Type.subheadline,
+                    color = colors.labelSecondary,
                     maxLines = 1,
                 )
             }
@@ -326,10 +331,10 @@ private fun SearchField(
                 onValueChange = onValueChange,
                 singleLine = true,
                 textStyle = TextStyle(
-                    fontSize = FontSize.body,
-                    color = colors.textPrimary,
+                    fontSize = V3Type.subheadline.fontSize,
+                    color = colors.labelPrimary,
                 ),
-                cursorBrush = SolidColor(colors.brandPrimary),
+                cursorBrush = SolidColor(colors.brand),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
                 modifier = Modifier
@@ -339,10 +344,13 @@ private fun SearchField(
         }
 
         if (value.isNotEmpty()) {
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
             Box(
                 modifier = Modifier
-                    .size(Sizes.iconLg)
+                    // ⚠️ 触摸目标用 touchMin（44dp）而不是图标尺寸：
+                    //    清空钮是个高频误触点，44dp 才够。
+                    //    图标本身仍画 iconSm，命中区与视觉尺寸解耦。
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onClear),
                 contentAlignment = Alignment.Center,
@@ -350,8 +358,8 @@ private fun SearchField(
                 Icon(
                     imageVector = Icons.Filled.Close,
                     contentDescription = "清空",
-                    tint = colors.textSecondary,
-                    modifier = Modifier.size(Sizes.iconMd),
+                    tint = colors.labelSecondary,
+                    modifier = Modifier.size(V3Size.iconSm),
                 )
             }
         }
@@ -367,42 +375,38 @@ private fun IdlePanel(
     onRemoveHistory: (String) -> Unit,
     onClearHistory: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     LazyColumn(
-        contentPadding = PaddingValues(vertical = Space.x4),
-        verticalArrangement = Arrangement.spacedBy(Space.x1),
+        // ⚠️ 顶部不留 padding：第一个区块标题自己带 topSpace，
+        //    两边都给会翻倍（§5.1「间距只由下方区块提供」）。
+        contentPadding = PaddingValues(bottom = V3Space.md),
+        verticalArrangement = Arrangement.spacedBy(V3Space.xxs),
         modifier = Modifier.fillMaxSize(),
     ) {
         if (history.isNotEmpty()) {
             item(key = "history-header") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Space.x4, vertical = Space.x2),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "搜索历史",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.body,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colors.textPrimary,
-                        ),
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        text = "清空",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
-                            color = colors.textSecondarySafe,
-                        ),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.interactive))
-                            .clickable(onClick = onClearHistory)
-                            .padding(horizontal = Space.x2, vertical = Space.x1),
-                    )
-                }
+                // 用 V3SectionTitle 而不是手写 Row —— 手写版本要自己管
+                // 字号/字重/左右边距，是"每页一套"的来源。
+                V3SectionTitle(
+                    title = "搜索历史",
+                    // 第一个区块不再额外留白
+                    topSpace = V3Space.sm,
+                    trailing = {
+                        Text(
+                            text = "清空",
+                            style = V3Type.caption1,
+                            color = colors.labelSecondary,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(V3Radius.xs))
+                                .clickable(onClick = onClearHistory)
+                                .padding(
+                                    horizontal = V3Space.xs,
+                                    vertical = V3Space.xxs,
+                                ),
+                        )
+                    },
+                )
             }
             items(history, key = { "h-$it" }) { word ->
                 KeywordRow(
@@ -415,19 +419,9 @@ private fun IdlePanel(
 
         if (hotSearch.isNotEmpty()) {
             item(key = "hot-header") {
-                Text(
-                    text = "热搜",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colors.textPrimary,
-                    ),
-                    modifier = Modifier.padding(
-                        start = Space.x4,
-                        end = Space.x4,
-                        top = if (history.isEmpty()) Space.x2 else Space.x5,
-                        bottom = Space.x2,
-                    ),
+                V3SectionTitle(
+                    title = "热搜",
+                    topSpace = if (history.isEmpty()) V3Space.sm else V3Space.xl,
                 )
             }
             items(hotSearch, key = { "hot-$it" }) { word ->
@@ -456,48 +450,56 @@ private fun KeywordRow(
     onClick: () -> Unit,
     onRemove: (() -> Unit)? = null,
 ) {
-    val colors = BiliTheme.colors
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = Space.x4, vertical = Space.x3),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Filled.Search,
-            contentDescription = null,
-            tint = colors.textTertiary,
-            modifier = Modifier.size(Sizes.iconSm),
-        )
-        Spacer(Modifier.width(Space.x3))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                color = colors.textPrimary,
-            ),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        if (onRemove != null) {
-            Box(
-                modifier = Modifier
-                    .size(Sizes.iconXl)
-                    .clip(CircleShape)
-                    .clickable(onClick = onRemove),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "删除",
-                    tint = colors.textTertiary,
-                    modifier = Modifier.size(Sizes.iconSm),
-                )
+    val colors = BiliV3.colors
+    // 用 V3ContentRow（**无容器**内容行）而不是手写 Row：
+    // 它统一了左右边距、纵向节奏与可选分隔线，是"内容页列表项"的唯一基座。
+    //
+    // ⚠️ `content` 必须**具名传**：本函数最后一个参数是
+    //    `separatorInsetStart: Dp`，尾随 lambda 会绑定到它而不是 content
+    //    （报 `No value passed for parameter 'content'` +
+    //    `Argument type mismatch: () -> Unit, but Dp was expected`）。
+    //    这是"参数顺序 ≠ 语义顺序"时尾随 lambda 的经典陷阱。
+    V3ContentRow(
+        onClick = onClick,
+        verticalPadding = V3Space.sm,
+        leading = {
+            Icon(
+                imageVector = Icons.Filled.Search,
+                contentDescription = null,
+                tint = colors.labelTertiary,
+                modifier = Modifier.size(V3Size.iconXs),
+            )
+        },
+        actions = if (onRemove != null) {
+            {
+                Box(
+                    modifier = Modifier
+                        .size(V3Size.touchMin)
+                        .clip(CircleShape)
+                        .clickable(onClick = onRemove),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "删除",
+                        tint = colors.labelTertiary,
+                        modifier = Modifier.size(V3Size.iconXs),
+                    )
+                }
             }
-        }
-    }
+        } else {
+            null
+        },
+        content = {
+            Text(
+                text = text,
+                style = V3Type.callout,
+                color = colors.labelPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+    )
 }
 
 /** 联想词面板。 */
@@ -506,7 +508,7 @@ private fun SuggestPanel(
     suggestions: List<String>,
     onPick: (String) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     if (suggestions.isEmpty()) {
         // 联想为空不是错误，只是没有建议 —— 静默留白比报错合理
@@ -515,7 +517,7 @@ private fun SuggestPanel(
     }
 
     LazyColumn(
-        contentPadding = PaddingValues(vertical = Space.x2),
+        contentPadding = PaddingValues(vertical = V3Space.xs),
         modifier = Modifier.fillMaxSize(),
     ) {
         items(suggestions, key = { "s-$it" }) { word ->
@@ -523,21 +525,20 @@ private fun SuggestPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onPick(word) }
-                    .padding(horizontal = Space.x4, vertical = Space.x3),
+                    .padding(horizontal = V3Space.md, vertical = V3Space.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     imageVector = Icons.Filled.Search,
                     contentDescription = null,
-                    tint = colors.textTertiary,
-                    modifier = Modifier.size(Sizes.iconSm),
+                    tint = colors.labelTertiary,
+                    modifier = Modifier.size(V3Size.iconXs),
                 )
-                Spacer(Modifier.width(Space.x3))
+                Spacer(Modifier.width(V3Space.sm))
                 Text(
                     text = word,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
-                        color = colors.textPrimary,
+                    style = V3Type.callout.copy(
+                        color = colors.labelPrimary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -554,7 +555,7 @@ private fun ResultList(
     onVideoClick: (String) -> Unit,
     onLoadMore: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val listState = rememberLazyListState()
 
     // 距底 5 项触发加载，避免用户看到"卡住不动"
@@ -573,12 +574,12 @@ private fun ResultList(
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(
-            start = Space.x4,
-            end = Space.x4,
-            top = Space.x3,
-            bottom = Space.x8,
+            start = V3Space.md,
+            end = V3Space.md,
+            top = V3Space.sm,
+            bottom = V3Space.xxl,
         ),
-        verticalArrangement = Arrangement.spacedBy(Space.x3),
+        verticalArrangement = Arrangement.spacedBy(V3Space.sm),
         modifier = Modifier.fillMaxSize(),
     ) {
         items(items = state.items, key = { it.bvid }) { video ->
@@ -589,20 +590,19 @@ private fun ResultList(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = Space.x4),
+                    .padding(vertical = V3Space.md),
                 contentAlignment = Alignment.Center,
             ) {
                 when {
                     state.loadingMore -> CircularProgressIndicator(
-                        color = colors.brandPrimary,
-                        strokeWidth = Space.trackHeight,
-                        modifier = Modifier.size(Sizes.iconXl),
+                        color = colors.brand,
+                        strokeWidth = V3Space.progressTrack,
+                        modifier = Modifier.size(V3Size.iconLg),
                     )
                     !state.hasMore -> Text(
                         text = "没有更多了",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
-                            color = colors.textSecondary,
+                        style = V3Type.caption1.copy(
+                            color = colors.labelSecondary,
                         ),
                     )
                 }
@@ -631,11 +631,11 @@ private fun SearchSkeleton() {
         modifier = Modifier
             .fillMaxSize()
             .padding(
-                start = Space.x4,
-                end = Space.x4,
-                top = Space.x3,
+                start = V3Space.md,
+                end = V3Space.md,
+                top = V3Space.sm,
             ),
-        verticalArrangement = Arrangement.spacedBy(Space.x3),
+        verticalArrangement = Arrangement.spacedBy(V3Space.sm),
     ) {
         repeat(SKELETON_CARDS) {
             SkeletonVideoCard()

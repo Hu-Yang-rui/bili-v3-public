@@ -25,7 +25,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
@@ -53,16 +52,13 @@ import com.example.biliv3.design.v3.V3Space
 import com.example.biliv3.design.v3.V3Type
 import com.example.biliv3.design.v3.V3SectionTitle
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.InlinePicker
 import com.example.biliv3.ui.component.PickerOption
 import com.example.biliv3.ui.component.BrandButton
 import com.example.biliv3.ui.component.BrandButtonVariant
+import com.example.biliv3.design.v3.V3SwitchRow
 
 /**
  * 设置页。
@@ -163,13 +159,13 @@ fun SettingsScreen(
                 // 顶栏不再是卡片：与页面同明度，只靠底边一条发丝线分隔
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -178,14 +174,13 @@ fun SettingsScreen(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
                     tint = colors.labelPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = "设置",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
                     color = colors.labelPrimary,
                 ),
@@ -196,7 +191,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = Space.x8),
+                .padding(bottom = V3Space.xxl),
         ) {
             // ================= 播放 =================
             V3SectionTitle(
@@ -617,15 +612,13 @@ fun SettingsScreen(
             Text(
                 text = "内置内容为本项目整理的常用直播用语，不是 B 站官方内容。" +
                     "可在直播间的聊天输入框左侧打开，支持搜索、复制与一键填入。",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    lineHeight = FontSize.labelLine,
+                style = V3Type.caption2.copy(lineHeight = V3Type.caption1.lineHeight,
                     color = colors.labelTertiary,
                 ),
                 modifier = Modifier.padding(
-                    start = Space.x4,
-                    end = Space.x4,
-                    top = Space.x1,
+                    start = V3Space.md,
+                    end = V3Space.md,
+                    top = V3Space.xxs,
                 ),
             )
 
@@ -766,40 +759,38 @@ private fun CategoryPicker(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
     ) {
         Text(
             text = "跳过哪些内容",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
+            style = V3Type.caption1.copy(
                 color = colors.labelTertiary,
             ),
         )
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
 
         // 手工分行：用 FlowRow 需要 experimental API，而这里只有 7 项、
         // 每行 3 个足够稳定（文字长度可控）。
         val cats = com.example.biliv3.data.SkipSegment.SELECTABLE
         cats.chunked(3).forEach { row ->
             Row(
-                horizontalArrangement = Arrangement.spacedBy(Space.x2),
-                modifier = Modifier.padding(bottom = Space.x2),
+                horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
+                modifier = Modifier.padding(bottom = V3Space.xs),
             ) {
                 row.forEach { cat ->
                     val on = cat in selected
                     Text(
                         text = com.example.biliv3.data.SkipSegment.LABELS[cat] ?: cat,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
+                        style = V3Type.caption1.copy(
                             color = if (on) colors.labelOnBrand else colors.labelSecondary,
                             fontWeight = if (on) FontWeight.Medium else FontWeight.Normal,
                         ),
                         maxLines = 1,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.pill))
+                            .clip(RoundedCornerShape(V3Radius.pill))
                             .background(if (on) colors.brand else colors.bgTertiary)
                             .clickable { onToggle(cat) }
-                            .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
+                            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                     )
                 }
             }
@@ -866,15 +857,13 @@ private fun AutoQualitySection(
         Text(
             text = "关闭时按服务端默认档取流（fnval=16，改动前的行为）。" +
                 "音质始终取最高码率音轨。",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.badge,
-                lineHeight = FontSize.labelLine,
+            style = V3Type.caption2.copy(lineHeight = V3Type.caption1.lineHeight,
                 color = colors.labelTertiary,
             ),
             modifier = Modifier.padding(
-                start = Space.x4,
-                end = Space.x4,
-                top = Space.x1,
+                start = V3Space.md,
+                end = V3Space.md,
+                top = V3Space.xxs,
             ),
         )
     }
@@ -946,14 +935,13 @@ private fun AutoQualitySection(
         )
 
         // ---- 解锁设置（对应原脚本的「解锁设置」面板）----
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
         Text(
             text = "解锁设置",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
+            style = V3Type.caption1.copy(
                 color = colors.labelTertiary,
             ),
-            modifier = Modifier.padding(horizontal = Space.x4),
+            modifier = Modifier.padding(horizontal = V3Space.md),
         )
         Text(
             text = "这些是**请求参数**（原脚本改 localStorage，本项目改 fnval 位）。" +
@@ -963,16 +951,14 @@ private fun AutoQualitySection(
                 "实测会让整条取流请求返回 -400 请求错误 —— " +
                 "带上不是「没有提升」，而是**整个视频都放不了**。" +
                 "所以那两项只做「服务端给了就用」，不做「主动索要」。",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.badge,
-                lineHeight = FontSize.labelLine,
+            style = V3Type.caption2.copy(lineHeight = V3Type.caption1.lineHeight,
                 color = colors.labelTertiary,
             ),
             modifier = Modifier.padding(
-                start = Space.x4,
-                end = Space.x4,
-                top = Space.x1,
-                bottom = Space.x1,
+                start = V3Space.md,
+                end = V3Space.md,
+                top = V3Space.xxs,
+                bottom = V3Space.xxs,
             ),
         )
 
@@ -1027,8 +1013,24 @@ private val QUALITY_CANDIDATES: List<Pair<Int, String>> =
 /**
  * 开关行。
  *
- * 整行可点（不只点 Switch）—— 触摸目标从 52dp 的 Switch 扩大到整行，
- * 与 Material 的 settings 列表规范一致。
+ * ## 🔴 v3：本函数已改为**委托**给设计系统的 [V3SwitchRow]
+ *
+ * 原先这里是页面内自己实现的一行开关（自己管 padding、字号、Switch 配色）。
+ * 而 `design/v3/V3Kit.kt` 里**已经有一个** `V3SwitchRow` 做同一件事 ——
+ * 于是同一个 App 里存在**两套开关行**：
+ *
+ * | | 本页（旧） | `V3SwitchRow` |
+ * |---|---|---|
+ * | 字号 | `MaterialTheme.typography.bodyMedium.copy(fontSize = …)` | `V3Type.body` / `V3Type.footnote` |
+ * | Switch 配色 | 只给 checked 两色 | checked + unchecked + border 全给 |
+ * | 缩放 | 无 | `scale(0.86f)`（收到 iOS 比例）|
+ * | 分隔线 | 无 | 有 `showSeparator` |
+ *
+ * ⚠️ 这是「每条规则只有一个家」的反例 —— 两套实现的**漂移是必然的**
+ * （本项目已因同类问题出过「设置页 0.6.1 而 versionName 0.6.4」）。
+ *
+ * 现在保留这个薄包装只是为了不动 13 处调用点，**实现只有一处**。
+ * 新代码请直接用 `V3SwitchRow`。
  */
 @Composable
 private fun SwitchRow(
@@ -1038,50 +1040,16 @@ private fun SwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true,
 ) {
-    val colors = BiliV3.colors
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            // ⚠️ 设置项**不再是卡片** —— 它是列表里的一行。
-            //
-            // 每个开关/信息/动作都套卡时，一屏设置项 = 一屏框，
-            // 且框之间还要留缝，纵向空间被大量浪费（设置页因此特别长）。
-            //
-            // 现在：靠分组标题 + 留白组织，行与行之间不画框。
-            .clickable(enabled = enabled) { onCheckedChange(!checked) }
-            .padding(horizontal = Space.x4, vertical = Space.x3),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = if (enabled) colors.labelPrimary else colors.labelTertiary,
-                ),
-            )
-            if (subtitle != null) {
-                Spacer(Modifier.height(Space.micro))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.labelSecondary,
-                    ),
-                )
-            }
-        }
-        Spacer(Modifier.width(Space.x3))
-        Switch(
-            checked = checked,
-            onCheckedChange = if (enabled) onCheckedChange else null,
-            enabled = enabled,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = colors.labelOnBrand,
-                checkedTrackColor = colors.brand,
-            ),
-        )
-    }
+    V3SwitchRow(
+        title = title,
+        subtitle = subtitle,
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        enabled = enabled,
+        // 设置页的行之间**不画分隔线**：分组靠标题 + 留白
+        // （§5.1「分组靠间距，线是兜底手段」）
+        showSeparator = false,
+    )
 }
 
 /** 只读信息行。 */
@@ -1092,26 +1060,24 @@ private fun InfoRow(label: String, value: String) {
         modifier = Modifier
             .fillMaxWidth()
             // 与开关行统一：无底色、无框，靠发丝线分隔
-            .padding(horizontal = Space.x4, vertical = Space.x3),
+            .padding(horizontal = V3Space.md, vertical = V3Space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
+            style = V3Type.callout.copy(
                 color = colors.labelPrimary,
             ),
         )
         Spacer(Modifier.weight(1f))
         Text(
             text = value,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
+            style = V3Type.caption1.copy(
                 color = colors.labelSecondary,
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = Space.x3),
+            modifier = Modifier.padding(start = V3Space.sm),
         )
     }
 }
@@ -1158,37 +1124,34 @@ private fun KeywordBlockRow(
                 .fillMaxWidth()
                 // ⚠️ 设置项不再是卡片（同「列表用留白分组」原则）
                 .clickable(onClick = onToggleEdit)
-                .padding(horizontal = Space.x4, vertical = Space.x3),
+                .padding(horizontal = V3Space.md, vertical = V3Space.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "屏蔽关键词",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
+                    style = V3Type.callout.copy(
                         color = colors.labelPrimary,
                     ),
                 )
-                Spacer(Modifier.height(Space.micro))
+                Spacer(Modifier.height(V3Space.hairline))
                 Text(
                     text = if (keywords.isEmpty()) {
                         "点此添加（空格或逗号分隔多个）"
                     } else {
                         keywords.joinToString("、")
                     },
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
+                    style = V3Type.caption1.copy(
                         color = colors.labelSecondary,
                     ),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
             Text(
                 text = if (editing) "收起" else "编辑",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
+                style = V3Type.caption1.copy(
                     color = colors.brandBiliText,
                     fontWeight = FontWeight.Medium,
                 ),
@@ -1200,20 +1163,19 @@ private fun KeywordBlockRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     // ⚠️ 关键词编辑区不再是卡片 —— 同「列表用留白分组」原则
-                    .padding(horizontal = Space.x4, vertical = Space.x3),
+                    .padding(horizontal = V3Space.md, vertical = V3Space.sm),
             ) {
                 androidx.compose.foundation.text.BasicTextField(
                     value = draft,
                     onValueChange = { draft = it },
                     singleLine = false,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
+                    textStyle = V3Type.callout.copy(
                         color = colors.labelPrimary,
                     ),
                     cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.brand),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(Modifier.height(Space.x3))
+                Spacer(Modifier.height(V3Space.sm))
                 Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                     BrandButton(
                         label = "保存",
@@ -1287,11 +1249,10 @@ private fun AiConfigSection(
         Text(
             text = config.missingHint +
                 "（未配置时 AI 总结只能走 B 站官方接口）",
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = FontSize.bodySm,
+            style = V3Type.footnote.copy(
                 color = colors.labelTertiary,
             ),
-            modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
+            modifier = Modifier.padding(horizontal = V3Space.md, vertical = V3Space.xs),
         )
     }
 
@@ -1305,7 +1266,7 @@ private fun AiConfigSection(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Space.x4, vertical = Space.x3),
+                .padding(horizontal = V3Space.md, vertical = V3Space.sm),
         ) {
             AiField(
                 label = "API 地址",
@@ -1314,7 +1275,7 @@ private fun AiConfigSection(
                 hint = "填到 /v1 为止，不要带 /chat/completions",
                 onValueChange = { draftBase = it },
             )
-            Spacer(Modifier.height(Space.x3))
+            Spacer(Modifier.height(V3Space.sm))
             AiField(
                 label = "模型名",
                 value = draftModel,
@@ -1322,7 +1283,7 @@ private fun AiConfigSection(
                 hint = "用服务商文档里的模型 ID",
                 onValueChange = { draftModel = it },
             )
-            Spacer(Modifier.height(Space.x3))
+            Spacer(Modifier.height(V3Space.sm))
             AiField(
                 label = "API Key",
                 value = draftKey,
@@ -1332,9 +1293,9 @@ private fun AiConfigSection(
                 // 用密码键盘，避免输入时被旁人看到
                 secret = true,
             )
-            Spacer(Modifier.height(Space.x3))
+            Spacer(Modifier.height(V3Space.sm))
             Row(
-                horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 BrandButton(
@@ -1384,24 +1345,22 @@ private fun AiField(
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
+            style = V3Type.caption1.copy(
                 color = colors.labelSecondary,
             ),
         )
-        Spacer(Modifier.height(Space.x1))
+        Spacer(Modifier.height(V3Space.xxs))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(Radius.interactive))
+                .clip(RoundedCornerShape(V3Radius.xs))
                 .background(colors.bgTertiary)
-                .padding(horizontal = Space.x3, vertical = Space.x2),
+                .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
         ) {
             if (value.isEmpty()) {
                 Text(
                     text = placeholder,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.bodySm,
+                    style = V3Type.footnote.copy(
                         color = colors.labelTertiary,
                     ),
                 )
@@ -1416,19 +1375,17 @@ private fun AiField(
                 } else {
                     androidx.compose.ui.text.input.VisualTransformation.None
                 },
-                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.bodySm,
+                textStyle = V3Type.footnote.copy(
                     color = colors.labelPrimary,
                 ),
                 cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.brand),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-        Spacer(Modifier.height(Space.x1))
+        Spacer(Modifier.height(V3Space.xxs))
         Text(
             text = hint,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.badge,
+            style = V3Type.caption2.copy(
                 color = colors.labelTertiary,
             ),
         )
@@ -1448,23 +1405,21 @@ private fun ActionRow(
             .fillMaxWidth()
             // ⚠️ 设置项不再是卡片（同「列表用留白分组」原则）
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x4, vertical = Space.x3),
+            .padding(horizontal = V3Space.md, vertical = V3Space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
+                style = V3Type.callout.copy(
                     color = colors.labelPrimary,
                 ),
             )
             if (subtitle != null) {
-                Spacer(Modifier.height(Space.micro))
+                Spacer(Modifier.height(V3Space.hairline))
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
+                    style = V3Type.caption1.copy(
                         color = colors.labelSecondary,
                     ),
                 )
@@ -1521,19 +1476,19 @@ private fun CookieSection(
         // 字段清单（只有名字，没有值）
         Text(
             text = "字段：${state.fieldNames.joinToString("、")}",
-            style = MaterialTheme.typography.bodySmall.copy(
+            style = V3Type.subheadline.copy(
                 color = colors.labelSecondary,
             ),
-            modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
+            modifier = Modifier.padding(horizontal = V3Space.md, vertical = V3Space.xs),
         )
         // 脱敏摘要：字段名 + 长度
         Text(
             text = state.masked,
-            style = MaterialTheme.typography.bodySmall.copy(
+            style = V3Type.subheadline.copy(
                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                 color = colors.labelTertiary,
             ),
-            modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x1),
+            modifier = Modifier.padding(horizontal = V3Space.md, vertical = V3Space.xxs),
         )
     }
 
@@ -1541,8 +1496,8 @@ private fun CookieSection(
         Text(
             text = "缺少关键字段：${state.missingEssentials.joinToString("、")}" +
                 "（缺 SESSDATA 一定不是登录态）",
-            style = MaterialTheme.typography.bodySmall.copy(color = colors.accentCoin),
-            modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
+            style = V3Type.subheadline.copy(color = colors.accentCoin),
+            modifier = Modifier.padding(horizontal = V3Space.md, vertical = V3Space.xs),
         )
     }
 
@@ -1550,10 +1505,10 @@ private fun CookieSection(
     state.message?.let { msg ->
         Text(
             text = msg,
-            style = MaterialTheme.typography.bodySmall.copy(
+            style = V3Type.subheadline.copy(
                 color = if (state.isError) colors.stateError else colors.stateSuccess,
             ),
-            modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
+            modifier = Modifier.padding(horizontal = V3Space.md, vertical = V3Space.xs),
         )
     }
 
@@ -1590,8 +1545,8 @@ private fun CookieSection(
     if (state.fieldNames.isEmpty() && state.message == null) {
         Text(
             text = "还没有凭据。导入后即可用开发者账号调试接口。",
-            style = MaterialTheme.typography.bodySmall.copy(color = colors.labelTertiary),
-            modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
+            style = V3Type.subheadline.copy(color = colors.labelTertiary),
+            modifier = Modifier.padding(horizontal = V3Space.md, vertical = V3Space.xs),
         )
     }
 }

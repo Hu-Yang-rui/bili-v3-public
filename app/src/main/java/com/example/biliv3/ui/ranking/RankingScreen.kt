@@ -46,14 +46,15 @@ import com.example.biliv3.design.band
 import com.example.biliv3.design.BandLevel
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.ruleTop
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 排行榜页。
@@ -88,12 +89,12 @@ fun RankingScreen(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 顶栏 ----
         Row(
@@ -102,13 +103,13 @@ fun RankingScreen(
                 // 顶栏不再是卡片：与页面同明度，只留底边一条发丝线
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -116,23 +117,22 @@ fun RankingScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = "排行榜",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
         }
 
         // ---- 分区 Tab ----
-        // ⚠️ 用 `band()` 而不是 `.background(colors.bgCard)`（v1.2.4 统一）。
+        // ⚠️ 用 `band()` 而不是 `.background(colors.bgSecondary)`（v1.2.4 统一）。
         // 这是**全宽、直角**的分区带 —— 正是 `Band` 的语义；
         // 而 `bgCard` 是"卡片"的色，拿它铺带子是把两个概念混用了
         // （§5.1 明确：分组靠明度带，不靠卡片）。
@@ -140,8 +140,8 @@ fun RankingScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .band(BandLevel.Raised),
-            contentPadding = PaddingValues(horizontal = Space.x4),
-            horizontalArrangement = Arrangement.spacedBy(Space.x5),
+            contentPadding = PaddingValues(horizontal = V3Space.md),
+            horizontalArrangement = Arrangement.spacedBy(V3Space.lg),
         ) {
             items(tabs, key = { it.rid }) { tab ->
                 val selected = tab.rid == selectedRid
@@ -149,24 +149,23 @@ fun RankingScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .clickable { onSelectTab(tab.rid) }
-                        .padding(vertical = Space.x3),
+                        .padding(vertical = V3Space.sm),
                 ) {
                     Text(
                         text = tab.name,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.body,
+                        style = V3Type.callout.copy(
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (selected) colors.textPrimary else colors.textSecondarySafe,
+                            color = if (selected) colors.labelPrimary else colors.labelSecondary,
                         ),
                     )
-                    Spacer(Modifier.height(Space.x1))
+                    Spacer(Modifier.height(V3Space.xxs))
                     Box(
                         modifier = Modifier
                             .width(20.dp)
-                            .height(Space.tabIndicator)
-                            .clip(RoundedCornerShape(Radius.badge))
+                            .height(V3Space.tabIndicator)
+                            .clip(RoundedCornerShape(V3Radius.xs))
                             .background(
-                                if (selected) colors.brandPrimary else androidx.compose.ui.graphics.Color.Transparent,
+                                if (selected) colors.brand else androidx.compose.ui.graphics.Color.Transparent,
                             ),
                     )
                 }
@@ -180,9 +179,9 @@ fun RankingScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(
-                    color = colors.brandPrimary,
-                    strokeWidth = Space.trackHeight,
-                    modifier = Modifier.size(Sizes.iconXl * 1.5f),
+                    color = colors.brand,
+                    strokeWidth = V3Space.progressTrack,
+                    modifier = Modifier.size(V3Size.iconLg * 1.5f),
                 )
             }
 
@@ -200,7 +199,7 @@ fun RankingScreen(
             )
 
             else -> LazyColumn(
-                contentPadding = PaddingValues(vertical = Space.x2),
+                contentPadding = PaddingValues(vertical = V3Space.xs),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 itemsIndexed(videos, key = { _, v -> v.bvid }) { index, v ->
@@ -214,7 +213,7 @@ fun RankingScreen(
 /** 单条榜单。 */
 @Composable
 private fun RankRow(rank: Int, video: VideoItem, onClick: () -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = Modifier
@@ -222,7 +221,7 @@ private fun RankRow(rank: Int, video: VideoItem, onClick: () -> Unit) {
             // 榜单行不再是卡片：行与行靠发丝线 + 间距分组
             .ruleTop(color = Rule.subtle)
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x4, vertical = Rhythm.inGroup),
+            .padding(horizontal = V3Space.md, vertical = Rhythm.inGroup),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // 名次：前三名高亮
@@ -232,19 +231,19 @@ private fun RankRow(rank: Int, video: VideoItem, onClick: () -> Unit) {
         ) {
             Text(
                 text = rank.toString(),
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = if (rank <= 3) FontSize.titleMd else FontSize.body,
+                style = V3Type.headline.copy(
+                    fontSize = if (rank <= 3) V3Type.subheadline.fontSize else V3Type.callout.fontSize,
                     fontWeight = if (rank <= 3) FontWeight.Bold else FontWeight.Normal,
                     color = when (rank) {
                         1 -> colors.rankFirst
                         2 -> colors.rankSecond
                         3 -> colors.rankThird
-                        else -> colors.textTertiary
+                        else -> colors.labelTertiary
                     },
                 ),
             )
         }
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
 
         // 封面
         Box(
@@ -260,24 +259,22 @@ private fun RankRow(rank: Int, video: VideoItem, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        Spacer(Modifier.width(Space.x3))
+        Spacer(Modifier.width(V3Space.sm))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = video.title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = colors.textPrimary,
+                style = V3Type.callout.copy(
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(Space.x1))
+            Spacer(Modifier.height(V3Space.xxs))
             Text(
                 text = "${video.authorName} · ${formatCount(video.playCount)} 播放",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption1.copy(
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.min
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * **Liquid Glass 悬浮底部导航**（全量重构的签名组件）。
@@ -102,7 +103,31 @@ fun GlassNavBar(
     val colors = BiliV3.colors
 
     Box(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            // 🔴 与屏幕底边的**自然间距**（12dp）—— 悬浮感的关键。
+            //
+            // ## 这个令牌早就声明了，但**零调用点**
+            //
+            // `V3Size.navBottomGap` 的 KDoc 写着「悬浮感的关键（贴底就'不浮'了）」，
+            // 却没有任何地方消费它 —— 属于本项目反复出现的
+            // 「声明了但没接线」类缺陷。
+            //
+            // 调用方（`MainShell`）只加了 `windowInsetsPadding(navigationBars)`，
+            // 而 insets 的语义是**"别被系统栏挡住"**，不是**"浮起来"**。
+            // 模拟器实测（1080×2400，navigationBars inset = 63px）：
+            //
+            // ```
+            // 玻璃托板 y 2174–2337
+            // 屏幕底 2400 − 托板底 2337 = 63px = 24dp = **恰好等于 nav inset**
+            // → 托板下边缘与系统导航栏边界严丝合缝，下方零留白
+            // ```
+            //
+            // 那样观感是"一条贴底的通栏"，而不是"浮在内容之上的层" ——
+            // 正是 v3 明确推翻的旧形态（见文件头部的对比表）。
+            //
+            // 判据：**insets 管"不遮挡"，间距管"浮起来"，两者不是同一件事。**
+            .padding(bottom = V3Size.navBottomGap),
         contentAlignment = Alignment.Center,
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -155,19 +180,51 @@ fun GlassNavBar(
                         // ⚠️ 用 `Modifier.offset { }`（lambda 版）而不是 `offset(x = )`：
                         //    前者在**布局后**偏移，不触发重新测量 —— 每帧移动的动画
                         //    必须用它，否则每帧都要重新 layout（明显掉帧）。
+                        //
+                        // ## 🔴 垂直居中：这里曾经用错参照物，指示器**整体偏高 10dp**
+                        //
+                        // 旧链是 `.height(navRow - xs*2).padding(top = (navGlass - navRow)/2)`：
+                        //
+                        // | 项 | 值 | 问题 |
+                        // |---|---|---|
+                        // | 胶囊高度 | `navRow − xs×2` = 54−16 = **38dp** | 对 |
+                        // | 顶部偏移 | `(navGlass − navRow)/2` = (62−54)/2 = **4dp** | ❌ 按"行高 54"算的 |
+                        //
+                        // 两个式子**用的参照物不同**：高度按"胶囊（38dp）"算，
+                        // 偏移却按"行（54dp）"算。而 62dp 托板里居中的正确偏移是
+                        // `(62 − 38)/2 = 12dp`，不是 4dp。
+                        //
+                        // 模拟器实测（1080×2400 / density 2.625）：
+                        //
+                        // ```
+                        // 托板      y 2174.0 – 2336.8   中心 2255.4
+                        // 内容行    y 2201   – 2311     中心 2256.0   ← 正确居中
+                        // 指示器    y 2180   – 2269     中心 2229.1   ← 偏高 26.9px
+                        // 偏差 = 2256.0 − 2229.1 = 26.9px = 10.25dp ≈ (12 − 4) + 2×… 
+                        // ```
+                        //
+                        // 观感后果：胶囊**只框住图标、把文字漏在外面**（内容 42dp 高于
+                        // 胶囊可见的 34dp），看着像"图标被选中"而不是"这一项被选中"。
+                        //
+                        // 判据：**一个尺寸链里所有偏移必须用同一个参照物**。
+                        // 混用"胶囊高度"与"行高"必然错位，且错位量 = 两者之差的一半。
                         Box(
                             modifier = Modifier
                                 .padding(start = V3Space.xs)
                                 .offset {
-                                    // offset lambda 的接收者是 Density，所以这里能 toPx()
+                                    // offset lambda 的接收者是 Density，所以这里能 roundToPx()
                                     androidx.compose.ui.unit.IntOffset(
                                         x = (itemWidth * pos.value + leadShift).roundToPx(),
                                         y = 0,
                                     )
                                 }
                                 .width(indicatorWidth)
+                                // 胶囊高度：行高减去上下各一个 xs
                                 .height(V3Size.navRow - V3Space.xs * 2)
-                                .padding(top = (V3Size.navGlass - V3Size.navRow) / 2)
+                                // 垂直居中于玻璃托板 —— 参照物是**胶囊自己**的高度
+                                .offset(
+                                    y = (V3Size.navGlass - (V3Size.navRow - V3Space.xs * 2)) / 2,
+                                )
                                 .clip(RoundedCornerShape(V3Radius.pill))
                                 .background(colors.fillSecondary),
                         )

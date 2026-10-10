@@ -15,7 +15,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.design.tokens.BiliColors
 import com.example.biliv3.design.tokens.Elevation
-import com.example.biliv3.design.tokens.Radius
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Radius
 
 /**
  * 全应用统一的**表面原语**。
@@ -64,7 +65,7 @@ import com.example.biliv3.design.tokens.Radius
 @Composable
 fun Modifier.biliCard(
     elevation: Dp = Elevation.rest,
-    shape: RoundedCornerShape = RoundedCornerShape(Radius.card),
+    shape: RoundedCornerShape = RoundedCornerShape(V3Radius.md),
     color: Color = Color.Unspecified,
     flat: Boolean = false,
     glassTint: Color = Color.Unspecified,
@@ -74,7 +75,7 @@ fun Modifier.biliCard(
         return this.clip(shape)
     }
 
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val tier = LocalDeviceTier.current
     val backdrop = LocalGlassBackdrop.current
     val frame = backdrop?.frame
@@ -124,7 +125,7 @@ fun Modifier.biliCard(
             // 玻璃形态用更亮的高光边（玻璃的"厚度感"）。
             Modifier.border(
                 width = 1.dp,
-                color = if (useGlass) GlassTokens.borderDark else colors.borderHairline,
+                color = if (useGlass) GlassTokens.borderDark else colors.separator,
                 shape = shape,
             ),
         )

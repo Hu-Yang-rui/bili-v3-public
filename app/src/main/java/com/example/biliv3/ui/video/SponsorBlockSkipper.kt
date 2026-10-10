@@ -33,11 +33,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import kotlinx.coroutines.delay
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 空降助手：按播放进度自动跳过片段。
@@ -126,7 +127,7 @@ fun SkippedBanner(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // 每次新提示都重新计时
     var visible by remember(label, durationSeconds) { mutableStateOf(true) }
@@ -144,11 +145,11 @@ fun SkippedBanner(
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = Space.x3, vertical = Space.x2)
-                .clip(RoundedCornerShape(Radius.pill))
-                .background(colors.overlayControl)
+                .padding(horizontal = V3Space.sm, vertical = V3Space.xs)
+                .clip(RoundedCornerShape(V3Radius.pill))
+                .background(colors.controlOverlay)
                 .clickable(enabled = canUndo, onClick = onUndo)
-                .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
+                .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start,
         ) {
@@ -162,28 +163,26 @@ fun SkippedBanner(
                         append(" 秒")
                     }
                 },
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.onOverlay,
+                style = V3Type.caption1.copy(
+                    color = colors.labelOnMedia,
                     fontWeight = FontWeight.Medium,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             if (canUndo) {
-                Spacer(Modifier.width(Space.x2))
+                Spacer(Modifier.width(V3Space.xs))
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Undo,
                     contentDescription = "撤销跳过",
-                    tint = colors.brandPrimary,
-                    modifier = Modifier.size(Sizes.iconSm),
+                    tint = colors.brand,
+                    modifier = Modifier.size(V3Size.iconXs),
                 )
-                Spacer(Modifier.width(Space.micro))
+                Spacer(Modifier.width(V3Space.hairline))
                 Text(
                     text = "撤销",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.brandPrimary,
+                    style = V3Type.caption2.copy(
+                        color = colors.brand,
                         fontWeight = FontWeight.Medium,
                     ),
                     maxLines = 1,

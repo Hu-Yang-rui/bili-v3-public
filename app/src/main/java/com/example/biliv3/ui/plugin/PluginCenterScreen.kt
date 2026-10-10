@@ -42,11 +42,7 @@ import com.example.biliv3.design.band
 import com.example.biliv3.design.BandLevel
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.ruleTop
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.plugin.PluginPermission
 import com.example.biliv3.plugin.PluginRuntime
 import com.example.biliv3.plugin.PluginType
@@ -55,6 +51,11 @@ import com.example.biliv3.plugin.RuleAction
 import com.example.biliv3.ui.component.BrandButton
 import com.example.biliv3.ui.component.BrandButtonVariant
 import com.example.biliv3.ui.component.EmptyState
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 插件中心。
@@ -83,12 +84,12 @@ fun PluginCenterScreen(
     onShowDetail: (PluginRuntime) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 标题栏 ----
         // ⚠️ 必须自己消费 statusBars：MainShell 的 contentWindowInsets 是 0，
@@ -100,54 +101,52 @@ fun PluginCenterScreen(
                 .fillMaxWidth()
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
-                    .clip(RoundedCornerShape(Radius.pill))
+                    .size(V3Size.touchMin)
+                    .clip(RoundedCornerShape(V3Radius.pill))
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = "插件中心",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
             Spacer(Modifier.weight(1f))
             // 导入入口
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.interactive))
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     .clickable(onClick = onImport)
-                    .padding(horizontal = Space.x3, vertical = Space.x2),
+                    .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Filled.FileOpen,
                         contentDescription = null,
-                        tint = colors.brandPrimary,
-                        modifier = Modifier.size(Sizes.iconMd),
+                        tint = colors.brand,
+                        modifier = Modifier.size(V3Size.iconMd),
                     )
-                    Spacer(Modifier.width(Space.x1))
+                    Spacer(Modifier.width(V3Space.xxs))
                     Text(
                         text = "导入",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
-                            color = colors.brandPrimary,
+                        style = V3Type.caption1.copy(
+                            color = colors.brand,
                         ),
                     )
                 }
@@ -164,7 +163,7 @@ fun PluginCenterScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = Space.x8),
+                contentPadding = PaddingValues(bottom = V3Space.xxl),
             ) {
                 items(plugins, key = { it.metadata.id }) { p ->
                     PluginRow(
@@ -189,7 +188,7 @@ private fun PluginRow(
     onUninstall: () -> Unit,
     onShowDetail: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val meta = runtime.metadata
 
     Column(
@@ -201,51 +200,48 @@ private fun PluginRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onShowDetail)
-                .padding(horizontal = Space.x3, vertical = Space.x3),
+                .padding(horizontal = V3Space.sm, vertical = V3Space.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = meta.name,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = FontSize.body,
+                        style = V3Type.callout.copy(
                             fontWeight = FontWeight.Medium,
-                            color = colors.textPrimary,
+                            color = colors.labelPrimary,
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                     TypeTag(meta.type)
                     if (runtime.autoDisabled) {
-                        Spacer(Modifier.width(Space.x1))
+                        Spacer(Modifier.width(V3Space.xxs))
                         Icon(
                             imageVector = Icons.Filled.Warning,
                             contentDescription = "因异常被自动禁用",
                             tint = colors.accentCoin,
-                            modifier = Modifier.size(Sizes.iconSm),
+                            modifier = Modifier.size(V3Size.iconXs),
                         )
                     }
                 }
-                Spacer(Modifier.height(Space.x1))
+                Spacer(Modifier.height(V3Space.xxs))
                 Text(
                     text = "v${meta.version} · ${runtime.source}" +
                         if (meta.author.isNotEmpty()) " · ${meta.author}" else "",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (meta.description.isNotEmpty()) {
-                    Spacer(Modifier.height(Space.x1))
+                    Spacer(Modifier.height(V3Space.xxs))
                     Text(
                         text = meta.description,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = FontSize.bodySm,
-                            color = colors.textTertiary,
+                        style = V3Type.footnote.copy(
+                            color = colors.labelTertiary,
                         ),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -253,7 +249,7 @@ private fun PluginRow(
                 }
             }
 
-            Spacer(Modifier.width(Space.x3))
+            Spacer(Modifier.width(V3Space.sm))
 
             Switch(
                 checked = runtime.enabled,
@@ -266,16 +262,15 @@ private fun PluginRow(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = Space.x3, end = Space.x3, bottom = Space.x2),
+                    .padding(start = V3Space.sm, end = V3Space.sm, bottom = V3Space.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 RiskTag(runtime.riskLevel)
-                Spacer(Modifier.width(Space.x2))
+                Spacer(Modifier.width(V3Space.xs))
                 Text(
                     text = meta.permissions.joinToString("、") { it.displayName },
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textTertiary,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelTertiary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -288,23 +283,21 @@ private fun PluginRow(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = Space.x3, end = Space.x3, bottom = Space.x2),
+                    .padding(start = V3Space.sm, end = V3Space.sm, bottom = V3Space.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "执行 ${runtime.runCount} 次 · 最近 ${runtime.lastDurationMs}ms",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textTertiary,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelTertiary,
                         fontFamily = com.example.biliv3.design.tokens.FontFamilies.mono,
                     ),
                 )
                 if (runtime.lastError != null) {
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                     Text(
                         text = "有错误",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = FontSize.badge,
+                        style = V3Type.caption2.copy(
                             color = colors.accentCoin,
                         ),
                     )
@@ -317,19 +310,18 @@ private fun PluginRow(
 /** 类型标签（方角微标签，极客点缀的合法用法）。 */
 @Composable
 private fun TypeTag(type: PluginType) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = type.label,
-        style = MaterialTheme.typography.labelSmall.copy(
-            fontSize = FontSize.badge,
-            color = colors.textSecondarySafe,
+        style = V3Type.caption2.copy(
+            color = colors.labelSecondary,
         ),
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.interactive))
-            .background(colors.bgHover)
+            .clip(RoundedCornerShape(V3Radius.xs))
+            .background(colors.bgTertiary)
             .padding(
-                horizontal = com.example.biliv3.design.tokens.Space.tagHorizontal,
-                vertical = com.example.biliv3.design.tokens.Space.tagVertical,
+                horizontal = V3Space.tagHorizontal,
+                vertical = V3Space.tagVertical,
             ),
     )
 }
@@ -337,16 +329,15 @@ private fun TypeTag(type: PluginType) {
 /** 风险标签。 */
 @Composable
 private fun RiskTag(level: RiskLevel) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val color = when (level) {
         RiskLevel.LOW -> colors.stateSuccess
         RiskLevel.MEDIUM -> colors.accentCoin
-        RiskLevel.HIGH -> colors.brandPrimary
+        RiskLevel.HIGH -> colors.brand
     }
     Text(
         text = "风险${level.label}",
-        style = MaterialTheme.typography.labelSmall.copy(
-            fontSize = FontSize.badge,
+        style = V3Type.caption2.copy(
             color = color,
         ),
     )
@@ -369,44 +360,43 @@ fun PluginDetailScreen(
     onUninstall: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val meta = runtime.metadata
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
-                    .clip(RoundedCornerShape(Radius.pill))
+                    .size(V3Size.touchMin)
+                    .clip(RoundedCornerShape(V3Radius.pill))
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = meta.name,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -415,7 +405,7 @@ fun PluginDetailScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = Space.x8),
+            contentPadding = PaddingValues(bottom = V3Space.xxl),
         ) {
             // ---- 基本信息 ----
             item { SectionTitle("基本信息") }
@@ -435,13 +425,12 @@ fun PluginDetailScreen(
                 item {
                     Text(
                         text = meta.description,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.body,
-                            color = colors.textSecondarySafe,
+                        style = V3Type.callout.copy(
+                            color = colors.labelSecondary,
                         ),
                         modifier = Modifier.padding(
-                            horizontal = Space.x3,
-                            vertical = Space.x2,
+                            horizontal = V3Space.sm,
+                            vertical = V3Space.xs,
                         ),
                     )
                 }
@@ -453,11 +442,10 @@ fun PluginDetailScreen(
                 item {
                     Text(
                         text = "未申请任何权限",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = FontSize.bodySm,
-                            color = colors.textTertiary,
+                        style = V3Type.footnote.copy(
+                            color = colors.labelTertiary,
                         ),
-                        modifier = Modifier.padding(horizontal = Space.x3, vertical = Space.x2),
+                        modifier = Modifier.padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                     )
                 }
             } else {
@@ -476,13 +464,12 @@ fun PluginDetailScreen(
                 // 判据来源只有一个：`PluginPackagePreview.riskReasons` /
                 // `PluginRuntime.riskLevel`，UI 只负责展示。
                 val reasons = runtime.riskReasons
-                Column(modifier = Modifier.padding(horizontal = Space.x3, vertical = Space.x2)) {
+                Column(modifier = Modifier.padding(horizontal = V3Space.sm, vertical = V3Space.xs)) {
                     reasons.forEach { r ->
                         Text(
                             text = "· $r",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = FontSize.bodySm,
-                                color = colors.textSecondarySafe,
+                            style = V3Type.footnote.copy(
+                                color = colors.labelSecondary,
                             ),
                         )
                     }
@@ -532,11 +519,10 @@ fun PluginDetailScreen(
                 items(runtime.ruleErrors) { err ->
                     Text(
                         text = "· $err",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = FontSize.bodySm,
+                        style = V3Type.footnote.copy(
                             color = colors.accentCoin,
                         ),
-                        modifier = Modifier.padding(horizontal = Space.x3, vertical = Space.x1),
+                        modifier = Modifier.padding(horizontal = V3Space.sm, vertical = V3Space.xxs),
                     )
                 }
             }
@@ -547,12 +533,11 @@ fun PluginDetailScreen(
                 items(runtime.logs) { line ->
                     Text(
                         text = line,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = FontSize.badge,
-                            color = colors.textTertiary,
+                        style = V3Type.caption2.copy(
+                            color = colors.labelTertiary,
                             fontFamily = com.example.biliv3.design.tokens.FontFamilies.mono,
                         ),
-                        modifier = Modifier.padding(horizontal = Space.x3, vertical = Space.x1),
+                        modifier = Modifier.padding(horizontal = V3Space.sm, vertical = V3Space.xxs),
                     )
                 }
             }
@@ -563,8 +548,8 @@ fun PluginDetailScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .ruleTop(color = Rule.color)
-                        .padding(horizontal = Space.x3, vertical = Space.x4),
-                    horizontalArrangement = Arrangement.spacedBy(Space.x3),
+                        .padding(horizontal = V3Space.sm, vertical = V3Space.md),
+                    horizontalArrangement = Arrangement.spacedBy(V3Space.sm),
                 ) {
                     BrandButton(
                         label = "重新加载",
@@ -584,57 +569,54 @@ fun PluginDetailScreen(
 
 @Composable
 private fun SectionTitle(title: String) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = title,
-        style = MaterialTheme.typography.labelLarge.copy(
-            fontSize = FontSize.label,
+        style = V3Type.caption1.copy(
             fontWeight = FontWeight.SemiBold,
-            color = colors.textSecondarySafe,
+            color = colors.labelSecondary,
         ),
         modifier = Modifier
             .fillMaxWidth()
             .band(BandLevel.Raised)
-            .padding(horizontal = Space.x3, vertical = Space.x2),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
     )
 }
 
 @Composable
 private fun InfoRow(label: String, value: String) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x2),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                color = colors.textSecondarySafe,
+            style = V3Type.callout.copy(
+                color = colors.labelSecondary,
             ),
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                color = colors.textPrimary,
+            style = V3Type.callout.copy(
+                color = colors.labelPrimary,
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = Space.x4),
+            modifier = Modifier.padding(start = V3Space.md),
         )
     }
 }
 
 @Composable
 private fun PermissionRow(p: PluginPermission) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x2),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
         verticalAlignment = Alignment.Top,
     ) {
         Icon(
@@ -647,26 +629,24 @@ private fun PermissionRow(p: PluginPermission) {
             tint = when (p.level) {
                 RiskLevel.LOW -> colors.stateSuccess
                 RiskLevel.MEDIUM -> colors.accentCoin
-                RiskLevel.HIGH -> colors.brandPrimary
+                RiskLevel.HIGH -> colors.brand
             },
             modifier = Modifier
                 .padding(top = 2.dp)
-                .size(Sizes.iconSm),
+                .size(V3Size.iconXs),
         )
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
         Column {
             Text(
                 text = p.displayName,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = colors.textPrimary,
+                style = V3Type.callout.copy(
+                    color = colors.labelPrimary,
                 ),
             )
             Text(
                 text = p.description,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    color = colors.textTertiary,
+                style = V3Type.footnote.copy(
+                    color = colors.labelTertiary,
                 ),
             )
         }
@@ -675,25 +655,23 @@ private fun PermissionRow(p: PluginPermission) {
 
 @Composable
 private fun RuleRow(id: String, actions: List<RuleAction>) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x2),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
     ) {
         Text(
             text = id,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
-                color = colors.textPrimary,
+            style = V3Type.caption1.copy(
+                color = colors.labelPrimary,
                 fontFamily = com.example.biliv3.design.tokens.FontFamilies.mono,
             ),
         )
         Text(
             text = actions.joinToString(" → ") { actionLabel(it) },
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = FontSize.bodySm,
-                color = colors.textSecondarySafe,
+            style = V3Type.footnote.copy(
+                color = colors.labelSecondary,
             ),
         )
     }

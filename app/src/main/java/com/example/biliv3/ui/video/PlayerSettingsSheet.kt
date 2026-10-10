@@ -48,12 +48,16 @@ import com.example.biliv3.data.model.PlayInfo
 import com.example.biliv3.data.subtitle.SubtitleBody
 import com.example.biliv3.data.subtitle.SubtitleTrack
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.InlinePicker
 import com.example.biliv3.ui.component.PickerOption
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
+import com.example.biliv3.design.v3.GlassSurface
+import com.example.biliv3.design.v3.V3Glass
+import com.example.biliv3.design.v3.v3GlassSurface
 
 /**
  * 播放设置弹层：字幕 / AI 翻译、清晰度、倍速。
@@ -106,7 +110,7 @@ fun PlayerSettingsSheet(
     onDanmakuFontScale: (Float) -> Unit = {},
     onDanmakuArea: (Float) -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     // 记录当前倍速；player 为空时用默认值
     var speed by remember { mutableFloatStateOf(player?.playbackParameters?.speed ?: 1f) }
 
@@ -153,7 +157,7 @@ fun PlayerSettingsSheet(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.scrimPanel)
+                .background(colors.scrim)
                 // ⚠️ 不用纯黑：纯黑遮罩与深色圆角面板叠在一起，
                 // 会在面板边缘形成一圈"描边"，看起来像没对齐的穿模。
                 // 用主题 scrim（半透明黑）并降低不透明度，边缘自然融合。
@@ -170,52 +174,67 @@ fun PlayerSettingsSheet(
             Column(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .padding(horizontal = Space.x4)
+                    .padding(horizontal = V3Space.md)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(Radius.panel))
-                    // 弹层用 `surfaceElevated`（比卡片亮一档）——
-                    // 深色下投影不可见，分层只能靠提亮。
-                    .background(colors.surfaceElevated)
+                    // 🔴 v3：面板材质从**实心深灰**改为 Liquid Glass。
+                    //
+                    // 判据（§7.37 坑 219）：**模糊玻璃适合「大面积、静态、
+                    // 内容之上」的浮层** —— 弹层三条全中（大面积、弹出后静止、
+                    // 确实压在页面内容之上）。
+                    //
+                    // ⚠️ 与播放器控件的区别：那些是"小面积 + 压在**动态**视频
+                    //    画面上"，所以走扁平（`controlFlat`）。
+                    //    **同一 App 里两种材质并存是对的** —— 判据是场景。
+                    //
+                    // ⚠️ 用 `Modifier.v3GlassSurface` 而不是 `GlassSurface` 容器：
+                    //    前者是**一个表达式替换**，不动花括号
+                    //    （容器形式要在几百行深的树里配括号，实测改坏过两次）。
+                    //
+                    // ⚠️ `UltraThin`（模糊 3.6dp）：面板面积大，
+                    //    大半径会糊掉底下内容（§5.4.6）。
+                    .v3GlassSurface(
+                        shape = RoundedCornerShape(V3Radius.sheet),
+                        level = V3Glass.Level.UltraThin,
+                    )
+                    // ⚠️ 高度上限：面板变高时（弹幕展开 + 字幕多轨）
+                    // 不能顶到状态栏。给个上限并内部滚动。
+                    .heightIn(max = MAX_SHEET_HEIGHT)
                     // ⚠️ 点**弹层内的空白处**也要收起已展开的选择器。
                     //
                     // 行内展开不是 Dialog，没有天然的"外部点击"通知；
                     // 用整块内容的 clickable 兜住 —— 子控件（选项行）
                     // 自己消费点击，所以不会误触。
                     .clickable { picker = null }
-                    // ⚠️ 高度上限：面板变高时（弹幕展开 + 字幕多轨）
-                    // 不能顶到状态栏。给个上限并内部滚动。
-                    .heightIn(max = MAX_SHEET_HEIGHT)
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = Space.x3),
+                    .padding(bottom = V3Space.sm),
             ) {
                 // ---- 标题栏 ----
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Space.x4, vertical = Space.x3),
+                        .padding(horizontal = V3Space.md, vertical = V3Space.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "播放设置",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontSize = FontSize.titleMd,
+                        style = V3Type.subheadline.copy(
                             fontWeight = FontWeight.SemiBold,
-                            color = colors.textPrimary,
+                            color = colors.labelPrimary,
                         ),
                     )
                     Spacer(Modifier.weight(1f))
                     Box(
                         modifier = Modifier
-                            .size(Sizes.iconXl + Space.x2)
-                            .clip(RoundedCornerShape(Radius.interactive))
+                            .size(V3Size.iconLg + V3Space.xs)
+                            .clip(RoundedCornerShape(V3Radius.xs))
                             .clickable(onClick = onDismiss),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Close,
                             contentDescription = "关闭",
-                            tint = colors.textSecondarySafe,
-                            modifier = Modifier.size(Sizes.iconLg),
+                            tint = colors.labelSecondary,
+                            modifier = Modifier.size(V3Size.iconMd),
                         )
                     }
                 }
@@ -230,7 +249,7 @@ fun PlayerSettingsSheet(
                     onLoginRequired = onLoginRequired,
                 )
 
-                Spacer(Modifier.height(Space.x3))
+                Spacer(Modifier.height(V3Space.sm))
 
                 // ---- 弹幕 ----
                 DanmakuSection(
@@ -250,7 +269,7 @@ fun PlayerSettingsSheet(
                     },
                 )
 
-                Spacer(Modifier.height(Space.x3))
+                Spacer(Modifier.height(V3Space.sm))
 
                 // ---- 清晰度：折叠为一行选择器（不再平铺 5 行）----
                 //
@@ -361,29 +380,27 @@ fun PlayerSettingsSheet(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = Space.x4, vertical = Space.x2),
+                            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = "音质",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = FontSize.body,
-                                color = colors.textPrimary,
+                            style = V3Type.callout.copy(
+                                color = colors.labelPrimary,
                             ),
                         )
                         Spacer(Modifier.weight(1f))
                         Text(
                             text = info.audioLabel,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.label,
-                                color = colors.textSecondarySafe,
+                            style = V3Type.caption1.copy(
+                                color = colors.labelSecondary,
                             ),
                         )
                     }
                 }
             }
         }
-    }
+    }           // ← 关 Dialog
 }
 
 /**
@@ -432,29 +449,28 @@ private fun SubtitleSection(
     onSelect: (SubtitleTrack?) -> Unit,
     onLoginRequired: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     SectionLabel("字幕 / AI 翻译")
 
-    Column(modifier = Modifier.padding(horizontal = Space.x4)) {
+    Column(modifier = Modifier.padding(horizontal = V3Space.md)) {
         when {
             loading -> Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = Space.x3),
+                    .padding(vertical = V3Space.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircularProgressIndicator(
-                    color = colors.brandPrimary,
-                    strokeWidth = Space.trackHeight,
-                    modifier = Modifier.size(Sizes.iconLg),
+                    color = colors.brand,
+                    strokeWidth = V3Space.progressTrack,
+                    modifier = Modifier.size(V3Size.iconMd),
                 )
-                Spacer(Modifier.width(Space.x3))
+                Spacer(Modifier.width(V3Space.sm))
                 Text(
                     text = "正在加载字幕…",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.callout.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
             }
@@ -462,24 +478,22 @@ private fun SubtitleSection(
             !isLoggedIn -> Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(Radius.interactive))
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     .clickable(onClick = onLoginRequired)
-                    .padding(vertical = Space.x3),
+                    .padding(vertical = V3Space.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "登录后可查看字幕与 AI 翻译",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
-                        color = colors.textLinkSafe,
+                    style = V3Type.callout.copy(
+                        color = colors.brandText,
                     ),
                     modifier = Modifier.weight(1f),
                 )
                 Text(
                     text = "去登录",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.brandPrimary,
+                    style = V3Type.caption1.copy(
+                        color = colors.brand,
                         fontWeight = FontWeight.Medium,
                     ),
                 )
@@ -487,11 +501,10 @@ private fun SubtitleSection(
 
             tracks.isEmpty() -> Text(
                 text = "该视频没有可用字幕",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = colors.textTertiary,
+                style = V3Type.callout.copy(
+                    color = colors.labelTertiary,
                 ),
-                modifier = Modifier.padding(vertical = Space.x3),
+                modifier = Modifier.padding(vertical = V3Space.sm),
             )
 
             else -> {
@@ -542,25 +555,24 @@ private fun DanmakuSection(
     onFontScale: (Float) -> Unit,
     onArea: (Float) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     SectionLabel("弹幕")
 
-    Column(modifier = Modifier.padding(horizontal = Space.x4)) {
+    Column(modifier = Modifier.padding(horizontal = V3Space.md)) {
         // ---- 总开关 ----
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(Radius.interactive))
+                .clip(RoundedCornerShape(V3Radius.xs))
                 .clickable(onClick = onToggle)
-                .padding(vertical = Space.x2),
+                .padding(vertical = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = "显示弹幕",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = colors.textPrimary,
+                style = V3Type.callout.copy(
+                    color = colors.labelPrimary,
                 ),
                 modifier = Modifier.weight(1f),
             )
@@ -568,8 +580,8 @@ private fun DanmakuSection(
                 checked = enabled,
                 onCheckedChange = { onToggle() },
                 colors = androidx.compose.material3.SwitchDefaults.colors(
-                    checkedThumbColor = colors.textOnBrand,
-                    checkedTrackColor = colors.brandPrimary,
+                    checkedThumbColor = colors.labelOnBrand,
+                    checkedTrackColor = colors.brand,
                 ),
             )
         }
@@ -628,18 +640,17 @@ private fun areaLabel(ratio: Float): String = when {
 
 @Composable
 private fun SectionLabel(text: String) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = text,
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.label,
-            color = BiliTheme.colors.textTertiary,
+        style = V3Type.caption1.copy(
+            color = BiliV3.colors.labelTertiary,
         ),
         modifier = Modifier.padding(
-            start = Space.x4,
-            end = Space.x4,
-            top = Space.x2,
-            bottom = Space.x1,
+            start = V3Space.md,
+            end = V3Space.md,
+            top = V3Space.xs,
+            bottom = V3Space.xxs,
         ),
     )
 }
@@ -657,37 +668,35 @@ private fun SettingRow(
     onClick: () -> Unit,
     badge: String? = null,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(Radius.interactive))
+            .clip(RoundedCornerShape(V3Radius.xs))
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x3),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.sm),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start,
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                color = if (selected) colors.brandPrimary else colors.textPrimary,
+            style = V3Type.callout.copy(
+                color = if (selected) colors.brand else colors.labelPrimary,
                 fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
             ),
         )
         if (badge != null) {
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
             Text(
                 text = badge,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = colors.textOnBrand,
+                style = V3Type.caption2.copy(
+                    color = colors.labelOnBrand,
                     fontWeight = FontWeight.Medium,
                 ),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.badge))
-                    .background(colors.brandPrimary)
-                    .padding(horizontal = Space.compactHorizontal, vertical = Space.tagVertical),
+                    .clip(RoundedCornerShape(V3Radius.xs))
+                    .background(colors.brand)
+                    .padding(horizontal = V3Space.xs, vertical = V3Space.tagVertical),
             )
         }
         Spacer(Modifier.weight(1f))
@@ -695,12 +704,12 @@ private fun SettingRow(
             Icon(
                 imageVector = Icons.Filled.Check,
                 contentDescription = "已选中",
-                tint = colors.brandPrimary,
-                modifier = Modifier.size(Sizes.iconLg),
+                tint = colors.brand,
+                modifier = Modifier.size(V3Size.iconMd),
             )
         } else {
             // 占位，保持行高一致，避免选中态切换时跳动
-            Spacer(Modifier.width(Sizes.iconLg))
+            Spacer(Modifier.width(V3Size.iconMd))
         }
     }
 }
@@ -719,10 +728,10 @@ private fun SettingRow(
  * ⚠️ 这里**不再**是文件级常量。
  *
  * 首版写的是 `private val SHEET_SCRIM = Color(0x73000000)` —— 硬编码色，
- * 不随主题切换。改用令牌时不能简单替换成 `colors.scrimPanel`，
- * 因为顶层 `val` 无法访问 `BiliTheme.colors`（那是 Composable 作用域）。
+ * 不随主题切换。改用令牌时不能简单替换成 `colors.scrim`，
+ * 因为顶层 `val` 无法访问 `BiliV3.colors`（那是 Composable 作用域）。
  *
- * 因此遮罩色在调用点从 `BiliTheme.colors.scrimPanel` 取（见下方 Dialog 内）。
+ * 因此遮罩色在调用点从 `BiliV3.colors.scrim` 取（见下方 Dialog 内）。
  */
 
 /**

@@ -15,8 +15,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -289,8 +287,41 @@ fun GlassSurface(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val m = BiliV3.colors.materials
-    val frame = backdrop?.frame
-    val dominant = backdrop?.dominantColor
+
+    // ---- 帧源：两条来源都要认（见下方说明）----
+    //
+    // ## 🔴 这里曾经只认 v3 的 `LocalGlassBackdrop`，导致视频页玻璃是"假的"
+    //
+    // 本项目**同时存在两套玻璃背景机制**（历史原因）：
+    //
+    // | 类 | CompositionLocal | 谁在喂帧 |
+    // |---|---|---|
+    // | `design/Glass.kt` 的 `VideoBackdrop` | `design.LocalGlassBackdrop` | **`VideoBackdropEffect`**（真正在抓帧的那个）|
+    // | `design/v3/V3Glass.kt` 的 `GlassBackdrop` | `v3.LocalGlassBackdrop` | **无人喂**（零调用点）|
+    //
+    // `PlayerHolder.backdrop` 的类型是**旧的** `VideoBackdrop`，
+    // 而 `VideoDetailScreen` 用**旧的** `ProvideGlassBackdrop` 注入 ——
+    // 但播放器浮层控件用的是**新的** `GlassSurface`，它只读 v3 的 Local。
+    //
+    // 结果：**帧抓到了、也确实模糊了，但没有任何 v3 玻璃读得到它**。
+    // 实测（模拟器 1080×2400，logcat 确认 `backdrop: 首帧抓取成功 (135x84)`）：
+    // 播放器中央播放钮的玻璃**没有背景采样**，只是"半透明色块压着视频"——
+    // 也就是旧系统批评的那种"假玻璃"。
+    //
+    // ## 为什么用"双读"而不是把两套合并
+    //
+    // 合并是**正确**的终局，但旧 `VideoBackdrop` 还被
+    // `design/BiliCard.kt` 的 `biliCard()` 消费者（尚未迁移的页面）依赖，
+    // 一次删掉会连带改十几个文件。这里先做**低风险的桥接**：
+    // v3 优先，读不到就回退到旧的那一份。
+    //
+    // ⚠️ 两者**不会**同时有值（旧路径喂的是 `VideoBackdrop`，
+    //    v3 路径目前无人喂），所以不存在"叠加两次模糊"。
+    //    TODO：全部页面迁到 v3 后，删掉旧 `VideoBackdrop` 与这条回退。
+    val v3Backdrop = backdrop
+    val legacy = com.example.biliv3.design.LocalGlassBackdrop.current
+    val frame = v3Backdrop?.frame ?: legacy?.frame
+    val dominant = v3Backdrop?.dominantColor ?: legacy?.dominantColor
 
     // ---- Haze 路径（有 state 时优先）----
     val hazeState = LocalHazeState.current
@@ -355,28 +386,47 @@ fun GlassSurface(
                 modifier = Modifier
                     .matchParentSize()
                     .drawWithCache {
-                        val top = Brush.verticalGradient(
-                            colors = listOf(m.specularTop, Color.Transparent),
-                            startY = 0f,
-                            endY = size.height,
-                        )
-                        val bottom = Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, m.specularBottom),
-                            startY = 0f,
-                            endY = size.height,
+                        // 🔴 必须用**一条**三段式渐变铺满整个高度。
+                        //
+                        // ## 这里曾经画出一条"底栏黑线"（真实事故，已实测证明）
+                        //
+                        // 旧实现是两个半高矩形、各配一条渐变：
+                        //
+                        // ```
+                        // 上半：specularTop → Transparent，startY=0, endY=size.height  ← 全高！
+                        // 下半：Transparent → specularBottom，startY=0, endY=size.height  ← 全高！
+                        // ```
+                        //
+                        // ⚠️ `endY` 写的是**整个玻璃的高度**，而矩形只有**一半**高。
+                        // 于是渐变在中点被"截断"——两半各停在一半透明度上：
+                        //
+                        // - 接缝上方 = `specularTop × 0.5`（半透明白）
+                        // - 接缝下方 = `specularBottom × 0.5`（半透明黑）
+                        //
+                        // 结果是一条**清晰、纯黑、机械、2px 的横向黑线**，
+                        // 正好落在玻璃托板的 50% 高度处。
+                        //
+                        // 模拟器实测（1080×2400 / density 2.625，底部导航托板
+                        // y 2174–2337 → 中点 2255.5）：
+                        //
+                        // ```
+                        // y=2254  row-mean luma = 88.86
+                        // y=2256  row-mean luma = 65.67   ← 2px 内骤降 23.2
+                        // ```
+                        //
+                        // 判据：**"渐变被画进一个比它自己小的矩形"** ——
+                        // 只要 `startY/endY` 与 `drawRect(size=)` 不是同一个矩形，
+                        // 就一定会出现硬边。修法不是调透明度，而是让两者一致。
+                        //
+                        // 现在改成一条连续渐变（0 → 0.5 → 1），
+                        // 接缝处两侧**都恰好是 0 alpha**，几何上不可能再有硬边。
+                        val edge = Brush.verticalGradient(
+                            0f to m.specularTop,
+                            0.5f to Color.Transparent,
+                            1f to m.specularBottom,
                         )
                         onDrawBehind {
-                            // 上亮（光从上来）—— 只铺上半，避免整体提亮成灰雾
-                            drawRect(
-                                brush = top,
-                                size = Size(size.width, size.height * 0.5f),
-                            )
-                            // 下暗（对应实测 innerShadow 的下半条）
-                            drawRect(
-                                brush = bottom,
-                                topLeft = Offset(0f, size.height * 0.5f),
-                                size = Size(size.width, size.height * 0.5f),
-                            )
+                            drawRect(brush = edge)
                         }
                     },
             )
@@ -385,6 +435,136 @@ fun GlassSurface(
         // ---- ④ 内容（在独立层之上，绝不参与模糊）----
         content()
     }
+}
+
+/**
+ * **玻璃表面的 `Modifier` 形式** —— 给"已经画好的面板"换材质。
+ *
+ * ---
+ *
+ * ## 🔴 为什么需要这个（而不是都用 [GlassSurface]）
+ *
+ * [GlassSurface] 是**容器**：它把内容包进 `Box` 里，所以调用方要改
+ * **一对花括号**。对于几百行深的 Compose 树，那意味着
+ * 「在 A 行加一个 `{`、在 700 行外找对应的 `}`」——
+ *
+ * > 实测代价：`PlayerSettingsSheet.kt` 与 `FavFolderSheet.kt`
+ * > **各改坏两次**，编译器报错行号离真正的编辑点 700 行，
+ * > 完全看不出问题在哪。
+ *
+ * 而"换材质"这件事本身**只需要一个 `Modifier`**：
+ * 面板的 `Column` 已经在了，把它的
+ * `.clip(...)` + `.background(...)` 换成 `.v3GlassSurface(...)` 即可 ——
+ * **一个表达式替换，不动任何括号**。
+ *
+ * ## 语义与 [GlassSurface] 一致
+ *
+ * 同样的两条路径（Haze 优先、否则内置四层合成）、同样的
+ * [GlassBackdrop] 回退读取（含旧 `VideoBackdrop`，见该函数的说明）。
+ *
+ * ⚠️ **区别**：`Modifier` 形式**只画材质、不含内容层**。
+ * 内容由调用方自己的 `Column`/`Row` 承担 —— 这正好是我们要的：
+ * 文字永远不会进模糊层。
+ *
+ * ## 用法
+ *
+ * ```kotlin
+ * Column(
+ *     modifier = Modifier
+ *         .fillMaxWidth()
+ *         .v3GlassSurface(
+ *             shape = RoundedCornerShape(V3Radius.sheet),
+ *             level = V3Glass.Level.UltraThin,
+ *         ),
+ * ) { ... }
+ * ```
+ *
+ * @param shape 形状。必须是圆角形状（直角玻璃看起来像贴纸）。
+ * @param level 玻璃层级（决定模糊半径与底色强度）。
+ * @param backdrop 背景帧源；不传则读 [LocalGlassBackdrop]（含旧实现回退）。
+ */
+@Composable
+fun Modifier.v3GlassSurface(
+    shape: Shape = RoundedCornerShape(V3Radius.sheet),
+    level: V3Glass.Level = V3Glass.Level.Regular,
+    tint: Color? = null,
+): Modifier {
+    val m = BiliV3.colors.materials
+
+    // 与 GlassSurface 相同的双读逻辑（见那边的长说明）
+    val v3Backdrop = LocalGlassBackdrop.current
+    val legacy = com.example.biliv3.design.LocalGlassBackdrop.current
+    val frame = v3Backdrop?.frame ?: legacy?.frame
+    val dominant = v3Backdrop?.dominantColor ?: legacy?.dominantColor
+
+    val blurDp = level.blur * m.blurScale()
+
+    val baseTint = remember(tint, m, level, dominant) {
+        val t = tint ?: m.tint
+        val scaled = t.copy(alpha = (t.alpha * level.tintScale).coerceIn(0f, 1f))
+        scaled
+    }
+
+    val hazeState = LocalHazeState.current
+
+    return this
+        // Haze 路径：真折射（与 GlassSurface 的参数映射一致）
+        .then(
+            if (hazeState != null) {
+                val rounded = shape as? RoundedCornerShape ?: RoundedCornerShape(V3Radius.sheet)
+                val style = remember(level, rounded, tint, m) {
+                    val base = when (level) {
+                        V3Glass.Level.Clear -> dev.chrisbanes.haze.glass.GlassStyle.clear
+                        else -> dev.chrisbanes.haze.glass.GlassStyle.regular
+                    }
+                    base.then {
+                        shape(rounded)
+                        tint(tint ?: m.tint)
+                    }
+                }
+                Modifier.hazeGlass(
+                    input = dev.chrisbanes.haze.HazeInput.Backdrop(hazeState),
+                    style = style,
+                )
+            } else {
+                Modifier
+            },
+        )
+        // 内置路径：四层合成的"材质部分"（背景采样 + 底色 + rim + specular）
+        .then(
+            if (hazeState != null) {
+                Modifier
+            } else {
+                Modifier
+                    .clip(shape)
+                    .drawWithCache {
+                        val edge = Brush.verticalGradient(
+                            0f to m.specularTop,
+                            0.5f to Color.Transparent,
+                            1f to m.specularBottom,
+                        )
+                        onDrawWithContent {
+                            // ① 背景采样（可选）
+                            if (frame != null) {
+                                drawBackdropCover(frame)
+                            }
+                            // ② 材质底色
+                            drawRect(color = baseTint)
+                            drawRect(color = m.overlay)
+                            // ④ 内容（调用方的 Column 画在这之上，绝不进模糊）
+                            drawContent()
+                            // ③ rim + specular（画在内容之上，只影响边缘观感）
+                            drawRect(
+                                color = m.rim,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                    width = 1.dp.toPx(),
+                                ),
+                            )
+                            drawRect(brush = edge)
+                        }
+                    }
+            },
+        )
 }
 
 /**

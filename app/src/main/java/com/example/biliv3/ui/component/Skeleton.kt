@@ -34,8 +34,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.tokens.Motion
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Size
 
 /**
  * 骨架屏基元。
@@ -67,7 +68,7 @@ fun SkeletonBox(
     aspectRatio: Float? = null,
     shape: Shape = RectangleShape,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     // 读共享相位（State 而不是裸值）—— 真正的读取发生在绘制阶段，
     // 相位变化只重绘、不重组。见 LocalShimmerPhase 的说明。
     val shimmer = LocalShimmerPhase.current
@@ -184,21 +185,21 @@ fun ProvideShimmer(content: @Composable () -> Unit) {
  * 1. **封面圆角 12dp → 0**：`VideoCard` 的封面已改直角（圆角是"卡片"的语言），
  *    骨架若仍留 12dp，加载完成瞬间四个角会"收方"，是可见的跳动。
  * 2. **间距与行数对齐**：改为 `封面 → 8dp → 标题两行(40dp) → 4dp → 元信息(16dp)`，
- *    与 `VideoCard` 的 `Space.x2 / heightIn(min=40.dp) / Space.x1 / 头像 16dp` 逐项对应。
+ *    与 `VideoCard` 的 `V3Space.xs / heightIn(min=40.dp) / V3Space.xxs / 头像 16dp` 逐项对应。
  */
 @Composable
 fun SkeletonVideoCard(modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxWidth()) {
         SkeletonBox(
             modifier = Modifier.fillMaxWidth(),
-            aspectRatio = Sizes.coverAspectRatio,
+            aspectRatio = V3Size.coverAspect,
         )
-        // 与 VideoCard 的 `Spacer(Space.x2)` 一致
-        Spacer(Modifier.height(Space.x2))
+        // 与 VideoCard 的 `Spacer(V3Space.xs)` 一致
+        Spacer(Modifier.height(V3Space.xs))
         // 标题两行：VideoCard 用 `heightIn(min = 40.dp)` 预留高度，骨架同样占 40dp
         SkeletonBox(Modifier.fillMaxWidth(), height = TITLE_BLOCK_HEIGHT)
-        // 与 VideoCard 的 `Spacer(Space.x1)` 一致
-        Spacer(Modifier.height(Space.x1))
+        // 与 VideoCard 的 `Spacer(V3Space.xxs)` 一致
+        Spacer(Modifier.height(V3Space.xxs))
         // 元信息行：VideoCard 是 16dp 头像 + 昵称
         SkeletonBox(Modifier.fillMaxWidth(0.45f), height = META_ROW_HEIGHT)
     }
@@ -220,9 +221,9 @@ fun SkeletonGrid(
     columns: Int,
     modifier: Modifier = Modifier,
     rows: Int = 3,
-    gutter: Dp = Space.gridGutterDesktop,
-    rowSpacing: Dp = Space.gridRowDesktop,
-    pagePadding: Dp = Space.pageDesktop,
+    gutter: Dp = V3Space.lg,
+    rowSpacing: Dp = V3Space.xl,
+    pagePadding: Dp = V3Space.xl,
 ) {
     val total = columns * rows
     // 用 Column + Row 手工分行，避免引入 LazyVerticalGrid 的滚动语义

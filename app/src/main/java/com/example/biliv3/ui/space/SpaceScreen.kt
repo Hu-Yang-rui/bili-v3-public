@@ -57,17 +57,19 @@ import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.model.formatRelativeTime
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
 import com.example.biliv3.ui.component.BrandButtonVariant
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.component.VideoCard
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
+import androidx.compose.foundation.layout.aspectRatio
 
 /**
  * 用户主页（UP 主空间）。
@@ -111,7 +113,7 @@ fun SpaceScreen(
     modifier: Modifier = Modifier,
     viewModel: SpaceViewModel,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
@@ -151,7 +153,7 @@ fun SpaceScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 顶栏 ----
         // 通栏：不再是卡片，内容直接排。
@@ -164,13 +166,13 @@ fun SpaceScreen(
                 .fillMaxWidth()
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -178,17 +180,16 @@ fun SpaceScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = profile?.name ?: "用户主页",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -201,9 +202,9 @@ fun SpaceScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(
-                    color = colors.brandPrimary,
-                    strokeWidth = Space.trackHeight,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    color = colors.brand,
+                    strokeWidth = V3Space.progressTrack,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
 
@@ -215,7 +216,7 @@ fun SpaceScreen(
             )
 
             else -> LazyColumn(
-                contentPadding = PaddingValues(bottom = Space.x8),
+                contentPadding = PaddingValues(bottom = V3Space.xxl),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 item(key = "header") {
@@ -283,8 +284,8 @@ fun SpaceScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = Space.x3, vertical = Space.x1),
-                                horizontalArrangement = Arrangement.spacedBy(Space.x3),
+                                    .padding(horizontal = V3Space.sm, vertical = V3Space.xxs),
+                                horizontalArrangement = Arrangement.spacedBy(V3Space.sm),
                             ) {
                                 row.forEach { v ->
                                     Box(modifier = Modifier.weight(1f)) {
@@ -305,13 +306,13 @@ fun SpaceScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = Space.x6),
+                                    .padding(vertical = V3Space.xl),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 CircularProgressIndicator(
-                                    color = colors.brandPrimary,
-                                    strokeWidth = Space.trackHeight,
-                                    modifier = Modifier.size(Sizes.iconXl),
+                                    color = colors.brand,
+                                    strokeWidth = V3Space.progressTrack,
+                                    modifier = Modifier.size(V3Size.iconLg),
                                 )
                             }
                         }
@@ -338,7 +339,7 @@ fun SpaceScreen(
             hostState = snackbar,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = Space.x12),
+                .padding(bottom = V3Space.huge),
         )
     }
 }
@@ -364,13 +365,13 @@ private fun ProfileHeader(
     onChatClick: () -> Unit,
     onAicuClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             // 头部信息区通栏：去掉卡片，靠组间距与下方 Tab 分开。
-            .padding(start = Space.x4, end = Space.x4, top = Rhythm.between),
+            .padding(start = V3Space.md, end = V3Space.md, top = Rhythm.between),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
@@ -382,77 +383,75 @@ private fun ProfileHeader(
                     .clip(CircleShape)
                     .background(colors.avatarPlaceholder),
             )
-            Spacer(Modifier.width(Space.x3))
+            Spacer(Modifier.width(V3Space.sm))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = name.ifEmpty { "未知用户" },
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontSize = FontSize.titleMd,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colors.textPrimary,
-                        ),
+                        style = V3Type.subheadline,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.labelPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
+                        // ⚠️ `weight(1f)` 而不是 `fill = false`：
+                        // 长昵称要能占满并把 LV 徽标推到右边；
+                        // 短昵称时徽标紧跟其右（weight 只影响"能吃多少"，
+                        // 不改变"靠左"这一点）。见 V3SectionTitle 里的同类说明。
+                        modifier = Modifier.weight(1f),
                     )
                     if (level > 0) {
-                        Spacer(Modifier.width(Space.x2))
+                        Spacer(Modifier.width(V3Space.xs))
                         Text(
                             // 等级用 LV{n} 表达（本项目不使用 B 站的等级图标素材）
                             text = "LV$level",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
-                                color = colors.textOnBrand,
-                                fontWeight = FontWeight.Medium,
-                            ),
+                            style = V3Type.caption2,
+                            color = colors.labelOnBrand,
+                            fontWeight = FontWeight.Medium,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(Radius.badge))
-                                .background(colors.brandPrimary)
-                                .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
+                                .clip(RoundedCornerShape(V3Radius.xs))
+                                .background(colors.brand)
+                                .padding(
+                                    horizontal = V3Space.tagHorizontal,
+                                    vertical = V3Space.tagVertical,
+                                ),
                         )
                     }
                 }
-                Spacer(Modifier.height(Space.micro))
+                Spacer(Modifier.height(V3Space.hairline))
                 Text(
                     text = "UID $mid",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
-                    ),
+                    style = V3Type.caption1,
+                    color = colors.labelSecondary,
                 )
-                Spacer(Modifier.height(Space.x1))
+                Spacer(Modifier.height(V3Space.xxs))
                 Text(
                     text = "${formatCount(fans)} 粉丝 · ${formatCount(followingCount)} 关注",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
-                    ),
+                    style = V3Type.caption1,
+                    color = colors.labelSecondary,
                 )
             }
         }
 
         if (sign.isNotEmpty()) {
-            Spacer(Modifier.height(Space.x3))
+            Spacer(Modifier.height(V3Space.sm))
             Text(
                 text = sign,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    color = colors.textSecondarySafe,
+                style = V3Type.footnote.copy(
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
 
-        Spacer(Modifier.height(Space.x3))
+        Spacer(Modifier.height(V3Space.sm))
 
         // ---- 操作行：关注 · 发私信 · 查成分（同一行）----
         //
         // ⚠️ 布局修正（问题 10）：此前「查成分」被单独放在**第二行**，
         // 理由是"上面那行窄屏会挤"。但用户明确要求它在**发私信右方**，
-        // 且实测这一行放得下 —— 挤的根源其实是内边距过大（`Space.x4`
+        // 且实测这一行放得下 —— 挤的根源其实是内边距过大（`V3Space.md`
         // 横向 + 图标），不是按钮数量。
         //
         // 修法：
@@ -463,7 +462,7 @@ private fun ProfileHeader(
         //    既不丢来源标注（合规要求），也不再占据操作行宽度
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Space.x2),
+            horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
@@ -478,9 +477,8 @@ private fun ProfileHeader(
             } else {
                 Text(
                     text = "这是你自己",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textTertiary,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelTertiary,
                     ),
                     maxLines = 1,
                 )
@@ -518,12 +516,11 @@ private fun ProfileHeader(
         }
 
         // 来源标注（合规要求：第三方数据必须标明出处）
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
         Text(
             text = "查成分数据来自 aicu.cc（第三方）",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.badge,
-                color = colors.textTertiary,
+            style = V3Type.caption2.copy(
+                color = colors.labelTertiary,
             ),
         )
     }
@@ -554,26 +551,26 @@ private fun AttentionChip(
     attended: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.interactive))
+            .clip(RoundedCornerShape(V3Radius.xs))
             .background(
-                if (attended) colors.accentTerminalDim else colors.bgHover,
+                if (attended) colors.accentTerminalDim else colors.bgTertiary,
             )
             .then(
                 if (attended) {
                     Modifier.border(
                         width = 1.dp,
                         color = colors.accentTerminal,
-                        shape = RoundedCornerShape(Radius.interactive),
+                        shape = RoundedCornerShape(V3Radius.xs),
                     )
                 } else {
                     Modifier
                 },
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x2),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -584,16 +581,15 @@ private fun AttentionChip(
                 Icons.Outlined.BookmarkBorder
             },
             contentDescription = null,
-            tint = if (attended) colors.accentTerminal else colors.textSecondarySafe,
-            modifier = Modifier.size(Sizes.iconMd),
+            tint = if (attended) colors.accentTerminal else colors.labelSecondary,
+            modifier = Modifier.size(V3Size.iconMd),
         )
-        Spacer(Modifier.width(Space.x1))
+        Spacer(Modifier.width(V3Space.xxs))
         Text(
             text = if (attended) "已特别关注" else "特别关注",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
+            style = V3Type.callout.copy(
                 fontWeight = if (attended) FontWeight.Medium else FontWeight.Normal,
-                color = if (attended) colors.accentTerminal else colors.textSecondarySafe,
+                color = if (attended) colors.accentTerminal else colors.labelSecondary,
             ),
             maxLines = 1,
         )
@@ -612,27 +608,26 @@ private fun HeaderActionChip(
     label: String,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.interactive))
-            .background(colors.bgHover)
+            .clip(RoundedCornerShape(V3Radius.xs))
+            .background(colors.bgTertiary)
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x2),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = colors.textSecondarySafe,
-            modifier = Modifier.size(Sizes.iconMd),
+            tint = colors.labelSecondary,
+            modifier = Modifier.size(V3Size.iconMd),
         )
-        Spacer(Modifier.width(Space.x1))
+        Spacer(Modifier.width(V3Space.xxs))
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                color = colors.textSecondarySafe,
+            style = V3Type.callout.copy(
+                color = colors.labelSecondary,
             ),
             maxLines = 1,
         )
@@ -646,19 +641,19 @@ private fun TabRow(
     onSelect: (Int) -> Unit,
     labels: List<String>,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
             // ⚠️ 标签条**不再是卡片** —— 它是一条切换栏，不是独立内容块。
             // 套卡会立刻多一个框。现在是一行纯文字 strip，靠上方组间距分隔。
             .padding(
-                start = Space.x4,
-                end = Space.x4,
+                start = V3Space.md,
+                end = V3Space.md,
                 top = Rhythm.between,
-                bottom = Space.x1,
+                bottom = V3Space.xxs,
             ),
-        horizontalArrangement = Arrangement.spacedBy(Space.x5),
+        horizontalArrangement = Arrangement.spacedBy(V3Space.lg),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         labels.forEachIndexed { i, label ->
@@ -667,25 +662,24 @@ private fun TabRow(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .clickable { onSelect(i) }
-                    .padding(horizontal = Space.x1, vertical = Space.x2),
+                    .padding(horizontal = V3Space.xxs, vertical = V3Space.xs),
             ) {
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
+                    style = V3Type.callout.copy(
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) colors.textPrimary else colors.textSecondarySafe,
+                        color = if (isSelected) colors.labelPrimary else colors.labelSecondary,
                     ),
                 )
-                Spacer(Modifier.height(Space.micro))
+                Spacer(Modifier.height(V3Space.hairline))
                 // 下划线固定高度，切换时不抖
-                // 高度用 `Space.tabIndicator`(3dp) —— 与其它页 Tab 一致（v1.4.2）
+                // 高度用 `V3Space.tabIndicator`(3dp) —— 与其它页 Tab 一致（v1.4.2）
                 Box(
                     modifier = Modifier
                         .width(20.dp)
-                        .height(Space.tabIndicator)
+                        .height(V3Space.tabIndicator)
                         .background(
-                            if (isSelected) colors.brandPrimary
+                            if (isSelected) colors.brand
                             else androidx.compose.ui.graphics.Color.Transparent,
                         ),
                 )
@@ -712,13 +706,13 @@ fun DynamicCard(
     onVideoClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             // ⚠️ 投稿列表行**不再是卡片** —— 列表用留白分组。
-            .padding(horizontal = Space.x4, vertical = Space.x3),
+            .padding(horizontal = V3Space.md, vertical = V3Space.sm),
     ) {
         // ---- 作者行 ----
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -727,44 +721,40 @@ fun DynamicCard(
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(V3Size.avatarSm)
                     .clip(CircleShape)
                     .background(colors.avatarPlaceholder),
             )
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
             Text(
                 text = item.authorName,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    fontWeight = FontWeight.Medium,
-                    color = colors.textSecondarySafe,
-                ),
+                style = V3Type.caption1,
+                fontWeight = FontWeight.Medium,
+                color = colors.labelSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
+                // ⚠️ 必须是 `weight(1f)`，不能 `fill = false` ——
+                // 否则时间戳紧贴作者名而不是靠到行尾（与 V3SectionTitle
+                // 那个 bug 同类：叫"右侧"的东西必须靠右）。
+                modifier = Modifier.weight(1f),
             )
             if (item.publishedAt > 0) {
-                Spacer(Modifier.width(Space.x2))
+                Spacer(Modifier.width(V3Space.xs))
                 Text(
                     text = formatRelativeTime(item.publishedAt),
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textTertiary,
-                    ),
+                    style = V3Type.caption2,
+                    color = colors.labelTertiary,
                 )
             }
         }
 
         // ---- 正文 ----
         if (item.text.isNotEmpty()) {
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             Text(
                 text = item.text,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    lineHeight = FontSize.bodyLine,
-                    color = colors.textPrimary,
-                ),
+                style = V3Type.callout,
+                color = colors.labelPrimary,
                 maxLines = 6,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -773,20 +763,28 @@ fun DynamicCard(
         // ---- 内容区 ----
         when (item.kind) {
             DynamicItem.Kind.Video -> {
-                Spacer(Modifier.height(Space.x3))
+                Spacer(Modifier.height(V3Space.sm))
+                // 🔴 **不再套容器**（v3）。
+                //
+                // 旧版是 `clip(xs) + background(bgTertiary)` —— 一个圆角矩形装
+                // 封面 + 标题。那正是「卡片海洋」的最小形态：
+                // 动态流里每条带视频的动态都长出一个盒子，
+                // 滚动时满屏都是矩形边界。
+                //
+                // v3 的做法：**封面 + 标题直接排**，靠间距与对齐建立关系。
+                // 可点性由 `clickable` 提供，不需要靠底色暗示
+                // （底色是"这是个区域"的语义，见 V3Colors 的三层系统）。
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        // 可点区块 → 4dp；封面本身直角
-                        .clip(RoundedCornerShape(Radius.interactive))
-                        .background(colors.bgHover)
-                        .clickable { onVideoClick(item.bvid) }
-                        .padding(Space.x2),
+                        .clickable { onVideoClick(item.bvid) },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(width = 112.dp, height = 63.dp)
+                            // 16:10 = B 站官方 viewAspectRatio，与全站封面一致
+                            .width(112.dp)
+                            .aspectRatio(V3Size.coverAspect)
                             .background(colors.coverPlaceholder),
                     ) {
                         AsyncImage(
@@ -798,25 +796,24 @@ fun DynamicCard(
                         if (item.durationLabel.isNotEmpty()) {
                             Text(
                                 text = item.durationLabel,
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = FontSize.badge,
-                                    color = colors.onOverlay,
-                                ),
+                                style = V3Type.caption2,
+                                color = colors.labelOnMedia,
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
-                                    .padding(2.dp)
-                                    .background(colors.overlayCover)
-                                    .padding(horizontal = 3.dp, vertical = 1.dp),
+                                    .padding(V3Space.hairline)
+                                    .background(colors.overlay)
+                                    .padding(
+                                        horizontal = V3Space.tagHorizontal,
+                                        vertical = V3Space.tagVertical,
+                                    ),
                             )
                         }
                     }
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.sm))
                     Text(
                         text = item.videoTitle,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.bodySm,
-                            color = colors.textPrimary,
-                        ),
+                        style = V3Type.footnote,
+                        color = colors.labelPrimary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
@@ -825,15 +822,15 @@ fun DynamicCard(
             }
 
             DynamicItem.Kind.Image -> {
-                Spacer(Modifier.height(Space.x3))
+                Spacer(Modifier.height(V3Space.sm))
                 AsyncImage(
                     model = item.coverUrl(480),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp)
-                        // 图片一律直角
+                        .aspectRatio(V3Size.coverAspect)
+                        // 图片一律直角（内容是内容，不套圆角）
                         .background(colors.coverPlaceholder),
                 )
             }
@@ -841,35 +838,34 @@ fun DynamicCard(
             DynamicItem.Kind.Text -> Unit
 
             DynamicItem.Kind.Unsupported -> {
-                Spacer(Modifier.height(Space.x2))
+                Spacer(Modifier.height(V3Space.xs))
                 Text(
                     // 明确标注而不是静默隐藏 —— 信息完整性优先
                     text = "暂不支持显示的类型（${item.type.removePrefix("DYNAMIC_TYPE_")}）",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textTertiary,
-                    ),
+                    style = V3Type.caption2,
+                    color = colors.labelTertiary,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.badge))
-                        .background(colors.bgHover)
-                        .padding(horizontal = Space.x2, vertical = Space.x1),
+                        .clip(RoundedCornerShape(V3Radius.xs))
+                        .background(colors.fillQuaternary)
+                        .padding(
+                            horizontal = V3Space.xs,
+                            vertical = V3Space.xxs,
+                        ),
                 )
             }
         }
 
         // ---- 统计行（只读，不做假互动）----
         if (item.likeCount > 0 || item.commentCount > 0 || item.forwardCount > 0) {
-            Spacer(Modifier.height(Space.x3))
+            Spacer(Modifier.height(V3Space.sm))
             Text(
                 text = buildString {
                     if (item.forwardCount > 0) append("转发 ${formatCount(item.forwardCount)}   ")
                     if (item.commentCount > 0) append("评论 ${formatCount(item.commentCount)}   ")
                     if (item.likeCount > 0) append("赞 ${formatCount(item.likeCount)}")
                 }.trim(),
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = colors.textTertiary,
-                ),
+                style = V3Type.caption2,
+                color = colors.labelTertiary,
             )
         }
     }

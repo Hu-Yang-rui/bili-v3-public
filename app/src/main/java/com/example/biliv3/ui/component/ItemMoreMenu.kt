@@ -42,10 +42,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.tokens.DarkColors
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 「更多」底部菜单（对照官方收藏项的 ⋮ 弹出层）。
@@ -88,7 +89,7 @@ fun ItemMoreMenu(
     onToggleFavorite: () -> Unit,
     extraActions: List<MoreMenuAction> = emptyList(),
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -100,42 +101,41 @@ fun ItemMoreMenu(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.scrimPanel)
+                .background(colors.scrim)
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.BottomCenter,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
+                    .clip(RoundedCornerShape(topStart = V3Radius.lg, topEnd = V3Radius.lg))
                     // ⚠️ 弹层用 `surfaceElevated`（比卡片亮一档），不用 `bgCard`。
                     //
                     // 深色下投影不可见，分层**只能靠提亮**。弹层若与背景卡片
                     // 同色就"浮不起来"，看起来像页面里本来就有的一块。
-                    .background(colors.surfaceElevated)
+                    .background(colors.bgSecondaryElevated)
                     .clickable(enabled = false) {}
                     .navigationBarsPadding(),
             ) {
                 // ---- 标题（截断，避免长标题撑高）----
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                     maxLines = 1,
                     modifier = Modifier.padding(
-                        start = Space.x4,
-                        end = Space.x4,
-                        top = Space.x3,
-                        bottom = Space.x2,
+                        start = V3Space.md,
+                        end = V3Space.md,
+                        top = V3Space.sm,
+                        bottom = V3Space.xs,
                     ),
                 )
 
                 // ---- 分享渠道横排 ----
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = Space.x4),
-                    horizontalArrangement = Arrangement.spacedBy(Space.x4),
+                    contentPadding = PaddingValues(horizontal = V3Space.md),
+                    horizontalArrangement = Arrangement.spacedBy(V3Space.md),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(SHARE_ROW_HEIGHT),
@@ -157,7 +157,7 @@ fun ItemMoreMenu(
                     ActionRow(
                         icon = a.icon,
                         label = a.label,
-                        tint = colors.textPrimary,
+                        tint = colors.labelPrimary,
                         onClick = a.onClick,
                     )
                 }
@@ -172,7 +172,7 @@ fun ItemMoreMenu(
                     // 这里是"可执行的动作"，用轮廓更贴切）。
                     icon = Icons.Outlined.StarBorder,
                     label = if (isFavorited) "取消收藏" else "收藏",
-                    tint = colors.textSecondarySafe,
+                    tint = colors.labelSecondary,
                     onClick = onToggleFavorite,
                 )
 
@@ -183,14 +183,13 @@ fun ItemMoreMenu(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(onClick = onDismiss)
-                        .padding(vertical = Space.x4),
+                        .padding(vertical = V3Space.md),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "取消",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.body,
-                            color = colors.textPrimary,
+                        style = V3Type.callout.copy(
+                            color = colors.labelPrimary,
                         ),
                     )
                 }
@@ -251,13 +250,13 @@ private fun ShareChannelItem(
     color: Color,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.interactive))
+            .clip(RoundedCornerShape(V3Radius.xs))
             .clickable(onClick = onClick)
-            .padding(vertical = Space.x1),
+            .padding(vertical = V3Space.xxs),
     ) {
         Box(
             modifier = Modifier
@@ -269,16 +268,15 @@ private fun ShareChannelItem(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = colors.onOverlay,
-                modifier = Modifier.size(Sizes.iconXl),
+                tint = colors.labelOnMedia,
+                modifier = Modifier.size(V3Size.iconLg),
             )
         }
-        Spacer(Modifier.height(Space.x1))
+        Spacer(Modifier.height(V3Space.xxs))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.badge,
-                color = colors.textSecondarySafe,
+            style = V3Type.caption2.copy(
+                color = colors.labelSecondary,
             ),
             maxLines = 1,
         )
@@ -297,21 +295,20 @@ private fun ActionRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x4, vertical = Space.x4),
+            .padding(horizontal = V3Space.md, vertical = V3Space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(Sizes.iconXl),
+            modifier = Modifier.size(V3Size.iconLg),
         )
-        Spacer(Modifier.width(Space.x3))
+        Spacer(Modifier.width(V3Space.sm))
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                color = BiliTheme.colors.textPrimary,
+            style = V3Type.callout.copy(
+                color = BiliV3.colors.labelPrimary,
             ),
         )
     }
@@ -324,7 +321,7 @@ private fun Divider() {
         modifier = Modifier
             .fillMaxWidth()
             .height(1.dp)
-            .background(BiliTheme.colors.borderHairline),
+            .background(BiliV3.colors.separator),
     )
 }
 

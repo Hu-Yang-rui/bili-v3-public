@@ -40,15 +40,16 @@ import coil.compose.AsyncImage
 import com.example.biliv3.data.AttendedUser
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
-import com.example.biliv3.design.SectionMark
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
+import com.example.biliv3.design.v3.V3SectionTitle
 
 /**
  * 「特别关注」列表页。
@@ -78,12 +79,12 @@ fun AttentionScreen(
     onRemove: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 顶栏（与全站二级页同构）----
         Row(
@@ -91,13 +92,13 @@ fun AttentionScreen(
                 .fillMaxWidth()
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -105,17 +106,16 @@ fun AttentionScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = "特别关注",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
         }
@@ -128,8 +128,8 @@ fun AttentionScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    start = Space.x4,
-                    end = Space.x4,
+                    start = V3Space.md,
+                    end = V3Space.md,
                     top = Rhythm.between,
                 ),
         ) {
@@ -140,23 +140,20 @@ fun AttentionScreen(
                         .height(14.dp)
                         .background(colors.accentTerminal),
                 )
-                Spacer(Modifier.width(Space.x2))
+                Spacer(Modifier.width(V3Space.xs))
                 Text(
                     text = "仅本机可见，不会关注对方的 B 站账号",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
             }
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             Text(
                 text = "「特别关注」是本应用的本地书签：加入后不会向 B 站发送任何关注请求，" +
                     "对方的粉丝数不会变化，你在 B 站网页端也看不到这条记录。",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    lineHeight = FontSize.bodySmLine,
-                    color = colors.textTertiary,
+                style = V3Type.footnote.copy(
+                    color = colors.labelTertiary,
                 ),
             )
         }
@@ -178,18 +175,33 @@ fun AttentionScreen(
         }
 
         LazyColumn(
-            contentPadding = PaddingValues(bottom = Space.x8),
+            contentPadding = PaddingValues(bottom = V3Space.xxl),
             modifier = Modifier.fillMaxSize(),
         ) {
             item(key = "count") {
-                SectionMark(
-                    index = users.size,
+                // 🔴 v3：`SectionMark(index = users.size, …)` → `V3SectionTitle`。
+                //
+                // ⚠️ 旧写法把**用户数量**当章节序号传进去 ——
+                //    渲染成 `12 ── 特别关注`，读起来像"第 12 章"，
+                //    实际是"有 12 个人"。序号位被塞了一个不相干的数字，
+                //    这是"序号要人工维护"之外的另一种误用。
+                //
+                // 数量本身是有用信息，但它属于**标题的附属说明**，
+                // 不是序号 —— 放在 trailing 位更诚实。
+                V3SectionTitle(
                     title = "特别关注",
-                    modifier = Modifier.padding(
-                        start = Space.x4,
-                        end = Space.x4,
-                        top = Rhythm.between,
-                    ),
+                    topSpace = Rhythm.between,
+                    trailing = if (users.isEmpty()) {
+                        null
+                    } else {
+                        {
+                            Text(
+                                text = "${users.size}",
+                                style = V3Type.caption1,
+                                color = colors.labelTertiary,
+                            )
+                        }
+                    },
                 )
             }
 
@@ -220,13 +232,13 @@ private fun AttendedRow(
     onOpen: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onOpen)
-            .padding(horizontal = Space.x4, vertical = Space.rowVertical),
+            .padding(horizontal = V3Space.md, vertical = V3Space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AsyncImage(
@@ -234,58 +246,55 @@ private fun AttendedRow(
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(Sizes.upAvatar + Space.x8)
+                .size(V3Size.avatarXs + V3Space.xxl)
                 .clip(CircleShape)
                 .background(colors.avatarPlaceholder),
         )
 
-        Spacer(Modifier.width(Space.x3))
+        Spacer(Modifier.width(V3Space.sm))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = user.name.ifEmpty { "UID ${user.mid}" },
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
+                style = V3Type.callout.copy(
                     fontWeight = FontWeight.Medium,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(Space.micro))
+            Spacer(Modifier.height(V3Space.hairline))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
             ) {
                 // 标识①：图标
                 Icon(
                     imageVector = Icons.Outlined.BookmarkBorder,
                     contentDescription = null,
                     tint = colors.accentTerminal,
-                    modifier = Modifier.size(Sizes.iconSm),
+                    modifier = Modifier.size(V3Size.iconXs),
                 )
                 // 标识②：文字标签 + 描边胶囊（标识③：形状）
                 Text(
                     text = "特别关注",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
+                    style = V3Type.caption2.copy(
                         fontWeight = FontWeight.Medium,
                         color = colors.accentTerminal,
                     ),
                     maxLines = 1,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.badge))
+                        .clip(RoundedCornerShape(V3Radius.xs))
                         .background(colors.accentTerminalDim)
                         .padding(
-                            horizontal = Space.tagHorizontal,
-                            vertical = Space.tagVertical,
+                            horizontal = V3Space.tagHorizontal,
+                            vertical = V3Space.tagVertical,
                         ),
                 )
                 Text(
                     text = "UID ${user.mid}",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textTertiary,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelTertiary,
                     ),
                     maxLines = 1,
                 )
@@ -295,7 +304,7 @@ private fun AttendedRow(
         // ---- 移除（这是本地操作，不涉及任何网络）----
         Box(
             modifier = Modifier
-                .size(Space.minTouchTarget)
+                .size(V3Size.touchMin)
                 .clip(CircleShape)
                 .clickable(onClick = onRemove),
             contentAlignment = Alignment.Center,
@@ -303,8 +312,8 @@ private fun AttendedRow(
             Icon(
                 imageVector = Icons.Outlined.RemoveCircleOutline,
                 contentDescription = "取消特别关注",
-                tint = colors.textSecondarySafe,
-                modifier = Modifier.size(Sizes.iconLg),
+                tint = colors.labelSecondary,
+                modifier = Modifier.size(V3Size.iconMd),
             )
         }
     }

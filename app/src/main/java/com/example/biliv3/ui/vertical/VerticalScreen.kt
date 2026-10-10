@@ -66,17 +66,21 @@ import com.example.biliv3.data.subtitle.SubtitleBody
 import com.example.biliv3.ui.component.MonoReadout
 import com.example.biliv3.ui.component.TechTag
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.player.PlayerHolder
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.video.DanmakuLayer
 import com.example.biliv3.ui.video.SubtitleOverlay
 import com.example.biliv3.ui.video.VideoPlayerSurface
 import kotlinx.coroutines.delay
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.GlassSurface
+import com.example.biliv3.design.v3.ProvideGlassBackdrop
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
+import com.example.biliv3.design.v3.v3GlassSurface
+import com.example.biliv3.design.v3.V3Glass
 
 /**
  * 竖屏沉浸式观看模式。
@@ -141,7 +145,7 @@ fun VerticalScreen(
     onPlayerError: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // 全屏纯黑：竖屏模式没有"页面底色"概念，画面即页面
     Box(
@@ -169,9 +173,9 @@ fun VerticalScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(
-                    color = colors.brandPrimary,
-                    strokeWidth = Space.trackHeight,
-                    modifier = Modifier.size(Sizes.iconXl * 1.5f),
+                    color = colors.brand,
+                    strokeWidth = V3Space.progressTrack,
+                    modifier = Modifier.size(V3Size.iconLg * 1.5f),
                 )
             }
 
@@ -244,7 +248,7 @@ fun VerticalScreen(
                     onShare = onShare,
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .padding(end = Space.x2),
+                        .padding(end = V3Space.xs),
                 )
 
                 // ---- 左下角信息 + 底部进度 ----
@@ -281,18 +285,18 @@ fun VerticalScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .padding(Space.x2)
-                            .size(Sizes.iconXl + Space.x3)
+                            .padding(V3Space.xs)
+                            .size(V3Size.iconLg + V3Space.sm)
                             .clip(CircleShape)
-                            .background(colors.overlayCover)
+                            .background(colors.overlay)
                             .clickable(onClick = onBack),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "返回",
-                            tint = colors.onOverlay,
-                            modifier = Modifier.size(Sizes.iconXl),
+                            tint = colors.labelOnMedia,
+                            modifier = Modifier.size(V3Size.iconLg),
                         )
                     }
                 }
@@ -328,7 +332,7 @@ private fun VerticalPage(
     isCurrent: Boolean,
     onPlayerError: (String) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Box(modifier = Modifier.fillMaxSize()) {
         // 封面铺满：竖屏内容封面本身是 9:16，直接裁切填充
         AsyncImage(
@@ -372,9 +376,9 @@ private fun VerticalPage(
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(
-                    color = colors.onOverlay,
-                    strokeWidth = Space.trackHeight,
-                    modifier = Modifier.size(Sizes.iconXl * 1.5f),
+                    color = colors.labelOnMedia,
+                    strokeWidth = V3Space.progressTrack,
+                    modifier = Modifier.size(V3Size.iconLg * 1.5f),
                 )
             }
         }
@@ -406,7 +410,7 @@ private fun RightActionBar(
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val detail = state.detail
     val inter = state.interaction
 
@@ -422,39 +426,39 @@ private fun RightActionBar(
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Space.x5),
+        verticalArrangement = Arrangement.spacedBy(V3Space.lg),
     ) {
         ActionItem(
             icon = if (inter.liked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-            tint = if (inter.liked) colors.brandPrimary else colors.onOverlay,
+            tint = if (inter.liked) colors.brand else colors.labelOnMedia,
             label = count(detail?.likeCount),
             contentDescription = "点赞",
             onClick = onLike,
         )
         ActionItem(
             icon = if (inter.coined) Icons.Filled.MonetizationOn else Icons.Outlined.MonetizationOn,
-            tint = if (inter.coined) colors.accentCoin else colors.onOverlay,
+            tint = if (inter.coined) colors.accentCoin else colors.labelOnMedia,
             label = count(detail?.coinCount),
             contentDescription = "投币",
             onClick = onCoin,
         )
         ActionItem(
             icon = if (inter.favored) Icons.Filled.Star else Icons.Outlined.StarBorder,
-            tint = if (inter.favored) colors.accentFavorite else colors.onOverlay,
+            tint = if (inter.favored) colors.accentFavorite else colors.labelOnMedia,
             label = count(detail?.favoriteCount),
             contentDescription = "收藏",
             onClick = onFavorite,
         )
         ActionItem(
             icon = Icons.Filled.Share,
-            tint = colors.onOverlay,
+            tint = colors.labelOnMedia,
             label = count(detail?.shareCount),
             contentDescription = "分享",
             onClick = onShare,
         )
         ActionItem(
             icon = Icons.Filled.PersonAdd,
-            tint = if (state.following) colors.brandPrimary else colors.onOverlay,
+            tint = if (state.following) colors.brand else colors.labelOnMedia,
             label = if (state.following) "已关注" else "关注",
             contentDescription = "关注",
             onClick = onFollow,
@@ -471,15 +475,15 @@ private fun ActionItem(
     contentDescription: String,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            // 交互元素 → 4dp（§5.2 圆角规则）。原来是 `Radius.card`(12dp)，
+            // 交互元素 → 4dp（§5.2 圆角规则）。原来是 `V3Radius.md`(12dp)，
             // 那是卡片时代的"主体圆角"，对按钮偏大、且与全站交互元素不一致。
-            .clip(RoundedCornerShape(Radius.interactive))
+            .clip(RoundedCornerShape(V3Radius.xs))
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x1, vertical = Space.x1),
+            .padding(horizontal = V3Space.xxs, vertical = V3Space.xxs),
     ) {
         Icon(
             imageVector = icon,
@@ -487,13 +491,13 @@ private fun ActionItem(
             tint = tint,
             modifier = Modifier.size(ACTION_ICON),
         )
-        Spacer(Modifier.height(Space.micro))
+        Spacer(Modifier.height(V3Space.hairline))
         // 计数用等宽：数字每秒/每次互动都在变，比例字体下整列会左右抖动。
         // 竖屏互动栏是纵向排列的多个读数，抖动尤其明显。
         MonoReadout(
             text = label,
-            color = colors.onOverlay,
-            fontSize = FontSize.badge,
+            color = colors.labelOnMedia,
+            fontSize = V3Type.caption2.fontSize,
             weight = FontWeight.Medium,
         )
     }
@@ -534,49 +538,60 @@ private fun BottomInfo(
     holder: PlayerHolder,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val detail = state.detail
 
-    // 底部信息区：走统一的 `biliCard()` 玻璃原语。
+    // 底部信息区：走 v3 的玻璃原语。
     //
-    // backdrop 已由外层 `ProvideGlassBackdrop` 注入，
-    // 所以这里自动是真毛玻璃（糊的是当前视频画面），不需要显式传。
+    // 🔴 这是**唯一"真玻璃"的场景**（背后有视频画面可糊）——
+    // 外层 `ProvideGlassBackdrop` 已注入 backdrop，
+    // `v3GlassSurface` 会自动读到它（含旧 `VideoBackdrop` 回退）。
     //
-    // 🔴 乙·质感：**圆角去掉**（改为直角）。
-    // 圆角是"卡片"的语言；这里是压在视频上的浮层，属"色块"语言。
-    // 玻璃本身保留 —— 它是唯一"真玻璃"的场景（背后有画面可糊）。
+    // ## 为什么从 `biliCard` 换成 `v3GlassSurface`
+    //
+    // `biliCard` 是**旧设计系统**的卡片原语（`design/BiliCard.kt`），
+    // 它的 KDoc 写着"圆角是卡片的语言"。这里虽然传了 `shape = 0.dp` 去掉圆角，
+    // 但**用的是卡片原语** —— 而 v3 的玻璃是独立原语（`V3Glass`）。
+    //
+    // 两者不是同一个东西：`biliCard` 只做"背景采样 + 半透明 + 高光边"，
+    // v3 的 `GlassSurface` 多了**两条路径**（Haze 真折射 / 内置四层合成）
+    // 与**四层级**（UltraThin/Thin/Regular/Clear）。
+    //
+    // ⚠️ 圆角保持 0（直角）：这里是压在视频上的浮层，属"色块"语言，
+    //    不是"卡片"。判据仍然成立，只是换了实现。
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .biliCard(shape = RoundedCornerShape(0.dp))
+            .v3GlassSurface(
+                shape = RoundedCornerShape(0.dp),
+                level = V3Glass.Level.UltraThin,
+            )
             .navigationBarsPadding()
             .padding(
-                start = Space.x4,
+                start = V3Space.md,
                 // 右侧留出互动栏宽度，避免文字压在图标下
                 end = ACTION_BAR_RESERVED,
-                top = Space.x3,
-                bottom = Space.x3,
+                top = V3Space.sm,
+                bottom = V3Space.sm,
             ),
     ) {
         Text(
             text = "@${detail?.ownerName.orEmpty()}",
-            style = MaterialTheme.typography.labelMedium.copy(
+            style = V3Type.footnote.copy(
                 // 15sp（原 12sp）：底部信息区是竖屏唯一的文字区，
                 // 12sp 在 6 寸屏上明显偏小，与"大图标"的视觉重量不匹配。
-                fontSize = FontSize.titleMd,
-                color = colors.onOverlay,
+                fontSize = V3Type.subheadline.fontSize,
+                color = colors.labelOnMedia,
                 fontWeight = FontWeight.SemiBold,
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Spacer(Modifier.height(Space.x1))
+        Spacer(Modifier.height(V3Space.xxs))
         Text(
             text = detail?.title.orEmpty(),
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                lineHeight = FontSize.bodyLine,
-                color = colors.onOverlay,
+            style = V3Type.callout.copy(
+                color = colors.labelOnMedia,
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -593,8 +608,8 @@ private fun BottomInfo(
         val views = detail?.viewCount ?: 0
         val danmakuCount = detail?.danmakuCount ?: 0
         if (views > 0 || danmakuCount > 0) {
-            Spacer(Modifier.height(Space.x2))
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+            Spacer(Modifier.height(V3Space.xs))
+            Row(horizontalArrangement = Arrangement.spacedBy(V3Space.xs)) {
                 if (views > 0) {
                     TechTag(text = "▶ ${com.example.biliv3.data.model.formatCount(views)}")
                 }
@@ -604,7 +619,7 @@ private fun BottomInfo(
             }
         }
 
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
         VerticalProgress(holder = holder)
     }
 }
@@ -617,7 +632,7 @@ private fun BottomInfo(
  */
 @Composable
 private fun VerticalProgress(holder: PlayerHolder) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     var progress by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(holder) {
@@ -633,7 +648,7 @@ private fun VerticalProgress(holder: PlayerHolder) {
         modifier = Modifier
             .fillMaxWidth()
             .height(PROGRESS_HEIGHT)
-            .clip(RoundedCornerShape(Radius.badge))
+            .clip(RoundedCornerShape(V3Radius.xs))
             // 未播轨道：走令牌而不是裸色值（`trackInactive` 就是为它定义的）
             .background(colors.trackInactive),
     ) {
@@ -641,7 +656,7 @@ private fun VerticalProgress(holder: PlayerHolder) {
             modifier = Modifier
                 .fillMaxWidth(progress)
                 .height(PROGRESS_HEIGHT)
-                .background(colors.onOverlay),
+                .background(colors.labelOnMedia),
         )
     }
 }

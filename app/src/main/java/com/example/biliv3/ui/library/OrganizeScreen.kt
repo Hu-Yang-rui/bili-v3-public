@@ -36,16 +36,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.example.biliv3.data.FavoriteEntry
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.plugin.RuleAction
 import com.example.biliv3.plugin.RuleEngine
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.component.TerminalLoadingState
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 快速整理页（v1.3.0）。
@@ -94,12 +95,12 @@ fun OrganizeScreen(
     onBatchRemove: () -> Unit = {},
     onBatchAddToView: () -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ⚠️ 必须自己消费 statusBars（MainShell 的 contentWindowInsets 是 0）
         Row(
@@ -107,13 +108,13 @@ fun OrganizeScreen(
                 .fillMaxWidth()
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -121,26 +122,24 @@ fun OrganizeScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = "快速整理",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = FontSize.titleMd,
+                    style = V3Type.subheadline.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
                     maxLines = 1,
                 )
                 Text(
                     text = folderTitle,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textTertiary,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelTertiary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -150,7 +149,7 @@ fun OrganizeScreen(
                 TextButton(onClick = if (selection.isAllSelected()) onClearSelection else onSelectAll) {
                     Text(
                         text = if (selection.isAllSelected()) "取消" else "全选",
-                        color = colors.brandPrimary,
+                        color = colors.brand,
                     )
                 }
             }
@@ -176,28 +175,26 @@ fun OrganizeScreen(
             )
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = Space.x12 * 2),
+                contentPadding = PaddingValues(bottom = V3Space.huge * 2),
             ) {
                 // 说明条：让用户知道这是"规则筛出来的候选"，不是全部
                 item {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(colors.bgHover)
-                            .padding(horizontal = Space.x4, vertical = Space.x2),
+                            .background(colors.bgTertiary)
+                            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
                     ) {
                         Text(
                             text = "规则筛出 ${candidates.size} 个候选",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = FontSize.bodySm,
-                                color = colors.textPrimary,
+                            style = V3Type.footnote.copy(
+                                color = colors.labelPrimary,
                             ),
                         )
                         Text(
                             text = "勾选后统一处理；确认前不会改动任何东西",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = FontSize.label,
-                                color = colors.textTertiary,
+                            style = V3Type.caption1.copy(
+                                color = colors.labelTertiary,
                             ),
                         )
                     }
@@ -242,31 +239,29 @@ fun OrganizeScreen(
  */
 @Composable
 private fun OrganizeLoginPanel(onLogin: () -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Space.x6),
+            .padding(V3Space.xl),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = "整理收藏需要登录",
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontSize = FontSize.titleMd,
-                color = colors.textPrimary,
+            style = V3Type.subheadline.copy(
+                color = colors.labelPrimary,
             ),
         )
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
         Text(
             text = "登录后才能读取收藏夹并做批量操作",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.bodySm,
-                color = colors.textSecondarySafe,
+            style = V3Type.footnote.copy(
+                color = colors.labelSecondary,
             ),
         )
-        Spacer(Modifier.height(Space.x4))
+        Spacer(Modifier.height(V3Space.md))
         TextButton(onClick = onLogin) {
-            Text("去登录", color = colors.brandPrimary)
+            Text("去登录", color = colors.brand)
         }
     }
 }
@@ -288,54 +283,51 @@ private fun OrganizeRow(
     selected: Boolean,
     onToggle: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val v = candidate.entry.video
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onToggle)
-            .padding(horizontal = Space.x4, vertical = Space.x3),
+            .padding(horizontal = V3Space.md, vertical = V3Space.sm),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // 选中标记用几何形状（不用 Material Checkbox）——
             // 这里行高比收藏列表大，Checkbox 会显得很空
             Box(
                 modifier = Modifier
-                    .size(Sizes.iconLg)
+                    .size(V3Size.iconMd)
                     .clip(CircleShape)
                     .background(
-                        if (selected) colors.brandPrimary else colors.bgHover,
+                        if (selected) colors.brand else colors.bgTertiary,
                     ),
                 contentAlignment = Alignment.Center,
             ) {
                 if (selected) {
                     Text(
                         text = "✓",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = FontSize.label,
-                            color = colors.textOnBrand,
+                        style = V3Type.caption1.copy(
+                            color = colors.labelOnBrand,
                         ),
                     )
                 }
             }
-            Spacer(Modifier.width(Space.x3))
+            Spacer(Modifier.width(V3Space.sm))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = v.title,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
-                        color = colors.textPrimary,
+                    style = V3Type.callout.copy(
+                        color = colors.labelPrimary,
                     ),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(Space.x1))
+                Spacer(Modifier.height(V3Space.xxs))
                 Text(
                     text = v.authorName,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textTertiary,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelTertiary,
                     ),
                     maxLines = 1,
                 )
@@ -344,22 +336,21 @@ private fun OrganizeRow(
 
         // 命中原因
         if (candidate.reasons.isNotEmpty()) {
-            Spacer(Modifier.height(Space.x1))
+            Spacer(Modifier.height(V3Space.xxs))
             Row(
-                modifier = Modifier.padding(start = Space.x12),
-                horizontalArrangement = Arrangement.spacedBy(Space.x1),
+                modifier = Modifier.padding(start = V3Space.huge),
+                horizontalArrangement = Arrangement.spacedBy(V3Space.xxs),
             ) {
                 candidate.reasons.forEach { r ->
                     Text(
                         text = r,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = FontSize.label,
+                        style = V3Type.caption1.copy(
                             color = colors.accentTerminal,
                         ),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.badge))
-                            .background(colors.bgHover)
-                            .padding(horizontal = Space.x2, vertical = Space.x1),
+                            .clip(RoundedCornerShape(V3Radius.xs))
+                            .background(colors.bgTertiary)
+                            .padding(horizontal = V3Space.xs, vertical = V3Space.xxs),
                     )
                 }
             }

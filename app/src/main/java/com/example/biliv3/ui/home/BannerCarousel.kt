@@ -45,12 +45,14 @@ import coil.compose.AsyncImage
 import com.example.biliv3.data.model.BannerItem
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
-import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Motion
 import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * Banner 轮播。
@@ -89,7 +91,7 @@ fun BannerCarousel(
 ) {
     if (banners.isEmpty()) return
 
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val height = when (windowSize) {
         WindowSize.Desktop -> Sizes.bannerDesktop
         WindowSize.Tablet -> Sizes.bannerTablet
@@ -167,19 +169,18 @@ fun BannerCarousel(
                 if (item.title.isNotEmpty()) {
                     Text(
                         text = item.title,
-                        style = MaterialTheme.typography.displaySmall.copy(
-                            fontSize = FontSize.display,
+                        style = V3Type.title3.copy(
                             fontWeight = FontWeight.Bold,
-                            color = colors.onOverlay,
+                            color = colors.labelOnMedia,
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(
-                                start = Space.x5,
-                                bottom = Space.x6 + Space.x2,
-                                end = Space.x5,
+                                start = V3Space.lg,
+                                bottom = V3Space.xl + V3Space.xs,
+                                end = V3Space.lg,
                             ),
                     )
                 }
@@ -193,7 +194,7 @@ fun BannerCarousel(
                 label = "上一张",
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .padding(start = Space.x4),
+                    .padding(start = V3Space.md),
                 onClick = {
                     val prev = (pagerState.currentPage - 1 + banners.size) % banners.size
                     scope.launch { pagerState.animateScrollToPage(prev) }
@@ -204,7 +205,7 @@ fun BannerCarousel(
                 label = "下一张",
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = Space.x4),
+                    .padding(end = V3Space.md),
                 onClick = {
                     val next = (pagerState.currentPage + 1) % banners.size
                     scope.launch { pagerState.animateScrollToPage(next) }
@@ -217,8 +218,8 @@ fun BannerCarousel(
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = Space.x4),
-                horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                    .padding(bottom = V3Space.md),
+                horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 repeat(banners.size) { i ->
@@ -234,7 +235,7 @@ fun BannerCarousel(
                             .size(width = width.dp, height = 8.dp)
                             .clip(CircleShape)
                             .background(
-                                if (isCurrent) colors.onOverlay else colors.trackInactive,
+                                if (isCurrent) colors.labelOnMedia else colors.trackInactive,
                             )
                             .clickable(
                                 // 点击指示点直接跳转到对应页
@@ -255,7 +256,7 @@ private fun CarouselArrow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
 
@@ -264,7 +265,7 @@ private fun CarouselArrow(
             .size(44.dp)
             .clip(CircleShape)
             .background(
-                if (hovered) colors.onOverlay else colors.qrSurface,
+                if (hovered) colors.labelOnMedia else colors.qrSurface,
             )
             .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -276,7 +277,7 @@ private fun CarouselArrow(
             // 这个箭头的底是恒为浅色的胶囊（qrSurface / onOverlay），
             // 深色主题下 textPrimary 是近白色，压在白底上会看不见。
             tint = colors.onQrSurface,
-            modifier = Modifier.size(Sizes.iconXl),
+            modifier = Modifier.size(V3Size.iconLg),
         )
     }
 }

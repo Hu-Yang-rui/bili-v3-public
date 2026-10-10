@@ -43,11 +43,12 @@ import com.example.biliv3.data.model.CoverUrls
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
 import com.example.biliv3.design.ruleTop
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 直播间用户操作菜单（v1.6.4）。
@@ -81,7 +82,7 @@ import com.example.biliv3.design.tokens.Space
  *
  * ## UI 风格
  *
- * 完全复用现有语言：`Dialog` + `surfaceElevated` + `Radius.panel` +
+ * 完全复用现有语言：`Dialog` + `surfaceElevated` + `V3Radius.lg` +
  * 发丝线分隔 + **无卡片**（每一项是一行，不是一个小卡片）。
  */
 @Composable
@@ -104,7 +105,7 @@ fun LiveUserMenu(
     /** 打开禁言时长选择。 */
     onRequestMute: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // 菜单项由纯函数算出（v1.6.6）—— 见 `LiveUserMenuModel`。
     //
@@ -125,17 +126,17 @@ fun LiveUserMenu(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.scrimPanel)
+                .background(colors.scrim)
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.BottomCenter,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
+                    .clip(RoundedCornerShape(topStart = V3Radius.lg, topEnd = V3Radius.lg))
                     // 弹层用 surfaceElevated（比卡片亮一档）——
                     // 深色下投影不可见，分层只能靠提亮
-                    .background(colors.surfaceElevated)
+                    .background(colors.bgSecondaryElevated)
                     .clickable(enabled = false) {}
                     // 🔴 v1.6.6：底部弹层必须补 `navigationBarsPadding()`。
                     //
@@ -145,13 +146,13 @@ fun LiveUserMenu(
                     .navigationBarsPadding()
                     .heightIn(max = MENU_MAX_H)
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = Space.x3),
+                    .padding(bottom = V3Space.sm),
             ) {
                 // ---- 头部：头像 + 用户名 + 身份 ----
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Space.x4, vertical = Space.x3),
+                        .padding(horizontal = V3Space.md, vertical = V3Space.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AsyncImage(
@@ -159,23 +160,22 @@ fun LiveUserMenu(
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(Sizes.upAvatar + Space.x6)
+                            .size(V3Size.avatarXs + V3Space.xl)
                             .clip(CircleShape)
                             .background(colors.avatarPlaceholder),
                     )
-                    Spacer(Modifier.width(Space.x3))
+                    Spacer(Modifier.width(V3Space.sm))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = target.uname.ifEmpty { "用户${target.uid}" },
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = FontSize.body,
+                            style = V3Type.callout.copy(
                                 fontWeight = FontWeight.Medium,
-                                color = colors.textPrimary,
+                                color = colors.labelPrimary,
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        Spacer(Modifier.height(Space.micro))
+                        Spacer(Modifier.height(V3Space.hairline))
                         Text(
                             text = buildString {
                                 append("UID ").append(target.uid)
@@ -185,9 +185,8 @@ fun LiveUserMenu(
                                 }
                                 if (isKnownAdmin) append(" · 房管")
                             },
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
-                                color = colors.textTertiary,
+                            style = V3Type.caption2.copy(
+                                color = colors.labelTertiary,
                             ),
                             maxLines = 1,
                         )
@@ -231,15 +230,14 @@ fun LiveUserMenu(
                     RuleLine(color = Rule.subtle)
                     Text(
                         text = "管理操作",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
-                            color = colors.textTertiary,
+                        style = V3Type.caption2.copy(
+                            color = colors.labelTertiary,
                         ),
                         modifier = Modifier.padding(
-                            start = Space.x4,
-                            end = Space.x4,
-                            top = Space.x2,
-                            bottom = Space.compactVertical,
+                            start = V3Space.md,
+                            end = V3Space.md,
+                            top = V3Space.xs,
+                            bottom = V3Space.hairline,
                         ),
                     )
 
@@ -277,20 +275,18 @@ fun LiveUserMenu(
                         } else {
                             "只有主播和房管可以管理直播间用户"
                         },
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
-                            lineHeight = FontSize.labelLine,
-                            color = colors.textTertiary,
+                        style = V3Type.caption2.copy(lineHeight = V3Type.caption1.lineHeight,
+                            color = colors.labelTertiary,
                         ),
                         modifier = Modifier.padding(
-                            start = Space.x4,
-                            end = Space.x4,
-                            top = Space.x2,
+                            start = V3Space.md,
+                            end = V3Space.md,
+                            top = V3Space.xs,
                         ),
                     )
                 }
 
-                Spacer(Modifier.height(Space.x2))
+                Spacer(Modifier.height(V3Space.xs))
                 MenuRow(label = "取消", enabled = true, onClick = onDismiss, center = true)
             }
         }
@@ -319,7 +315,7 @@ fun LiveMuteDurationDialog(
     onDismiss: () -> Unit,
     onConfirm: (minutes: Int) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     var custom by remember { mutableStateOf("") }
 
     Dialog(
@@ -329,19 +325,18 @@ fun LiveMuteDurationDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(Radius.panel))
-                .background(colors.surfaceElevated)
-                .padding(Space.x4),
+                .clip(RoundedCornerShape(V3Radius.lg))
+                .background(colors.bgSecondaryElevated)
+                .padding(V3Space.md),
         ) {
             Text(
                 text = "禁言 ${targetName.ifEmpty { "该用户" }}",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
-            Spacer(Modifier.height(Space.x3))
+            Spacer(Modifier.height(V3Space.sm))
 
             // ---- 常用档位 ----
             val presets = listOf(
@@ -353,46 +348,44 @@ fun LiveMuteDurationDialog(
             )
             presets.chunked(3).forEach { row ->
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(Space.x2),
-                    modifier = Modifier.padding(bottom = Space.x2),
+                    horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
+                    modifier = Modifier.padding(bottom = V3Space.xs),
                 ) {
                     row.forEach { (min, label) ->
                         Text(
                             text = label,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.label,
-                                color = colors.textPrimary,
+                            style = V3Type.caption1.copy(
+                                color = colors.labelPrimary,
                             ),
                             modifier = Modifier
-                                .clip(RoundedCornerShape(Radius.pill))
-                                .background(colors.bgHover)
+                                .clip(RoundedCornerShape(V3Radius.pill))
+                                .background(colors.bgTertiary)
                                 .clickable(enabled = !busy) { onConfirm(min) }
                                 .padding(
-                                    horizontal = Space.x3,
-                                    vertical = Space.compactHorizontal,
+                                    horizontal = V3Space.sm,
+                                    vertical = V3Space.xs,
                                 ),
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
 
             // ---- 自定义 ----
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(Radius.interactive))
-                        .background(colors.bgHover)
-                        .padding(horizontal = Space.x3, vertical = Space.x2),
+                        .clip(RoundedCornerShape(V3Radius.xs))
+                        .background(colors.bgTertiary)
+                        .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                 ) {
                     if (custom.isEmpty()) {
                         Text(
                             text = "自定义分钟数",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = FontSize.bodySm,
-                                color = colors.textTertiary,
+                            style = V3Type.footnote.copy(
+                                color = colors.labelTertiary,
                             ),
                         )
                     }
@@ -400,62 +393,57 @@ fun LiveMuteDurationDialog(
                         value = custom,
                         onValueChange = { custom = it.filter { ch -> ch.isDigit() }.take(5) },
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.bodySm,
-                            color = colors.textPrimary,
+                        textStyle = V3Type.footnote.copy(
+                            color = colors.labelPrimary,
                         ),
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.brandPrimary),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.brand),
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-                Spacer(Modifier.width(Space.x2))
+                Spacer(Modifier.width(V3Space.xs))
                 val minutes = custom.toIntOrNull()
                 Text(
                     text = "确定",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
+                    style = V3Type.caption1.copy(
                         fontWeight = FontWeight.Medium,
                         // 输入非法 / 有操作在途 → 视觉上也明确不可用
                         color = if (minutes != null && minutes > 0 && !busy) {
-                            colors.brandPrimary
+                            colors.brand
                         } else {
-                            colors.textTertiary
+                            colors.labelTertiary
                         },
                     ),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.interactive))
+                        .clip(RoundedCornerShape(V3Radius.xs))
                         .clickable(enabled = minutes != null && minutes > 0 && !busy) {
                             onConfirm(minutes!!)
                         }
-                        .padding(horizontal = Space.x3, vertical = Space.x2),
+                        .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                 )
             }
 
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             Text(
                 text = "可选的时长范围由 B 站服务端决定，超出范围会返回错误。",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    lineHeight = FontSize.labelLine,
-                    color = colors.textTertiary,
+                style = V3Type.caption2.copy(lineHeight = V3Type.caption1.lineHeight,
+                    color = colors.labelTertiary,
                 ),
             )
 
-            Spacer(Modifier.height(Space.x3))
+            Spacer(Modifier.height(V3Space.sm))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
                 Text(
                     text = "取消",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.interactive))
+                        .clip(RoundedCornerShape(V3Radius.xs))
                         .clickable(onClick = onDismiss)
-                        .padding(horizontal = Space.x3, vertical = Space.x2),
+                        .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                 )
             }
         }
@@ -475,7 +463,7 @@ fun LiveConfirmDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -484,56 +472,51 @@ fun LiveConfirmDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(Radius.panel))
-                .background(colors.surfaceElevated)
-                .padding(Space.x4),
+                .clip(RoundedCornerShape(V3Radius.lg))
+                .background(colors.bgSecondaryElevated)
+                .padding(V3Space.md),
         ) {
             Text(
                 text = "确定要${actionLabel}吗？",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             Text(
                 text = "将对「${targetName.ifEmpty { "该用户" }}」执行「$actionLabel」。",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    lineHeight = FontSize.bodySmLine,
-                    color = colors.textSecondarySafe,
+                style = V3Type.footnote.copy(
+                    color = colors.labelSecondary,
                 ),
             )
-            Spacer(Modifier.height(Space.x4))
+            Spacer(Modifier.height(V3Space.md))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
                 Text(
                     text = "取消",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.interactive))
+                        .clip(RoundedCornerShape(V3Radius.xs))
                         .clickable(enabled = !busy, onClick = onDismiss)
-                        .padding(horizontal = Space.x3, vertical = Space.x2),
+                        .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                 )
-                Spacer(Modifier.width(Space.x2))
+                Spacer(Modifier.width(V3Space.xs))
                 Text(
                     text = "确定",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
+                    style = V3Type.caption1.copy(
                         fontWeight = FontWeight.Medium,
                         // 危险操作用 stateError —— 与"取消"形成明确对比
-                        color = if (busy) colors.textTertiary else colors.stateError,
+                        color = if (busy) colors.labelTertiary else colors.stateError,
                     ),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.interactive))
+                        .clip(RoundedCornerShape(V3Radius.xs))
                         .clickable(enabled = !busy, onClick = onConfirm)
-                        .padding(horizontal = Space.x3, vertical = Space.x2),
+                        .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                 )
             }
         }
@@ -545,7 +528,7 @@ fun LiveConfirmDialog(
  *
  * ## 尺寸
  *
- * `heightIn(min = Space.minTouchTarget)` —— 48dp 最小触摸目标。
+ * `heightIn(min = V3Size.touchMin)` —— 48dp 最小触摸目标。
  * 菜单项是最容易做成"点不中"的地方（§11 明确要求避免点击区域太小）。
  */
 @Composable
@@ -556,25 +539,24 @@ private fun MenuRow(
     dangerous: Boolean = false,
     center: Boolean = false,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val tint = when {
-        !enabled -> colors.textTertiary
+        !enabled -> colors.labelTertiary
         dangerous -> colors.stateError
-        else -> colors.textPrimary
+        else -> colors.labelPrimary
     }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = Space.minTouchTarget)
+            .heightIn(min = V3Size.touchMin)
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = Space.x4),
+            .padding(horizontal = V3Space.md),
         contentAlignment = if (center) Alignment.Center else Alignment.CenterStart,
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
+            style = V3Type.callout.copy(
                 color = tint,
             ),
             maxLines = 1,

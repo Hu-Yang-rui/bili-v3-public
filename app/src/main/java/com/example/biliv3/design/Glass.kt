@@ -26,8 +26,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.biliv3.design.tokens.Radius
 import kotlinx.coroutines.delay
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.GlassSurface
+import com.example.biliv3.design.v3.ProvideGlassBackdrop
+import com.example.biliv3.design.v3.V3Radius
 
 /**
  * 毛玻璃（glassmorphism）设计系统。
@@ -343,7 +346,7 @@ fun VideoBackdropEffect(
  * ```kotlin
  * GlassSurface(
  *     backdrop = backdrop,
- *     shape = RoundedCornerShape(Radius.card),
+ *     shape = RoundedCornerShape(V3Radius.md),
  * ) {
  *     Text("@作者名")      // ← 内容不会被模糊
  * }
@@ -365,7 +368,7 @@ fun VideoBackdropEffect(
 fun GlassSurface(
     modifier: Modifier = Modifier,
     backdrop: VideoBackdrop? = null,
-    shape: RoundedCornerShape = RoundedCornerShape(Radius.card),
+    shape: RoundedCornerShape = RoundedCornerShape(V3Radius.md),
     blur: Dp = GlassTokens.blurMedium,
     /** 底色。默认按主题取。传 `Color.Transparent` 可关掉染色。 */
     tint: Color? = null,
@@ -373,7 +376,7 @@ fun GlassSurface(
     border: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     // ⚠️ 本组件**专用于"压在视频上"**，所以染色一律压暗。
     //
     // 视频画面的亮度与主题无关，必须压暗才能既"透出"又保证白字可读。

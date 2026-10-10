@@ -27,11 +27,12 @@ import androidx.compose.ui.unit.Dp
 import com.example.biliv3.design.tokens.Band
 import com.example.biliv3.design.tokens.Emboss
 import com.example.biliv3.design.tokens.FontFamilies
-import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Grain
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Space
 import kotlin.random.Random
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Type
 
 // ---------------------------------------------------------------------------
 // 五个分隔原语 —— 替代 BiliCard 的全部词汇
@@ -98,7 +99,7 @@ fun RuleLine(
     color: Color = Rule.color,
     inset: Dp = Dp.Unspecified,
 ) {
-    val pad = if (inset == Dp.Unspecified) Space.x4 else inset
+    val pad = if (inset == Dp.Unspecified) V3Space.md else inset
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -236,33 +237,32 @@ fun SectionMark(
     title: String,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x4),
+            .padding(horizontal = V3Space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = index.toString().padStart(2, '0'),
-            style = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(
+            style = V3Type.footnote.copy(
                 fontFamily = FontFamilies.mono,
-                fontSize = FontSize.micro,
+                fontSize = V3Type.caption2.fontSize,
                 color = colors.accentTerminal,
                 fontWeight = FontWeight.Medium,
             ),
         )
-        Spacer(Modifier.width(Space.x3))
+        Spacer(Modifier.width(V3Space.sm))
         Text(
             text = title,
-            style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(
-                fontSize = FontSize.titleMd,
-                color = colors.textPrimary,
+            style = V3Type.subheadline.copy(
+                color = colors.labelPrimary,
                 fontWeight = FontWeight.SemiBold,
             ),
             maxLines = 1,
         )
-        Spacer(Modifier.width(Space.x3))
+        Spacer(Modifier.width(V3Space.sm))
         // 余下的空间用一条极淡的线补满 —— 它是"章节的延伸"，不是边框
         Box(
             modifier = Modifier

@@ -56,15 +56,17 @@ import com.example.biliv3.design.DeviceTier
 import com.example.biliv3.design.LocalDeviceTier
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
-import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.component.ProvideShimmer
 import com.example.biliv3.ui.component.SkeletonBox
 import com.example.biliv3.ui.component.SkeletonGrid
 import com.example.biliv3.ui.component.VideoCard
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 主页。
@@ -123,7 +125,7 @@ fun HomeScreen(
     onOpenLink: (String) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val snackbar = remember { SnackbarHostState() }
 
     // 当前选中的分区 Tab。默认「推荐」，与官方首页一致。
@@ -140,7 +142,7 @@ fun HomeScreen(
 
     Scaffold(
         modifier = modifier,
-        containerColor = colors.bgBase,
+        containerColor = colors.bgPrimary,
         // ⚠️ contentWindowInsets 置空：inset 由我们自己按栏位精确消费。
         // 否则 Scaffold 会把 inset 同时算进 innerPadding 和 topBar，
         // 出现双重留白。
@@ -278,7 +280,7 @@ private fun DesktopLayout(
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Fixed(windowSize.gridColumns),
-            contentPadding = PaddingValues(top = Space.x2, bottom = Space.x8),
+            contentPadding = PaddingValues(top = V3Space.xs, bottom = V3Space.xxl),
             horizontalArrangement = Arrangement.spacedBy(gridGutterFor(windowSize)),
             verticalArrangement = Arrangement.spacedBy(gridRowSpacingFor(windowSize)),
             modifier = Modifier.weight(1f),
@@ -299,7 +301,7 @@ private fun DesktopLayout(
             )
         }
 
-        Spacer(Modifier.width(Space.x6))
+        Spacer(Modifier.width(V3Space.xl))
 
         // ---- 右侧栏（独立滚动，sticky 效果）----
         Column(
@@ -307,7 +309,7 @@ private fun DesktopLayout(
                 .width(Sizes.sidePanel)
                 .fillMaxHeight()
                 .verticalScroll(rememberScrollState())
-                .padding(top = Space.x5, bottom = Space.x8),
+                .padding(top = V3Space.lg, bottom = V3Space.xxl),
         ) {
             SidePanel(
                 ranks = data.ranks,
@@ -354,8 +356,8 @@ private fun StackedLayout(
             start = pagePadding,
             end = pagePadding,
             // 顶栏本身已有底色分隔，这里不需要 20dp —— 收到 8dp
-            top = Space.x2,
-            bottom = Space.x8,
+            top = V3Space.xs,
+            bottom = V3Space.xxl,
         ),
         horizontalArrangement = Arrangement.spacedBy(gridGutterFor(windowSize)),
         verticalArrangement = Arrangement.spacedBy(gridRowSpacingFor(windowSize)),
@@ -431,7 +433,7 @@ private fun androidx.compose.foundation.lazy.grid.LazyGridScope.MainColumnItems(
             // ⚠️ 间距不能太小：Tab 条是横向可滚动的，最后一个可见 Tab
             // （实测「舞蹈」）会紧贴这里。用 x4(16dp) 把动作与 Tab 拉开，
             // 避免"换一换"看起来像又一个分区 Tab。
-            Spacer(Modifier.width(Space.x4))
+            Spacer(Modifier.width(V3Space.md))
             ShuffleAction(onShuffle)
         }
     }
@@ -469,23 +471,23 @@ private fun androidx.compose.foundation.lazy.grid.LazyGridScope.MainColumnItems(
 
     // ---- 加载更多 / 没有更多 ----
     item(span = { GridItemSpan(maxLineSpan) }, key = "load-more") {
-        val colors = BiliTheme.colors
+        val colors = BiliV3.colors
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = Space.x5),
+                .padding(vertical = V3Space.lg),
             contentAlignment = Alignment.Center,
         ) {
             when {
                 loadingMore -> CircularProgressIndicator(
-                    color = colors.brandPrimary,
-                    strokeWidth = Space.trackHeight,
+                    color = colors.brand,
+                    strokeWidth = V3Space.progressTrack,
                     modifier = Modifier.size(24.dp),
                 )
                 !hasMore -> Text(
                     text = "没有更多了",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        color = colors.textSecondary,
+                    style = V3Type.footnote.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
             }
@@ -510,7 +512,7 @@ private fun androidx.compose.foundation.lazy.grid.LazyGridScope.MainColumnItems(
  */
 @Composable
 private fun ShuffleAction(onClick: () -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         verticalAlignment = Alignment.CenterVertically,
         // 🔴 乙·质感：从"胶囊按钮"改成"纯文字动作"。
@@ -523,20 +525,19 @@ private fun ShuffleAction(onClick: () -> Unit) {
         // 比加一个底色更轻，也更清楚。
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(vertical = Space.x2),
+            .padding(vertical = V3Space.xs),
     ) {
         Icon(
             imageVector = Icons.Filled.Refresh,
             contentDescription = null,
-            tint = colors.textTertiary,
-            modifier = Modifier.size(Sizes.iconSm),
+            tint = colors.labelTertiary,
+            modifier = Modifier.size(V3Size.iconXs),
         )
-        Spacer(Modifier.width(Space.x1))
+        Spacer(Modifier.width(V3Space.xxs))
         Text(
             text = "换一换",
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = FontSize.bodySm,
-                color = colors.textSecondarySafe,
+            style = V3Type.footnote.copy(
+                color = colors.labelSecondary,
             ),
             maxLines = 1,
         )
@@ -579,7 +580,7 @@ private fun HomeSkeleton(windowSize: WindowSize) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = pagePadding, vertical = Space.x5),
+            .padding(horizontal = pagePadding, vertical = V3Space.lg),
         verticalArrangement = Arrangement.spacedBy(sectionSpacingFor(windowSize)),
     ) {
         SkeletonBox(

@@ -50,14 +50,15 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.player.QueueItem
 import com.example.biliv3.player.RepeatMode
 import com.example.biliv3.ui.component.EmptyState
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 播放队列页。
@@ -93,20 +94,20 @@ fun QueueScreen(
     onCycleRepeat: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val listState = rememberLazyListState()
 
     // 拖动状态：正在拖的下标 + 累计偏移
     var draggingIndex by remember { mutableStateOf(-1) }
     var dragOffset by remember { mutableStateOf(0f) }
     val rowHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) {
-        (Sizes.upAvatar + Space.x6).toPx()
+        (V3Size.avatarXs + V3Space.xl).toPx()
     }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 标题栏（二级页一律 ruleBottom，§7.4-32） ----
         // ⚠️ 必须自己消费 statusBars（MainShell 的 contentWindowInsets 是 0）。
@@ -116,45 +117,43 @@ fun QueueScreen(
                 .fillMaxWidth()
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
-                    .clip(RoundedCornerShape(Radius.pill))
+                    .size(V3Size.touchMin)
+                    .clip(RoundedCornerShape(V3Radius.pill))
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = "播放队列",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
             Spacer(Modifier.weight(1f))
             if (items.isNotEmpty()) {
                 Text(
                     text = "清空",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.interactive))
+                        .clip(RoundedCornerShape(V3Radius.xs))
                         .clickable(onClick = onClear)
-                        .padding(horizontal = Space.x3, vertical = Space.x2),
+                        .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                 )
             }
         }
@@ -164,9 +163,9 @@ fun QueueScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .ruleBottom(color = Rule.subtle)
-                .padding(horizontal = Space.x3, vertical = Space.x2),
+                .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Space.x2),
+            horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
         ) {
             QueueModeButton(
                 icon = Icons.Filled.Shuffle,
@@ -190,9 +189,8 @@ fun QueueScreen(
             Spacer(Modifier.weight(1f))
             Text(
                 text = "${items.size} 首",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textTertiary,
+                style = V3Type.caption1.copy(
+                    color = colors.labelTertiary,
                 ),
             )
         }
@@ -209,7 +207,7 @@ fun QueueScreen(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = Space.x8),
+                contentPadding = PaddingValues(bottom = V3Space.xxl),
             ) {
                 itemsIndexed(items, key = { _, it -> it.key }) { index, item ->
                     QueueRow(
@@ -257,7 +255,7 @@ private fun QueueRow(
     onDrag: (Float) -> Unit,
     onDragEnd: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = Modifier
@@ -272,13 +270,13 @@ private fun QueueRow(
                 scaleY = if (isDragging) 1.02f else 1f
             }
             .clickable(onClick = onSelect)
-            .padding(horizontal = Space.x3, vertical = Space.x3),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // 拖动把手：长按才拖（否则会与滚动冲突）
         Box(
             modifier = Modifier
-                .size(Space.minTouchTarget)
+                .size(V3Size.touchMin)
                 .pointerInput(item.key) {
                     detectDragGesturesAfterLongPress(
                         onDragStart = { onDragStart() },
@@ -295,12 +293,12 @@ private fun QueueRow(
             Icon(
                 imageVector = Icons.Filled.DragHandle,
                 contentDescription = "拖动排序",
-                tint = colors.textTertiary,
-                modifier = Modifier.size(Sizes.iconLg),
+                tint = colors.labelTertiary,
+                modifier = Modifier.size(V3Size.iconMd),
             )
         }
 
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
 
         // 封面（直角，§5.1 硬规则 2）
         Box(
@@ -317,27 +315,25 @@ private fun QueueRow(
             )
         }
 
-        Spacer(Modifier.width(Space.x3))
+        Spacer(Modifier.width(V3Space.sm))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = item.title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
+                style = V3Type.callout.copy(
                     fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
                     // 当前播放项用品牌色（它是"状态"不是"装饰"）
-                    color = if (isCurrent) colors.brandPrimary else colors.textPrimary,
+                    color = if (isCurrent) colors.brand else colors.labelPrimary,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             if (item.author.isNotEmpty()) {
-                Spacer(Modifier.height(Space.x1))
+                Spacer(Modifier.height(V3Space.xxs))
                 Text(
                     text = item.author,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -345,20 +341,20 @@ private fun QueueRow(
             }
         }
 
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
 
         Box(
             modifier = Modifier
-                .size(Space.minTouchTarget)
-                .clip(RoundedCornerShape(Radius.interactive))
+                .size(V3Size.touchMin)
+                .clip(RoundedCornerShape(V3Radius.xs))
                 .clickable(onClick = onRemove),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Filled.Close,
                 contentDescription = "从队列移除",
-                tint = colors.textTertiary,
-                modifier = Modifier.size(Sizes.iconLg),
+                tint = colors.labelTertiary,
+                modifier = Modifier.size(V3Size.iconMd),
             )
         }
     }
@@ -372,27 +368,26 @@ private fun QueueModeButton(
     active: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.interactive))
-            .background(if (active) colors.brandPrimaryDim else colors.bgHover)
+            .clip(RoundedCornerShape(V3Radius.xs))
+            .background(if (active) colors.brandDim else colors.bgTertiary)
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x2),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = if (active) colors.brandPrimary else colors.textSecondarySafe,
-            modifier = Modifier.size(Sizes.iconMd),
+            tint = if (active) colors.brand else colors.labelSecondary,
+            modifier = Modifier.size(V3Size.iconMd),
         )
-        Spacer(Modifier.width(Space.x1))
+        Spacer(Modifier.width(V3Space.xxs))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
-                color = if (active) colors.brandPrimary else colors.textSecondarySafe,
+            style = V3Type.caption1.copy(
+                color = if (active) colors.brand else colors.labelSecondary,
             ),
         )
     }

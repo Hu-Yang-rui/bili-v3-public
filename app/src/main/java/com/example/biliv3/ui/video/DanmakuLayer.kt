@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.biliv3.data.danmaku.DanmakuItem
 import kotlinx.coroutines.delay
+import com.example.biliv3.design.v3.BiliV3
 
 /**
  * 弹幕渲染层。
@@ -416,7 +417,7 @@ private fun DanmakuText(
     fontScale: Float,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = item.content,
         style = TextStyle(
@@ -425,7 +426,7 @@ private fun DanmakuText(
             color = Color(item.argb),
             // 描边：深色弹幕压在暗画面上会看不清，官方也是描边方案
             shadow = androidx.compose.ui.graphics.Shadow(
-                color = colors.overlayControl,
+                color = colors.controlOverlay,
                 offset = androidx.compose.ui.geometry.Offset(1f, 1f),
                 blurRadius = 2f,
             ),

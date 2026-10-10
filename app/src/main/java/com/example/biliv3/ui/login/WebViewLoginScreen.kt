@@ -48,11 +48,12 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.biliv3.data.api.Endpoints
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import kotlinx.coroutines.delay
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * WebView 登录页。
@@ -93,7 +94,7 @@ fun WebViewLoginScreen(
     onBack: () -> Unit = {},
     onLoggedIn: (cookie: String) -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     var loading by remember { mutableStateOf(true) }
     var progress by remember { mutableStateOf(0) }
@@ -151,7 +152,7 @@ fun WebViewLoginScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 顶栏 ----
         Row(
@@ -160,13 +161,13 @@ fun WebViewLoginScreen(
                 // 顶栏不再是卡片：与页面同明度，靠底边一条发丝线分隔
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -174,23 +175,22 @@ fun WebViewLoginScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = "登录",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
             Spacer(Modifier.weight(1f))
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable { webView?.reload() },
                 contentAlignment = Alignment.Center,
@@ -198,8 +198,8 @@ fun WebViewLoginScreen(
                 Icon(
                     imageVector = Icons.Filled.Refresh,
                     contentDescription = "刷新",
-                    tint = colors.textSecondarySafe,
-                    modifier = Modifier.size(Sizes.iconLg),
+                    tint = colors.labelSecondary,
+                    modifier = Modifier.size(V3Size.iconMd),
                 )
             }
         }
@@ -208,8 +208,8 @@ fun WebViewLoginScreen(
         if (loading && progress in 1..99) {
             LinearProgressIndicator(
                 progress = { progress / 100f },
-                color = colors.brandPrimary,
-                trackColor = colors.bgHover,
+                color = colors.brand,
+                trackColor = colors.bgTertiary,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(2.dp),
@@ -309,13 +309,13 @@ fun WebViewLoginScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(colors.bgBase),
+                        .background(colors.bgPrimary),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(
-                        color = colors.brandPrimary,
-                        strokeWidth = Space.trackHeight,
-                        modifier = Modifier.size(Sizes.iconXl * 1.5f),
+                        color = colors.brand,
+                        strokeWidth = V3Space.progressTrack,
+                        modifier = Modifier.size(V3Size.iconLg * 1.5f),
                     )
                 }
             }

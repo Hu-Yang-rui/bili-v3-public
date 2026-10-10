@@ -44,14 +44,15 @@ import com.example.biliv3.data.model.CoverUrls
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.ruleTop
-import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
 import com.example.biliv3.ui.component.BrandButtonVariant
 import com.example.biliv3.ui.component.ErrorState
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 番剧详情页。
@@ -85,7 +86,7 @@ fun BangumiDetailScreen(
     modifier: Modifier = Modifier,
     viewModel: BangumiDetailViewModel,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val detail by viewModel.detail.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
@@ -94,7 +95,7 @@ fun BangumiDetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // 通栏顶栏：不再是卡片，内容直接排。
         // ⚠️ 底线不可省（v1.2.4 补）：§7.4-32 要求「二级页标题栏一律
@@ -105,13 +106,13 @@ fun BangumiDetailScreen(
                 .fillMaxWidth()
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -119,17 +120,16 @@ fun BangumiDetailScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = detail?.title ?: "番剧",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -159,13 +159,13 @@ fun BangumiDetailScreen(
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(EPISODE_COLUMNS),
                     contentPadding = PaddingValues(
-                        start = Space.x3,
-                        end = Space.x3,
-                        top = Space.x2,
-                        bottom = Space.x8,
+                        start = V3Space.sm,
+                        end = V3Space.sm,
+                        top = V3Space.xs,
+                        bottom = V3Space.xxl,
                     ),
-                    horizontalArrangement = Arrangement.spacedBy(Space.x2),
-                    verticalArrangement = Arrangement.spacedBy(Space.x2),
+                    horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
+                    verticalArrangement = Arrangement.spacedBy(V3Space.xs),
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     // ---- 头部信息卡（占满整行）----
@@ -189,15 +189,14 @@ fun BangumiDetailScreen(
                     }) {
                         Text(
                             text = "选集（${d.totalEpisodes}）",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.label,
+                            style = V3Type.caption1.copy(
                                 fontWeight = FontWeight.SemiBold,
-                                color = colors.textTertiary,
+                                color = colors.labelTertiary,
                             ),
                             modifier = Modifier.padding(
                                 // 章节标题自带组间距（头部区块不再提供 bottom）
                                 top = Rhythm.between,
-                                bottom = Space.x2,
+                                bottom = V3Space.xs,
                             ),
                         )
                     }
@@ -231,7 +230,7 @@ private fun BangumiHeader(
     isFollowing: Boolean,
     onToggleFollow: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = Modifier
@@ -239,7 +238,7 @@ private fun BangumiHeader(
             // 头部信息区通栏：去掉卡片，改用上边发丝线分隔。
             // 间距只加在 top（下方区块各自负责自己的 top，避免翻倍）。
             .ruleTop(color = Rule.subtle)
-            .padding(start = Space.x4, end = Space.x4, top = Rhythm.between),
+            .padding(start = V3Space.md, end = V3Space.md, top = Rhythm.between),
     ) {
         // 竖版海报 3:4（番剧海报比例，不是 16:10 的横版封面）
         AsyncImage(
@@ -252,66 +251,60 @@ private fun BangumiHeader(
                 // 海报是封面 → 直角
                 .background(colors.coverPlaceholder),
         )
-        Spacer(Modifier.width(Space.x3))
+        Spacer(Modifier.width(V3Space.sm))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (score > 0) {
                     Text(
                         // 评分用"数值 + 文案"表达，不使用 B 站的评分图标素材
                         text = "评分 ${score}",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
+                        style = V3Type.caption1.copy(
                             fontWeight = FontWeight.SemiBold,
-                            color = colors.textBrandSafe,
+                            color = colors.brandBiliText,
                         ),
                     )
-                    Spacer(Modifier.width(Space.x3))
+                    Spacer(Modifier.width(V3Space.sm))
                 }
                 Text(
                     text = "全 $totalEpisodes 话",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
                 if (followCount > 0) {
-                    Spacer(Modifier.width(Space.x3))
+                    Spacer(Modifier.width(V3Space.sm))
                     Text(
                         text = "${com.example.biliv3.data.model.formatCount(followCount)} 人追",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
-                            color = colors.textSecondarySafe,
+                        style = V3Type.caption1.copy(
+                            color = colors.labelSecondary,
                         ),
                     )
                 }
             }
             if (evaluate.isNotEmpty()) {
-                Spacer(Modifier.height(Space.x2))
+                Spacer(Modifier.height(V3Space.xs))
                 Text(
                     text = evaluate,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = FontSize.bodySm,
-                        lineHeight = FontSize.bodySmLine,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.footnote.copy(
+                        color = colors.labelSecondary,
                     ),
                     maxLines = 5,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
 
-            Spacer(Modifier.height(Space.x3))
+            Spacer(Modifier.height(V3Space.sm))
 
             // ---- 追番按钮（此前「追番」功能完全不存在）----
             BrandButton(
@@ -337,35 +330,33 @@ private fun BangumiHeader(
  */
 @Composable
 private fun EpisodeCell(ep: BangumiEpisode, onClick: () -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val playable = ep.playableInApp()
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             // 集数格子：直角（列表项一律直角），只有交互态保留可点。
-            .background(colors.bgCard)
+            .background(colors.bgSecondary)
             .clickable(onClick = onClick)
-            .padding(vertical = Space.x3, horizontal = Space.x2),
+            .padding(vertical = V3Space.sm, horizontal = V3Space.xs),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = ep.index.ifEmpty { "?" },
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
+            style = V3Type.callout.copy(
                 fontWeight = FontWeight.Medium,
-                color = if (playable) colors.textPrimary else colors.textSecondarySafe,
+                color = if (playable) colors.labelPrimary else colors.labelSecondary,
             ),
             maxLines = 1,
             textAlign = TextAlign.Center,
         )
         if (ep.title.isNotEmpty()) {
-            Spacer(Modifier.height(Space.micro))
+            Spacer(Modifier.height(V3Space.hairline))
             Text(
                 text = ep.title,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = colors.textTertiary,
+                style = V3Type.caption2.copy(
+                    color = colors.labelTertiary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -373,13 +364,14 @@ private fun EpisodeCell(ep: BangumiEpisode, onClick: () -> Unit) {
             )
         }
         if (!playable) {
-            Spacer(Modifier.height(Space.micro))
+            Spacer(Modifier.height(V3Space.hairline))
             Text(
                 text = "官方 App",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = 9.sp,
-                    color = colors.textTertiary,
-                ),
+                // ⚠️ 原为 `fontSize = 9.sp` —— **不在类型阶梯上**。
+                // v3 最小档是 caption2（11sp）；9sp 低于 CJK 字形的实用下限
+                // （汉字在 9sp 下笔画粘连）。归到 caption2。
+                style = V3Type.caption2,
+                color = colors.labelTertiary,
                 maxLines = 1,
             )
         }

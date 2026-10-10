@@ -36,10 +36,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.data.live.DanmakuDraft
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 直播间弹幕输入条（v1.6.5）。
@@ -79,7 +80,7 @@ fun LiveChatInputBar(
     onLoginRequired: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // 自动聚焦（v1.6.6）。
     //
@@ -96,15 +97,13 @@ fun LiveChatInputBar(
         error?.let {
             Text(
                 text = it,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    lineHeight = FontSize.labelLine,
+                style = V3Type.caption2.copy(lineHeight = V3Type.caption1.lineHeight,
                     color = colors.stateError,
                 ),
                 modifier = Modifier.padding(
-                    start = Space.x3,
-                    end = Space.x3,
-                    bottom = Space.micro,
+                    start = V3Space.sm,
+                    end = V3Space.sm,
+                    bottom = V3Space.hairline,
                 ),
             )
         }
@@ -112,7 +111,7 @@ fun LiveChatInputBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Space.x2, vertical = Space.x1),
+                .padding(horizontal = V3Space.xs, vertical = V3Space.xxs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (!canSend) {
@@ -120,26 +119,24 @@ fun LiveChatInputBar(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(Radius.interactive))
-                        .background(colors.bgHover)
+                        .clip(RoundedCornerShape(V3Radius.xs))
+                        .background(colors.bgTertiary)
                         .clickable(onClick = onLoginRequired)
-                        .padding(horizontal = Space.x3, vertical = Space.x3),
+                        .padding(horizontal = V3Space.sm, vertical = V3Space.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "登录后可以发送弹幕",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = FontSize.bodySm,
-                            color = colors.textBrandSafe,
+                        style = V3Type.footnote.copy(
+                            color = colors.brandBiliText,
                         ),
                         modifier = Modifier.weight(1f),
                     )
                     Text(
                         text = "去登录",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
+                        style = V3Type.caption2.copy(
                             fontWeight = FontWeight.Medium,
-                            color = colors.textBrandSafe,
+                            color = colors.brandBiliText,
                         ),
                     )
                 }
@@ -149,16 +146,16 @@ fun LiveChatInputBar(
             // ---- 烂梗库入口 ----
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
-                    .clip(RoundedCornerShape(Radius.interactive))
+                    .size(V3Size.touchMin)
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     .clickable(onClick = onOpenMemes),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.Outlined.EmojiEmotions,
                     contentDescription = "烂梗库",
-                    tint = colors.textSecondarySafe,
-                    modifier = Modifier.size(Sizes.iconLg),
+                    tint = colors.labelSecondary,
+                    modifier = Modifier.size(V3Size.iconMd),
                 )
             }
 
@@ -166,16 +163,15 @@ fun LiveChatInputBar(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(Radius.interactive))
-                    .background(colors.bgHover)
-                    .padding(horizontal = Space.x3, vertical = Space.x2),
+                    .clip(RoundedCornerShape(V3Radius.xs))
+                    .background(colors.bgTertiary)
+                    .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
             ) {
                 if (text.isEmpty()) {
                     Text(
                         text = "说点什么…",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.bodySm,
-                            color = colors.textTertiary,
+                        style = V3Type.footnote.copy(
+                            color = colors.labelTertiary,
                         ),
                     )
                 }
@@ -186,11 +182,10 @@ fun LiveChatInputBar(
                     // 一长段才被服务端拒绝，还得自己删字重试。
                     onValueChange = { onTextChange(DanmakuDraft.clamp(it)) },
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.bodySm,
-                        color = colors.textPrimary,
+                    textStyle = V3Type.footnote.copy(
+                        color = colors.labelPrimary,
                     ),
-                    cursorBrush = SolidColor(colors.brandPrimary),
+                    cursorBrush = SolidColor(colors.brand),
                     // 回车 = 发送（与搜索页同一写法）
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(
@@ -207,52 +202,50 @@ fun LiveChatInputBar(
             //
             // 常驻显示 `0/20` 是纯噪音；到 16 字再提示才有信息量。
             if (DanmakuDraft.remaining(text) <= COUNTER_SHOW_AT) {
-                Spacer(Modifier.width(Space.x1))
+                Spacer(Modifier.width(V3Space.xxs))
                 Text(
                     text = "${text.length}/${DanmakuDraft.MAX_LEN}",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
+                    style = V3Type.caption2.copy(
                         // 到上限用错误色 —— 用户一眼知道"打不进去了"
                         color = if (DanmakuDraft.atLimit(text)) {
                             colors.stateError
                         } else {
-                            colors.textTertiary
+                            colors.labelTertiary
                         },
                     ),
                     maxLines = 1,
                 )
             }
 
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
 
             // ---- 发送 ----
             //
-            // ⚠️ `heightIn(min = Space.minTouchTarget)` 是**触摸热区**，
+            // ⚠️ `heightIn(min = V3Size.touchMin)` 是**触摸热区**，
             //    不是视觉尺寸 —— 文字大小不变，只是可点区域到 48dp。
-            //    此前是 `vertical = Space.x2`(8dp) + 12sp ≈ 33dp，
+            //    此前是 `vertical = V3Space.xs`(8dp) + 12sp ≈ 33dp，
             //    在手机上是明显的"点不中"。
             val enabled = !sending && DanmakuDraft.canSend(text)
             Box(
                 modifier = Modifier
-                    .heightIn(min = Space.minTouchTarget)
-                    .clip(RoundedCornerShape(Radius.interactive))
+                    .heightIn(min = V3Size.touchMin)
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     .clickable(enabled = enabled, onClick = onSend)
-                    .padding(horizontal = Space.x3),
+                    .padding(horizontal = V3Space.sm),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = if (sending) "发送中" else "发送",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
+                    style = V3Type.caption1.copy(
                         fontWeight = FontWeight.Medium,
-                        color = if (enabled) colors.textBrandSafe else colors.textTertiary,
+                        color = if (enabled) colors.brandBiliText else colors.labelTertiary,
                     ),
                     maxLines = 1,
                 )
             }
         }
 
-        Spacer(Modifier.height(Space.micro))
+        Spacer(Modifier.height(V3Space.hairline))
     }
 }
 

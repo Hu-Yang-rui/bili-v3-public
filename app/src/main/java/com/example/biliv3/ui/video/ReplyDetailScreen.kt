@@ -50,12 +50,12 @@ import com.example.biliv3.data.model.formatRelativeTime
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 楼中楼详情页（某条评论的全部回复）。
@@ -88,7 +88,7 @@ fun ReplyDetailScreen(
     modifier: Modifier = Modifier,
     viewModel: ReplyDetailViewModel,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val replies by viewModel.replies.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
@@ -112,7 +112,7 @@ fun ReplyDetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         Row(
             modifier = Modifier
@@ -120,13 +120,13 @@ fun ReplyDetailScreen(
                 // 🔴 乙·质感：顶栏不再是卡片，只留底边一条发丝线
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -134,24 +134,23 @@ fun ReplyDetailScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = "全部回复",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
         }
 
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(bottom = Space.x8),
+            contentPadding = PaddingValues(bottom = V3Space.xxl),
             modifier = Modifier.fillMaxSize(),
         ) {
             // ---- 主评论（上下文）----
@@ -164,14 +163,13 @@ fun ReplyDetailScreen(
             item(key = "count") {
                 Text(
                     text = "共 ${replies.size} 条回复" + if (hasMore) "（还有更多）" else "",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textTertiary,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelTertiary,
                     ),
                     modifier = Modifier.padding(
-                        start = Space.x4,
-                        top = Space.x3,
-                        bottom = Space.x2,
+                        start = V3Space.md,
+                        top = V3Space.sm,
+                        bottom = V3Space.xs,
                     ),
                 )
             }
@@ -181,13 +179,13 @@ fun ReplyDetailScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = Space.x6),
+                            .padding(vertical = V3Space.xl),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
-                            color = colors.brandPrimary,
-                            strokeWidth = Space.trackHeight,
-                            modifier = Modifier.size(Sizes.iconXl),
+                            color = colors.brand,
+                            strokeWidth = V3Space.progressTrack,
+                            modifier = Modifier.size(V3Size.iconLg),
                         )
                     }
                 }
@@ -222,20 +220,19 @@ fun ReplyDetailScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = Space.x4),
+                                .padding(vertical = V3Space.md),
                             contentAlignment = Alignment.Center,
                         ) {
                             when {
                                 loadingMore -> CircularProgressIndicator(
-                                    color = colors.brandPrimary,
-                                    strokeWidth = Space.trackHeight,
-                                    modifier = Modifier.size(Sizes.iconXl),
+                                    color = colors.brand,
+                                    strokeWidth = V3Space.progressTrack,
+                                    modifier = Modifier.size(V3Size.iconLg),
                                 )
                                 !hasMore -> Text(
                                     text = "没有更多了",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontSize = FontSize.label,
-                                        color = colors.textTertiary,
+                                    style = V3Type.caption1.copy(
+                                        color = colors.labelTertiary,
                                     ),
                                 )
                             }
@@ -250,13 +247,13 @@ fun ReplyDetailScreen(
 /** 顶部主评论卡。 */
 @Composable
 private fun RootCommentCard(comment: CommentItem, onAvatarClick: (Long) -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         modifier = Modifier
             .fillMaxWidth()
             // ⚠️ 楼中楼的主评论**不再是卡片** —— 它是列表里的一行。
             // 列表用留白分组，不用卡片分组。
-            .padding(horizontal = Space.x4, vertical = Space.x3),
+            .padding(horizontal = V3Space.md, vertical = V3Space.sm),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
@@ -269,36 +266,32 @@ private fun RootCommentCard(comment: CommentItem, onAvatarClick: (Long) -> Unit)
                     .background(colors.avatarPlaceholder)
                     .clickable { onAvatarClick(comment.mid) },
             )
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
             Text(
                 text = comment.userName,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
+                style = V3Type.caption1.copy(
                     fontWeight = FontWeight.Medium,
-                    color = colors.textSecondarySafe,
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
         Text(
             text = comment.content,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                lineHeight = FontSize.bodyLine,
-                color = colors.textPrimary,
+            style = V3Type.callout.copy(
+                color = colors.labelPrimary,
             ),
         )
-        Spacer(Modifier.height(Space.x1))
+        Spacer(Modifier.height(V3Space.xxs))
         Text(
             text = buildString {
                 append(formatRelativeTime(comment.ctime))
                 if (comment.hasIpLocation) append("  IP属地：${comment.ipLocation}")
             },
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.badge,
-                color = colors.textSecondarySafe,
+            style = V3Type.caption2.copy(
+                color = colors.labelSecondary,
             ),
         )
     }
@@ -311,13 +304,13 @@ private fun ReplyRow(
     onLike: () -> Unit,
     onAvatarClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
             // ⚠️ 楼中楼的每条回复**不再是卡片** —— 同「列表用留白分组」原则。
             // 每条回复都套卡会形成"卡片墙"，且与主评论卡重复。
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
         verticalAlignment = Alignment.Top,
     ) {
         AsyncImage(
@@ -330,44 +323,39 @@ private fun ReplyRow(
                 .background(colors.avatarPlaceholder)
                 .clickable(onClick = onAvatarClick),
         )
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = comment.userName,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
+                style = V3Type.caption1.copy(
                     fontWeight = FontWeight.Medium,
-                    color = colors.textSecondarySafe,
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(Space.micro))
+            Spacer(Modifier.height(V3Space.hairline))
             Text(
                 text = comment.content,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    lineHeight = FontSize.bodyLine,
-                    color = colors.textPrimary,
+                style = V3Type.callout.copy(
+                    color = colors.labelPrimary,
                 ),
             )
-            Spacer(Modifier.height(Space.x1))
+            Spacer(Modifier.height(V3Space.xxs))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = formatRelativeTime(comment.ctime),
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
                 if (comment.hasIpLocation) {
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                     Text(
                         text = "IP属地：${comment.ipLocation}",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
-                            color = colors.textSecondarySafe,
+                        style = V3Type.caption2.copy(
+                            color = colors.labelSecondary,
                         ),
                     )
                 }
@@ -376,19 +364,18 @@ private fun ReplyRow(
                     imageVector = if (comment.liked) Icons.Filled.ThumbUp
                     else Icons.Outlined.ThumbUp,
                     contentDescription = if (comment.liked) "取消点赞" else "点赞",
-                    tint = if (comment.liked) colors.brandPrimary else colors.textSecondarySafe,
+                    tint = if (comment.liked) colors.brand else colors.labelSecondary,
                     modifier = Modifier
-                        .size(Sizes.iconSm + Space.x1)
+                        .size(V3Size.iconXs + V3Space.xxs)
                         .clickable(onClick = onLike),
                 )
                 if (comment.likeCount > 0) {
-                    Spacer(Modifier.width(Space.micro))
+                    Spacer(Modifier.width(V3Space.hairline))
                     Text(
                         text = formatCount(comment.likeCount),
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
-                            color = if (comment.liked) colors.brandPrimary
-                            else colors.textSecondarySafe,
+                        style = V3Type.caption2.copy(
+                            color = if (comment.liked) colors.brand
+                            else colors.labelSecondary,
                         ),
                     )
                 }

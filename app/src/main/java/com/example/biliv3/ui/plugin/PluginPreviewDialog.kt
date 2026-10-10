@@ -27,16 +27,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.plugin.PluginPackagePreview
 import com.example.biliv3.plugin.RiskLevel
 import com.example.biliv3.plugin.SignatureStatus
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Type
+import com.example.biliv3.design.v3.v3GlassSurface
+import com.example.biliv3.design.v3.V3Glass
 
 /**
  * 插件包预览确认框（v1.3.0）。
@@ -67,7 +68,7 @@ fun PluginPreviewDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val meta = preview.metadata
 
     Dialog(
@@ -80,51 +81,52 @@ fun PluginPreviewDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.scrimPanel)
+                .background(colors.scrim)
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
             Column(
                 modifier = Modifier
-                    .padding(horizontal = Space.x4)
+                    .padding(horizontal = V3Space.md)
                     .fillMaxWidth()
-                    .biliCard(
-                        shape = RoundedCornerShape(Radius.panel),
-                        color = colors.surfaceElevated,
+                    // v3：弹层面板改用 Liquid Glass（判据见 §7.37 坑 219）。
+                    // 用 `Modifier.v3GlassSurface` 而不是 `GlassSurface` 容器 ——
+                    // 一个表达式替换，不动花括号。
+                    .v3GlassSurface(
+                        shape = RoundedCornerShape(V3Radius.sheet),
+                        level = V3Glass.Level.UltraThin,
                     )
                     // 弹层本体不穿透到遮罩
                     .clickable(enabled = false) {}
-                    .padding(vertical = Space.x4),
+                    .padding(vertical = V3Space.md),
             ) {
                 // ---- 标题 ----
                 Text(
                     text = if (preview.valid) "安装插件？" else "无法安装",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = FontSize.titleMd,
+                    style = V3Type.subheadline.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
-                    modifier = Modifier.padding(horizontal = Space.x5),
+                    modifier = Modifier.padding(horizontal = V3Space.lg),
                 )
-                Spacer(Modifier.height(Space.x1))
+                Spacer(Modifier.height(V3Space.xxs))
                 Text(
                     text = source,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.bodySm,
-                        color = colors.textTertiary,
+                    style = V3Type.footnote.copy(
+                        color = colors.labelTertiary,
                     ),
                     maxLines = 1,
-                    modifier = Modifier.padding(horizontal = Space.x5),
+                    modifier = Modifier.padding(horizontal = V3Space.lg),
                 )
 
-                Spacer(Modifier.height(Space.x3))
+                Spacer(Modifier.height(V3Space.sm))
 
                 // ---- 正文（可滚动：权限可能十几条）----
                 Column(
                     modifier = Modifier
-                        .heightIn(max = Space.x12 * 9)
+                        .heightIn(max = V3Space.huge * 9)
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = Space.x5),
+                        .padding(horizontal = V3Space.lg),
                 ) {
                     if (!preview.valid) {
                         // 解析失败：只显示原因，不给安装按钮
@@ -156,43 +158,39 @@ fun PluginPreviewDialog(
                         }
 
                         // ---- 权限清单（核心）----
-                        Spacer(Modifier.height(Space.x3))
+                        Spacer(Modifier.height(V3Space.sm))
                         SectionTitle("请求的权限")
                         val perms = meta?.permissions?.toList().orEmpty()
                         if (perms.isEmpty()) {
                             Text(
                                 text = "未请求任何权限",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = FontSize.bodySm,
-                                    color = colors.textSecondarySafe,
+                                style = V3Type.footnote.copy(
+                                    color = colors.labelSecondary,
                                 ),
                             )
                         } else {
                             perms.sortedByDescending { it.level.ordinal }.forEach { p ->
-                                Column(Modifier.padding(vertical = Space.x1)) {
+                                Column(Modifier.padding(vertical = V3Space.xxs)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
                                             text = p.displayName,
-                                            style = MaterialTheme.typography.bodyMedium.copy(
-                                                fontSize = FontSize.bodySm,
+                                            style = V3Type.footnote.copy(
                                                 fontWeight = FontWeight.Medium,
-                                                color = colors.textPrimary,
+                                                color = colors.labelPrimary,
                                             ),
                                         )
-                                        Spacer(Modifier.width(Space.x2))
+                                        Spacer(Modifier.width(V3Space.xs))
                                         Text(
                                             text = levelLabel(p.level),
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                fontSize = FontSize.label,
+                                            style = V3Type.caption1.copy(
                                                 color = levelColor(p.level, colors),
                                             ),
                                         )
                                     }
                                     Text(
                                         text = p.description,
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            fontSize = FontSize.label,
-                                            color = colors.textTertiary,
+                                        style = V3Type.caption1.copy(
+                                            color = colors.labelTertiary,
                                         ),
                                     )
                                 }
@@ -200,7 +198,7 @@ fun PluginPreviewDialog(
                         }
 
                         // ---- 风险 ----
-                        Spacer(Modifier.height(Space.x3))
+                        Spacer(Modifier.height(V3Space.sm))
                         SectionTitle("风险")
                         PreviewRow(
                             label = "等级",
@@ -213,14 +211,14 @@ fun PluginPreviewDialog(
 
                         // ---- 规则/权限解析问题 ----
                         if (preview.ruleErrors.isNotEmpty()) {
-                            Spacer(Modifier.height(Space.x3))
+                            Spacer(Modifier.height(V3Space.sm))
                             SectionTitle("解析问题")
                             preview.ruleErrors.forEach { e -> BulletLine(e, warn = true) }
                         }
 
                         // ---- 包内文件 ----
                         if (preview.entries.isNotEmpty()) {
-                            Spacer(Modifier.height(Space.x3))
+                            Spacer(Modifier.height(V3Space.sm))
                             SectionTitle("包内文件（${preview.entries.size}）")
                             preview.entries.take(20).forEach { e ->
                                 BulletLine("${e.path}  ${formatSize(e.sizeBytes)}", warn = false)
@@ -228,9 +226,8 @@ fun PluginPreviewDialog(
                             if (preview.entries.size > 20) {
                                 Text(
                                     text = "…还有 ${preview.entries.size - 20} 个",
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontSize = FontSize.label,
-                                        color = colors.textTertiary,
+                                    style = V3Type.caption1.copy(
+                                        color = colors.labelTertiary,
                                     ),
                                 )
                             }
@@ -238,36 +235,35 @@ fun PluginPreviewDialog(
 
                         // ---- 签名 ----
                         if (preview.signature == SignatureStatus.NONE) {
-                            Spacer(Modifier.height(Space.x3))
+                            Spacer(Modifier.height(V3Space.sm))
                             Text(
                                 text = "⚠️ 此包未签名，无法验证来源与完整性。只安装你信任来源的插件。",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontSize = FontSize.label,
-                                    color = colors.brandPrimary,
+                                style = V3Type.caption1.copy(
+                                    color = colors.brand,
                                 ),
                             )
                         }
                     }
                 }
 
-                Spacer(Modifier.height(Space.x3))
+                Spacer(Modifier.height(V3Space.sm))
 
                 // ---- 操作 ----
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Space.x4),
+                        .padding(horizontal = V3Space.md),
                     horizontalArrangement = Arrangement.End,
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("取消", color = colors.textSecondary)
+                        Text("取消", color = colors.labelSecondary)
                     }
                     // 解析失败时**不给**安装按钮 —— 装了也跑不起来
                     if (preview.valid) {
                         TextButton(onClick = onConfirm) {
                             Text(
                                 text = "安装",
-                                color = colors.brandPrimary,
+                                color = colors.brand,
                                 fontWeight = FontWeight.SemiBold,
                             )
                         }
@@ -280,43 +276,40 @@ fun PluginPreviewDialog(
 
 @Composable
 private fun SectionTitle(text: String) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = text,
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.label,
+        style = V3Type.caption1.copy(
             fontWeight = FontWeight.SemiBold,
-            color = colors.textSecondary,
+            color = colors.labelSecondary,
         ),
         modifier = Modifier
             .fillMaxWidth()
             .ruleBottom(color = Rule.color)
-            .padding(vertical = Space.x1),
+            .padding(vertical = V3Space.xxs),
     )
 }
 
 @Composable
 private fun PreviewRow(label: String, value: String, warn: Boolean = false) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = Space.x1),
+            .padding(vertical = V3Space.xxs),
         verticalAlignment = Alignment.Top,
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.bodySm,
-                color = colors.textTertiary,
+            style = V3Type.footnote.copy(
+                color = colors.labelTertiary,
             ),
-            modifier = Modifier.width(Space.x12 * 2),
+            modifier = Modifier.width(V3Space.huge * 2),
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.bodySm,
-                color = if (warn) colors.brandPrimary else colors.textPrimary,
+            style = V3Type.footnote.copy(
+                color = if (warn) colors.brand else colors.labelPrimary,
             ),
             modifier = Modifier.weight(1f),
         )
@@ -325,37 +318,46 @@ private fun PreviewRow(label: String, value: String, warn: Boolean = false) {
 
 @Composable
 private fun BulletLine(text: String, warn: Boolean) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
-        modifier = Modifier.padding(vertical = Space.x1),
+        modifier = Modifier.padding(vertical = V3Space.xxs),
         verticalAlignment = Alignment.Top,
     ) {
         Text(
             text = "·",
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = FontSize.label,
-                color = colors.textTertiary,
+            style = V3Type.caption1.copy(
+                color = colors.labelTertiary,
             ),
-            modifier = Modifier.width(Space.x3),
+            modifier = Modifier.width(V3Space.sm),
         )
         Text(
             text = text,
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = FontSize.label,
-                color = if (warn) colors.textSecondarySafe else colors.textTertiary,
+            style = V3Type.caption1.copy(
+                color = if (warn) colors.labelSecondary else colors.labelTertiary,
             ),
             modifier = Modifier.weight(1f),
         )
     }
 }
 
+/**
+ * 风险等级 → 颜色。
+ *
+ * ⚠️ 参数类型必须跟调用方用的 palette 一致。这里曾经写成
+ * `design.tokens.BiliColors`，而调用方已经迁移到 `BiliV3.colors`
+ * （类型是 `V3Colors`）—— 于是报 `Argument type mismatch`。
+ *
+ * 这正是 §7.29 坑 188「`colors` 这个局部名会骗你」的同类问题：
+ * **换调色板时，字段名与参数类型是一个原子操作**，
+ * 只改一处必然编译不过。
+ */
 private fun levelColor(
     level: RiskLevel,
-    colors: com.example.biliv3.design.tokens.BiliColors,
+    colors: com.example.biliv3.design.v3.V3Colors,
 ): androidx.compose.ui.graphics.Color = when (level) {
-    RiskLevel.HIGH -> colors.brandPrimary
+    RiskLevel.HIGH -> colors.stateError
     RiskLevel.MEDIUM -> colors.accentCoin
-    RiskLevel.LOW -> colors.textTertiary
+    RiskLevel.LOW -> colors.labelTertiary
 }
 
 private fun levelLabel(level: RiskLevel): String = when (level) {

@@ -36,17 +36,18 @@ import com.example.biliv3.data.api.InteractionState
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.ui.component.MonoReadout
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 互动栏：点赞 / 投币 / 收藏 / 分享。
  *
  * ## 布局（v1.4.2 重做）
  *
- * 首版是 `Arrangement.SpaceEvenly` + 每项 `padding(horizontal = Space.x4)`。
+ * 首版是 `Arrangement.SpaceEvenly` + 每项 `padding(horizontal = V3Space.md)`。
  * 两个问题叠加，实测在 412dp 屏上：
  *
  * ```
@@ -93,7 +94,7 @@ fun InteractionBar(
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = modifier
@@ -106,7 +107,7 @@ fun InteractionBar(
             // 视觉上像"框里又画了个框"，比不合并还乱。
             //
             // 它只需要横向铺满 + 一点纵向呼吸。
-            .padding(vertical = Space.x2),
+            .padding(vertical = V3Space.xs),
         // ⚠️ 不再用 SpaceEvenly。四项各占 `weight(1f)`，热区等宽；
         // 内容在各自热区内居中，视觉上自然形成紧凑的一组。
         horizontalArrangement = Arrangement.Center,
@@ -117,7 +118,7 @@ fun InteractionBar(
             icon = if (interaction.liked) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
             label = formatCount(likeCount),
             active = interaction.liked,
-            activeColor = colors.brandPrimary,
+            activeColor = colors.brand,
             contentDescription = if (interaction.liked) "取消点赞" else "点赞",
             onClick = onLike,
             modifier = Modifier.weight(1f),
@@ -144,7 +145,7 @@ fun InteractionBar(
             icon = Icons.Outlined.Share,
             label = formatCount(shareCount),
             active = false,
-            activeColor = colors.textSecondarySafe,
+            activeColor = colors.labelSecondary,
             contentDescription = "分享",
             onClick = onShare,
             modifier = Modifier.weight(1f),
@@ -157,10 +158,10 @@ fun InteractionBar(
  *
  * ## 触摸热区 vs 视觉尺寸（v1.4.2 重做）
  *
- * 外层 `weight(1f)` 的容器撑满整格，`minHeight = Space.minTouchTarget`
+ * 外层 `weight(1f)` 的容器撑满整格，`minHeight = V3Size.touchMin`
  * 保证热区达标；**内层内容保持紧凑**，靠 `SpacedBy` 控制视觉距离。
  *
- * 关键点：热区大不等于视觉松散。首版用 `padding(horizontal = Space.x4)`
+ * 关键点：热区大不等于视觉松散。首版用 `padding(horizontal = V3Space.md)`
  * 把 padding 当成了「视觉间距」，实际上它同时撑大了热区并把图标推远 ——
  * 两件事被同一个参数绑死了。
  */
@@ -174,35 +175,35 @@ private fun ActionItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
-    val tint = if (active) activeColor else colors.textSecondarySafe
+    val colors = BiliV3.colors
+    val tint = if (active) activeColor else colors.labelSecondary
 
     Box(
         modifier = modifier
             // 热区：撑满所在格子，并保证不低于最小触摸目标
             .fillMaxHeight()
-            .heightIn(min = Space.minTouchTarget)
-            .clip(RoundedCornerShape(Radius.interactive))
+            .heightIn(min = V3Size.touchMin)
+            .clip(RoundedCornerShape(V3Radius.xs))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             // 图标与数字之间只留 2dp：它们是**一个整体**，不是两行内容
-            verticalArrangement = Arrangement.spacedBy(Space.micro),
+            verticalArrangement = Arrangement.spacedBy(V3Space.hairline),
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = tint,
-                modifier = Modifier.size(Sizes.iconLg),
+                modifier = Modifier.size(V3Size.iconMd),
             )
             // 计数用等宽：点赞/投币数会实时变化，比例字体下四个数字
             // 宽度不一，整栏会随交互轻微抖动。
             MonoReadout(
                 text = label,
                 color = tint,
-                fontSize = FontSize.badge,
+                fontSize = V3Type.caption2.fontSize,
                 weight = if (active) FontWeight.Medium else FontWeight.Normal,
             )
         }

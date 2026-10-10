@@ -46,10 +46,12 @@ import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 右侧辅助栏。
@@ -95,7 +97,7 @@ fun SidePanel(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(Space.x4),
+        verticalArrangement = Arrangement.spacedBy(V3Space.md),
     ) {
         if (ranks.isNotEmpty()) {
             RankPanel(ranks = ranks, onVideoClick = onVideoClick, onSeeAll = onSeeRanking)
@@ -138,42 +140,40 @@ private fun PanelHeader(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = Space.x3),
+            .padding(bottom = V3Space.sm),
     ) {
         if (icon != null) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = colors.brandPrimary,
-                modifier = Modifier.size(Sizes.iconLg),
+                tint = colors.brand,
+                modifier = Modifier.size(V3Size.iconMd),
             )
-            Spacer(Modifier.width(Space.compactHorizontal))
+            Spacer(Modifier.width(V3Space.xs))
         }
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontSize = FontSize.titleLg,
+            style = V3Type.headline.copy(
                 fontWeight = FontWeight.Bold,
-                color = colors.textPrimary,
+                color = colors.labelPrimary,
             ),
         )
         Spacer(Modifier.weight(1f))
         if (actionLabel != null && onAction != null) {
             Text(
                 text = actionLabel,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption1.copy(
+                    color = colors.labelSecondary,
                 ),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.badge))
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     .clickable(onClick = onAction)
-                    .padding(horizontal = Space.x1, vertical = Space.compactVertical),
+                    .padding(horizontal = V3Space.xxs, vertical = V3Space.hairline),
             )
         }
     }
@@ -191,7 +191,7 @@ private fun RankPanel(
     onVideoClick: (String) -> Unit,
     onSeeAll: (() -> Unit)? = null,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     PanelCard {
         Column {
@@ -211,48 +211,45 @@ private fun RankPanel(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(Radius.badge))
+                        .clip(RoundedCornerShape(V3Radius.xs))
                         .clickable(
                             interactionSource = interaction,
                             indication = null,
                         ) { onVideoClick(item.bvid) }
-                        .background(if (hovered) colors.bgHover else Color.Transparent)
-                        .padding(horizontal = Space.x1, vertical = Space.rowVertical),
+                        .background(if (hovered) colors.bgTertiary else Color.Transparent)
+                        .padding(horizontal = V3Space.xxs, vertical = V3Space.sm),
                 ) {
                     // 序号
                     Text(
                         text = item.rank.toString(),
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontSize = FontSize.titleMd,
+                        style = V3Type.subheadline.copy(
                             fontWeight = FontWeight.Bold,
                             color = when (item.rank) {
                                 1 -> colors.rankFirst
                                 2 -> colors.rankSecond
                                 3 -> colors.rankThird
-                                else -> colors.textSecondary
+                                else -> colors.labelSecondary
                             },
                         ),
                         modifier = Modifier.width(22.dp),
                     )
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                     // 标题
                     Text(
                         text = item.title,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = FontSize.bodySm,
-                            color = if (hovered) colors.textBrandSafe else colors.textPrimary,
+                        style = V3Type.footnote.copy(
+                            color = if (hovered) colors.brandBiliText else colors.labelPrimary,
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                     // 热度
                     Text(
                         text = formatCount(item.hotScore.toInt()),
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
-                            color = colors.textSecondary,
+                        style = V3Type.caption1.copy(
+                            color = colors.labelSecondary,
                         ),
                     )
                 }
@@ -267,7 +264,7 @@ private fun LivePanel(
     lives: List<LiveItem>,
     onLiveClick: (LiveItem) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     PanelCard {
         Column {
@@ -281,13 +278,13 @@ private fun LivePanel(
                     modifier = Modifier
                         .fillMaxWidth()
                         // 列表项 + 封面：一律直角（§5.1 硬规则 2）。
-                        // `Radius.thumb` 是卡片时代的兼容别名，已随重构废弃。
+                        // `V3Radius.sm` 是卡片时代的兼容别名，已随重构废弃。
                         .clickable(
                             interactionSource = interaction,
                             indication = null,
                         ) { onLiveClick(item) }
-                        .background(if (hovered) colors.bgHover else Color.Transparent)
-                        .padding(Space.x1),
+                        .background(if (hovered) colors.bgTertiary else Color.Transparent)
+                        .padding(V3Space.xxs),
                 ) {
                     Box(
                         modifier = Modifier
@@ -305,52 +302,51 @@ private fun LivePanel(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
-                                .padding(Space.x1)
-                                .clip(RoundedCornerShape(Radius.badge))
+                                .padding(V3Space.xxs)
+                                .clip(RoundedCornerShape(V3Radius.xs))
                                 .background(colors.stateLive)
-                                .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
+                                .padding(horizontal = V3Space.tagHorizontal, vertical = V3Space.tagVertical),
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(Sizes.dotSm)
+                                    .size(V3Size.dotSm)
                                     .clip(CircleShape)
-                                    .background(colors.onOverlay),
+                                    .background(colors.labelOnMedia),
                             )
                             Spacer(Modifier.width(3.dp))
                             Text(
                                 text = "直播中",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 9.sp,
-                                    color = colors.onOverlay,
-                                ),
+                                // ⚠️ 原为 9sp —— 低于 v3 最小档（caption2 = 11sp），
+                                // 也低于 CJK 字形的实用下限。压在图上的角标
+                                // 本来就小，再缩到 9sp 会糊成一团。
+                                style = V3Type.caption2,
+                                color = colors.labelOnMedia,
                             )
                         }
                     }
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = item.anchorName,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = FontSize.bodySm,
-                                color = if (hovered) colors.textBrandSafe else colors.textPrimary,
+                            style = V3Type.footnote.copy(
+                                color = if (hovered) colors.brandBiliText else colors.labelPrimary,
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        Spacer(Modifier.height(Space.x1))
+                        Spacer(Modifier.height(V3Space.xxs))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Outlined.Visibility,
                                 contentDescription = "观看人数",
-                                tint = colors.textSecondary,
-                                modifier = Modifier.size(Sizes.iconSm - 2.dp),
+                                tint = colors.labelSecondary,
+                                modifier = Modifier.size(V3Size.iconXs - 2.dp),
                             )
                             Spacer(Modifier.width(3.dp))
                             Text(
                                 text = formatCount(item.online),
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = FontSize.label,
-                                    color = colors.textSecondary,
+                                style = V3Type.caption1.copy(
+                                    color = colors.labelSecondary,
                                 ),
                             )
                         }
@@ -367,7 +363,7 @@ private fun TopicPanel(
     topics: List<TopicItem>,
     onTopicClick: (TopicItem) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     PanelCard {
         Column {
@@ -375,9 +371,9 @@ private fun TopicPanel(
                 title = "话题活动",
                 icon = Icons.Filled.Campaign,
             )
-            Column(verticalArrangement = Arrangement.spacedBy(Space.x3)) {
+            Column(verticalArrangement = Arrangement.spacedBy(V3Space.sm)) {
                 topics.take(4).chunked(2).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(Space.x3)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(V3Space.sm)) {
                         row.forEach { item ->
                             TopicCell(
                                 item = item,
@@ -399,7 +395,7 @@ private fun TopicCell(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
 
@@ -421,22 +417,20 @@ private fun TopicCell(
                 modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
             )
         }
-        Spacer(Modifier.height(Space.compactHorizontal))
+        Spacer(Modifier.height(V3Space.xs))
         Text(
             text = item.title,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
-                color = if (hovered) colors.textBrandSafe else colors.textPrimary,
+            style = V3Type.caption1.copy(
+                color = if (hovered) colors.brandBiliText else colors.labelPrimary,
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Text(
             text = "${formatCount(item.joinCount)}人参与",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 10.sp,
-                color = colors.textSecondary,
-            ),
+            // 原为 10sp（不在 v3 阶梯上）→ caption2（11sp）
+            style = V3Type.caption2,
+            color = colors.labelSecondary,
             maxLines = 1,
         )
     }
@@ -445,7 +439,7 @@ private fun TopicCell(
 /** 公告。 */
 @Composable
 private fun NoticePanel(notices: List<NoticeItem>) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     PanelCard {
         Column {
@@ -455,20 +449,19 @@ private fun NoticePanel(notices: List<NoticeItem>) {
                     verticalAlignment = Alignment.Top,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = Space.compactHorizontal),
+                        .padding(vertical = V3Space.xs),
                 ) {
                     Text(
                         text = "·",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = colors.textSecondary,
+                        style = V3Type.subheadline.copy(
+                            color = colors.labelSecondary,
                         ),
                     )
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                     Text(
                         text = item.text,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = FontSize.bodySm,
-                            color = colors.textSecondarySafe,
+                        style = V3Type.footnote.copy(
+                            color = colors.labelSecondary,
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

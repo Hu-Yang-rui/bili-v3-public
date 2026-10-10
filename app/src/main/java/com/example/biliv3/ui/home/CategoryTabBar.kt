@@ -31,10 +31,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.data.model.CategoryEntry
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 分区 Tab 条 —— 官方 44dp，选中粉色下划线。
@@ -103,7 +104,7 @@ fun CategoryTabBar(
     // 所以问题不是"渐隐该不该画"，而是**它太宽了**：
     // 24dp ≈ 63px ≈ **0.9 个字**，足够把一整个字吃干净。
     //
-    // ### 修法：宽度 24dp → 8dp（`Space.x2`）
+    // ### 修法：宽度 24dp → 8dp（`V3Space.xs`）
     //
     // **判据**：渐隐宽度 ≤ 1/3 字宽（字宽 ≈ 27dp），
     // 这样即使某个 Tab 正好贴在右缘，也只有它的**右端**被柔化，
@@ -113,7 +114,7 @@ fun CategoryTabBar(
     // > 不可能靠"画不画"绕开（唯一绕开办法是让右缘永远落在 Tab 之间的空隙里，
     // > 而那取决于屏宽，做不保证）。所以只能**限制它的伤害范围**。
     // >
-    // > ⚠️ 想加宽渐隐前先复测：`Space.x3`(12dp=31px) 时「蹈」起点亮度只有 163，
+    // > ⚠️ 想加宽渐隐前先复测：`V3Space.sm`(12dp=31px) 时「蹈」起点亮度只有 163，
     // > 已经不达标。**8dp 是这条曲线上的可用上限，不是随手挑的。**
     val scrollState = rememberScrollState()
     val canScrollForward by remember {
@@ -129,7 +130,7 @@ fun CategoryTabBar(
             modifier = Modifier
                 .height(Sizes.categoryTabBar)
                 .horizontalScroll(scrollState),
-            horizontalArrangement = Arrangement.spacedBy(Space.x5),
+            horizontalArrangement = Arrangement.spacedBy(V3Space.lg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             tabs.forEach { entry ->
@@ -140,7 +141,7 @@ fun CategoryTabBar(
                 )
             }
             // 尾部留白：滚动到底时最后一个 Tab 不至于贴死右边缘
-            Spacer(Modifier.width(Space.x6))
+            Spacer(Modifier.width(V3Space.xl))
         }
 
         // 右侧渐隐（透明 -> 页面底色）。
@@ -151,13 +152,13 @@ fun CategoryTabBar(
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .width(Space.x2)
+                    .width(V3Space.xs)
                     .height(Sizes.categoryTabBar)
                     .background(
                         Brush.horizontalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                BiliTheme.colors.bgBase,
+                                BiliV3.colors.bgPrimary,
                             ),
                         ),
                     ),
@@ -176,45 +177,44 @@ private fun CategoryTab(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.interactive))
+            .clip(RoundedCornerShape(V3Radius.xs))
             .clickable(
                 interactionSource = interaction,
                 indication = null,
                 onClick = onClick,
             )
-            .padding(horizontal = Space.x1),
+            .padding(horizontal = V3Space.xxs),
     ) {
         Text(
             text = entry.name,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
+            style = V3Type.callout.copy(
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                 // 选中态用主文字色 + 下划线表达，不用粉色文字
                 // （粉字在浅色下只有 2.6:1，做文字不达标；下划线是图形，可用品牌粉）
                 color = when {
-                    selected -> colors.textPrimary
-                    hovered -> colors.textBrandSafe
-                    else -> colors.textSecondarySafe
+                    selected -> colors.labelPrimary
+                    hovered -> colors.brandBiliText
+                    else -> colors.labelSecondary
                 },
             ),
             maxLines = 1,
         )
 
-        Spacer(Modifier.height(Space.x1))
+        Spacer(Modifier.height(V3Space.xxs))
 
         Box(
             modifier = Modifier
                 .width(20.dp)
-                .height(Space.tabIndicator)
-                .clip(RoundedCornerShape(Radius.badge))
-                .background(if (selected) colors.brandPrimary else Color.Transparent),
+                .height(V3Space.tabIndicator)
+                .clip(RoundedCornerShape(V3Radius.xs))
+                .background(if (selected) colors.brand else Color.Transparent),
         )
     }
 }

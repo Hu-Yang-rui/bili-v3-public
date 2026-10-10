@@ -46,10 +46,10 @@ import androidx.compose.ui.window.DialogWindowProvider
 import android.view.WindowManager
 import com.example.biliv3.data.model.CommentItem
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 评论输入弹层（发主评论 / 回复评论）。
@@ -83,7 +83,7 @@ fun CommentInputSheet(
     onDismiss: () -> Unit,
     onSend: (String) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     var text by remember { mutableStateOf("") }
     val focus = remember { FocusRequester() }
 
@@ -135,65 +135,62 @@ fun CommentInputSheet(
             // ⚠️ imePadding 必须在这里 —— 这是 Activity window 的
             // composition，inset 正常派发
             .imePadding()
-            .background(colors.scrimPanel)
+            .background(colors.scrim)
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.BottomCenter,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
+                .clip(RoundedCornerShape(topStart = V3Radius.lg, topEnd = V3Radius.lg))
                 // 弹层用 `surfaceElevated`（比卡片亮一档）——
                 // 深色下投影不可见，分层只能靠提亮。
-                .background(colors.surfaceElevated)
+                .background(colors.bgSecondaryElevated)
                 .clickable(enabled = false) {}
                 .navigationBarsPadding()
-                .padding(horizontal = Space.x4, vertical = Space.x3),
+                .padding(horizontal = V3Space.md, vertical = V3Space.sm),
         ) {
             Text(
                 text = if (replyTo != null) "回复 @${replyTo.userName}" else "发表评论",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption1.copy(
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 1,
             )
 
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
 
             // ---- 输入框 ----
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(INPUT_HEIGHT)
-                    .clip(RoundedCornerShape(Radius.interactive))
-                    .background(colors.bgHover)
-                    .padding(horizontal = Space.x3, vertical = Space.x2),
+                    .clip(RoundedCornerShape(V3Radius.xs))
+                    .background(colors.bgTertiary)
+                    .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
             ) {
                 if (text.isEmpty()) {
                     Text(
                         text = "说点什么…",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.body,
-                            color = colors.textTertiary,
+                        style = V3Type.callout.copy(
+                            color = colors.labelTertiary,
                         ),
                     )
                 }
                 BasicTextField(
                     value = text,
                     onValueChange = { text = it },
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
-                        color = colors.textPrimary,
+                    textStyle = V3Type.callout.copy(
+                        color = colors.labelPrimary,
                     ),
-                    cursorBrush = SolidColor(colors.brandPrimary),
+                    cursorBrush = SolidColor(colors.brand),
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focus),
                 )
             }
 
-            Spacer(Modifier.height(Space.x3))
+            Spacer(Modifier.height(V3Space.sm))
 
             // ---- 发送 ----
             Row(
@@ -203,18 +200,17 @@ fun CommentInputSheet(
                 val enabled = text.isNotBlank()
                 Text(
                     text = "发送",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
+                    style = V3Type.caption1.copy(
                         fontWeight = FontWeight.Medium,
-                        color = if (enabled) colors.textOnBrand else colors.textTertiary,
+                        color = if (enabled) colors.labelOnBrand else colors.labelTertiary,
                     ),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.pill))
-                        .background(if (enabled) colors.brandPrimary else colors.bgHover)
+                        .clip(RoundedCornerShape(V3Radius.pill))
+                        .background(if (enabled) colors.brand else colors.bgTertiary)
                         .clickable(enabled = enabled) {
                             onSend(text.trim())
                         }
-                        .padding(horizontal = Space.x5, vertical = Space.x2),
+                        .padding(horizontal = V3Space.lg, vertical = V3Space.xs),
                 )
             }
         }
@@ -258,7 +254,7 @@ fun DanmakuInputSheet(
     onDismiss: () -> Unit,
     onSend: (text: String, color: Int, mode: Int) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     var text by remember { mutableStateOf("") }
     var colorIndex by remember { mutableIntStateOf(0) }
     var modeIndex by remember { mutableIntStateOf(0) }
@@ -278,30 +274,29 @@ fun DanmakuInputSheet(
         modifier = Modifier
             .fillMaxSize()
             .imePadding()
-            .background(colors.scrimPanel)
+            .background(colors.scrim)
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.BottomCenter,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
+                .clip(RoundedCornerShape(topStart = V3Radius.lg, topEnd = V3Radius.lg))
                 // 弹层用 `surfaceElevated`（比卡片亮一档）——
                 // 深色下投影不可见，分层只能靠提亮。
-                .background(colors.surfaceElevated)
+                .background(colors.bgSecondaryElevated)
                 .clickable(enabled = false) {}
                 .navigationBarsPadding()
-                .padding(horizontal = Space.x4, vertical = Space.x3),
+                .padding(horizontal = V3Space.md, vertical = V3Space.sm),
         ) {
             Text(
                 text = "发送弹幕",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption1.copy(
+                    color = colors.labelSecondary,
                 ),
             )
 
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
 
             Box(
                 modifier = Modifier
@@ -318,28 +313,26 @@ fun DanmakuInputSheet(
                     // ⚠️ 不加 `imePadding`（键盘避让由调用方的根 Box 负责，
                     // 见本文件顶部关于"为什么不用 Dialog"的说明）。
                     .height(INPUT_HEIGHT)
-                    .clip(RoundedCornerShape(Radius.interactive))
-                    .background(colors.bgHover)
-                    .padding(horizontal = Space.x3, vertical = Space.x2),
+                    .clip(RoundedCornerShape(V3Radius.xs))
+                    .background(colors.bgTertiary)
+                    .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 if (text.isEmpty()) {
                     Text(
                         text = "发个弹幕吧…",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.body,
-                            color = colors.textTertiary,
+                        style = V3Type.callout.copy(
+                            color = colors.labelTertiary,
                         ),
                     )
                 }
                 BasicTextField(
                     value = text,
                     onValueChange = { text = it },
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
-                        color = colors.textPrimary,
+                    textStyle = V3Type.callout.copy(
+                        color = colors.labelPrimary,
                     ),
-                    cursorBrush = SolidColor(colors.brandPrimary),
+                    cursorBrush = SolidColor(colors.brand),
                     modifier = Modifier
                         .fillMaxWidth()
                         // 撑满扣除内边距后的高度 —— 点输入框任意位置都能落光标
@@ -348,18 +341,17 @@ fun DanmakuInputSheet(
                 )
             }
 
-            Spacer(Modifier.height(Space.x3))
+            Spacer(Modifier.height(V3Space.sm))
 
             // ---- 颜色选择 ----
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "颜色",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
-                Spacer(Modifier.width(Space.x3))
+                Spacer(Modifier.width(V3Space.sm))
                 DANMAKU_COLORS.forEachIndexed { i, c ->
                     Box(
                         modifier = Modifier
@@ -375,7 +367,7 @@ fun DanmakuInputSheet(
                                 if (i == colorIndex) {
                                     Modifier.border(
                                         width = 2.dp,
-                                        color = colors.textPrimary,
+                                        color = colors.labelPrimary,
                                         shape = CircleShape,
                                     )
                                 } else {
@@ -384,42 +376,40 @@ fun DanmakuInputSheet(
                             )
                             .clickable { colorIndex = i },
                     )
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                 }
             }
 
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
 
             // ---- 位置选择 ----
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "位置",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
-                Spacer(Modifier.width(Space.x3))
+                Spacer(Modifier.width(V3Space.sm))
                 DANMAKU_MODES.forEachIndexed { i, (label, _) ->
                     val selected = i == modeIndex
                     Text(
                         text = label,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
+                        style = V3Type.caption1.copy(
                             fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-                            color = if (selected) colors.textOnBrand else colors.textSecondarySafe,
+                            color = if (selected) colors.labelOnBrand else colors.labelSecondary,
                         ),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.pill))
-                            .background(if (selected) colors.brandPrimary else colors.bgHover)
+                            .clip(RoundedCornerShape(V3Radius.pill))
+                            .background(if (selected) colors.brand else colors.bgTertiary)
                             .clickable { modeIndex = i }
-                            .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
+                            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                     )
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                 }
             }
 
-            Spacer(Modifier.height(Space.x3))
+            Spacer(Modifier.height(V3Space.sm))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -428,14 +418,13 @@ fun DanmakuInputSheet(
                 val enabled = text.isNotBlank()
                 Text(
                     text = "发送",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
+                    style = V3Type.caption1.copy(
                         fontWeight = FontWeight.Medium,
-                        color = if (enabled) colors.textOnBrand else colors.textTertiary,
+                        color = if (enabled) colors.labelOnBrand else colors.labelTertiary,
                     ),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.pill))
-                        .background(if (enabled) colors.brandPrimary else colors.bgHover)
+                        .clip(RoundedCornerShape(V3Radius.pill))
+                        .background(if (enabled) colors.brand else colors.bgTertiary)
                         .clickable(enabled = enabled) {
                             onSend(
                                 text.trim(),
@@ -443,7 +432,7 @@ fun DanmakuInputSheet(
                                 DANMAKU_MODES[modeIndex].second,
                             )
                         }
-                        .padding(horizontal = Space.x5, vertical = Space.x2),
+                        .padding(horizontal = V3Space.lg, vertical = V3Space.xs),
                 )
             }
         }

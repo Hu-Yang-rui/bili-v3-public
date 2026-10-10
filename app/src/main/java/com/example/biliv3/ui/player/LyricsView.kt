@@ -38,11 +38,12 @@ import com.example.biliv3.data.lyrics.LyricLine
 import com.example.biliv3.data.lyrics.Lyrics
 import com.example.biliv3.data.lyrics.LyricsUiState
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
 import com.example.biliv3.ui.component.BrandButtonVariant
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 歌词视图（播放器内嵌）。
@@ -79,7 +80,7 @@ fun LyricsView(
     /** 是否允许点击行跳转（沉浸式下可能禁用，避免误触）。 */
     clickable: Boolean = true,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     when (state) {
         is LyricsUiState.Idle, is LyricsUiState.Loading -> {
@@ -129,7 +130,7 @@ private fun LyricsList(
     clickable: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val listState = rememberLazyListState()
     val currentIndex = lyrics.indexAt(positionMs)
 
@@ -156,9 +157,9 @@ private fun LyricsList(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(Space.x2),
+            verticalArrangement = Arrangement.spacedBy(V3Space.xs),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                vertical = Space.x10,
+                vertical = V3Space.xxxl,
             ),
         ) {
             itemsIndexed(lyrics.lines) { index, line ->
@@ -174,13 +175,12 @@ private fun LyricsList(
         // 来源标注：歌词可能来自第三方，不能冒充官方（§4.3 同类原则）
         Text(
             text = "来源：$source",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = FontSize.badge,
-                color = colors.textTertiary,
+            style = V3Type.caption2.copy(
+                color = colors.labelTertiary,
             ),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = Space.x3, bottom = Space.x2),
+                .padding(end = V3Space.sm, bottom = V3Space.xs),
         )
     }
 }
@@ -192,18 +192,18 @@ private fun LyricRow(
     clickable: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = line.text,
-        style = MaterialTheme.typography.bodyMedium.copy(
+        style = V3Type.callout.copy(
             // 当前行放大 + 提亮；非当前行次要色 ——
             // 靠**明度与字重**区分而不是靠颜色（颜色对比度不够时也读得清）
             //
             // ⚠️ 字号取自令牌阶梯（14 → 15），不写 15.sp 字面量。
             // 阶梯只有 13/14/15/17，没有"14.5"这种中间值。
-            fontSize = if (active) FontSize.titleMd else FontSize.body,
+            fontSize = if (active) V3Type.subheadline.fontSize else V3Type.callout.fontSize,
             fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (active) colors.textPrimary else colors.textSecondarySafe,
+            color = if (active) colors.labelPrimary else colors.labelSecondary,
             textAlign = TextAlign.Center,
         ),
         modifier = Modifier
@@ -211,23 +211,23 @@ private fun LyricRow(
             .then(
                 if (clickable) {
                     Modifier
-                        .clip(RoundedCornerShape(Radius.interactive))
+                        .clip(RoundedCornerShape(V3Radius.xs))
                         .clickable(onClick = onClick)
                 } else {
                     Modifier
                 },
             )
-            .padding(horizontal = Space.x4, vertical = Space.x1),
+            .padding(horizontal = V3Space.md, vertical = V3Space.xxs),
     )
 }
 
 /** 加载态：骨架行（不用转圈 —— 歌词区用骨架更贴内容形状）。 */
 @Composable
 private fun LyricsSkeleton(modifier: Modifier = Modifier) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(Space.x3, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(V3Space.sm, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         repeat(5) { i ->
@@ -249,7 +249,7 @@ private fun LyricsHint(
     modifier: Modifier = Modifier,
     action: (@Composable () -> Unit)? = null,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -258,28 +258,27 @@ private fun LyricsHint(
         Icon(
             imageVector = Icons.Filled.Lyrics,
             contentDescription = null,
-            tint = colors.textTertiary,
+            tint = colors.labelTertiary,
             modifier = Modifier.size(48.dp),
         )
-        Spacer(Modifier.height(Space.x4))
+        Spacer(Modifier.height(V3Space.md))
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                color = colors.textSecondarySafe,
+            style = V3Type.callout.copy(
+                color = colors.labelSecondary,
             ),
         )
-        Spacer(Modifier.height(Space.x1))
+        Spacer(Modifier.height(V3Space.xxs))
         Text(
             text = description,
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = FontSize.bodySm,
-                color = colors.textTertiary,
+            style = V3Type.footnote.copy(
+                color = colors.labelTertiary,
             ),
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = Space.x8),
+            modifier = Modifier.padding(horizontal = V3Space.xxl),
         )
         if (action != null) {
-            Spacer(Modifier.height(Space.x5))
+            Spacer(Modifier.height(V3Space.lg))
             action()
         }
     }

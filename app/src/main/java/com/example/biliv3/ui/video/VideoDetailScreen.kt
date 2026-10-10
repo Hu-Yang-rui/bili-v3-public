@@ -95,15 +95,12 @@ import com.example.biliv3.design.v3.V3Radius
 import com.example.biliv3.design.v3.V3Size
 import com.example.biliv3.design.v3.V3Space
 import com.example.biliv3.design.v3.V3Type
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.player.PlayerFactory
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.component.ProvideShimmer
 import com.example.biliv3.ui.component.SkeletonBox
 import com.example.biliv3.ui.component.VideoCard
+import com.example.biliv3.design.v3.ProvideGlassBackdrop
 
 /**
  * 视频详情页。
@@ -354,7 +351,7 @@ fun VideoDetailScreen(
     // 首屏评论失败原因（null = 没失败）。UI 据此区分「加载失败」与「还没有评论」。
     val commentError by viewModel.commentError.collectAsStateWithLifecycle()
     val commentSort by viewModel.commentSort.collectAsStateWithLifecycle()
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val context = LocalContext.current
 
     var playerError by remember { mutableStateOf<String?>(null) }
@@ -743,7 +740,7 @@ fun VideoDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.bgBase),
+                .background(colors.bgPrimary),
         ) {
             // ⚠️ **没有**顶部固定白栏（对照官方结构）。
             //
@@ -938,7 +935,7 @@ fun VideoDetailScreen(
             hostState = snackbar,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = Space.x12),
+                .padding(bottom = V3Space.huge),
         )
 
         // ---- 续播提示条 ----
@@ -952,7 +949,7 @@ fun VideoDetailScreen(
                 onDismiss = { onResumeConsumed() },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = Space.x12, start = Space.x3, end = Space.x3),
+                    .padding(top = V3Space.huge, start = V3Space.sm, end = V3Space.sm),
             )
         }
 
@@ -1433,10 +1430,10 @@ private const val PLAYER_ASPECT_WIDE = 16f / 9f
 /**
  * 元信息小项：图标 + 文字。
  *
- * ## 为什么图标与文字用 `Space.x1` 的小间距
+ * ## 为什么图标与文字用 `V3Space.xxs` 的小间距
  *
  * 图标与文字属于**同一个语义单元**（"这是播放量"），
- * 间距要明显小于项与项之间（`Space.x3`）——
+ * 间距要明显小于项与项之间（`V3Space.sm`）——
  * 靠间距的**对比**建立分组，比加分隔线更轻。
  */
 /**
@@ -1448,7 +1445,7 @@ private const val PLAYER_ASPECT_WIDE = 16f / 9f
  *
  * | 卡片 | 修复前 | 结果 |
  * |---|---|---|
- * | UP 信息 / 选集 / 视频简介 | `Space.x3` | 内缩 ✅ |
+ * | UP 信息 / 选集 / 视频简介 | `V3Space.sm` | 内缩 ✅ |
  * | 工具条（简介·评论切换） | **无** | 通栏贴边 ❌ |
  * | 互动栏（点赞/投币/收藏/分享） | **无** | 通栏贴边 ❌ |
  *
@@ -1458,27 +1455,26 @@ private const val PLAYER_ASPECT_WIDE = 16f / 9f
  * 抽成常量后，新增卡片只要用 [CARD_INSET] 就自动对齐，
  * 不会再出现"漏写一处"（漏写时是通栏，视觉上很明显但不报错）。
  */
-private val CARD_INSET = Space.x3
+private val CARD_INSET = V3Space.sm
 
 @Composable
 private fun MetaItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     text: String,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = colors.textTertiary,
-            modifier = Modifier.size(Sizes.iconSm + 2.dp),
+            tint = colors.labelTertiary,
+            modifier = Modifier.size(V3Size.iconXs + 2.dp),
         )
-        Spacer(Modifier.width(Space.x1))
+        Spacer(Modifier.width(V3Space.xxs))
         Text(
             text = text,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
-                color = colors.textSecondary,
+            style = V3Type.caption1.copy(
+                color = colors.labelSecondary,
             ),
             maxLines = 1,
         )
@@ -1510,7 +1506,7 @@ private fun MetaItem(
  *
  * ## ⚠️ 尺寸必须与右上角按钮组一致（用户反馈"退出键过大"）
  *
- * 此前这里是 `Space.minTouchTarget`（**48dp**），而右上角那组是
+ * 此前这里是 `V3Size.touchMin`（**48dp**），而右上角那组是
  * **36dp** —— 左上角比右上角大一圈，
  * 在一屏"默认纯画面"的播放器上非常抢眼。
  *
@@ -1548,7 +1544,7 @@ private fun FloatingBackButton(
     visible: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     // 视觉淡入淡出，但组件不离开组合 → 命中区始终存在
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
@@ -1559,7 +1555,7 @@ private fun FloatingBackButton(
     Box(
         modifier = modifier
             .statusBarsPadding()
-            .padding(start = Space.x2, top = Space.x2)
+            .padding(start = V3Space.xs, top = V3Space.xs)
             .size(PLAYER_CHROME_TOUCH)
             // 🔴 v1.5.1：**去掉默认指示**（用户反馈"点左上角出现白色方框"）。
             //
@@ -1584,17 +1580,38 @@ private fun FloatingBackButton(
         Box(
             modifier = Modifier
                 .size(PLAYER_CHROME_BUTTON)
-                .alpha(alpha)
-                .clip(CircleShape)
-                .background(colors.overlayControl),
+                .alpha(alpha),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "返回",
-                tint = colors.onOverlay,
-                modifier = Modifier.size(Sizes.iconMd),
-            )
+            // 🔴 v3：返回钮与右上角那组浮层控件**必须同材质**。
+            //
+            // ## 这里曾经是唯一的例外（实测发现）
+            //
+            // 右上角 5 个 `PlayerChromeButton` 都已换成扁平半透明，
+            // 而返回钮还是 `background(colors.controlOverlay)` —— **70% 黑圆**。
+            //
+            // 同一块画面上、同一行高度，左边一颗实心黑饼、
+            // 右边 5 颗轻量半透明 —— 观感是"返回钮没跟上重构"，
+            // 而不是"刻意强调返回"。
+            //
+            // ⚠️ 判据：**同一层浮层里的同类控件必须同材质**。
+            //    材质是"层级"的表达（谁浮在谁上面），
+            //    不是"重要性"的表达 —— 返回键不比设置键更重要。
+            Box(
+                modifier = Modifier
+                    .size(PLAYER_CHROME_BUTTON)
+                    .clip(CircleShape)
+                    .background(colors.materials.controlFlat)
+                    .border(1.dp, colors.materials.controlFlatBorder, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "返回",
+                    tint = colors.labelOnMedia,
+                    modifier = Modifier.size(V3Size.iconMd),
+                )
+            }
         }
     }
 }
@@ -1842,9 +1859,9 @@ private fun DetailContent(
                 // 页面底色的间隙，让三块各自成为独立卡片。
                 .background(colors.bgPrimary),
             // 与简介模式用同一套间距节奏（问题 11）：
-            // 手写的 `Spacer(height = Space.x2)` 容易漏、且与 LazyColumn
+            // 手写的 `Spacer(height = V3Space.xs)` 容易漏、且与 LazyColumn
             // 分支不一致。统一用 arrangement 表达"卡片间距"。
-            verticalArrangement = Arrangement.spacedBy(Space.x2),
+            verticalArrangement = Arrangement.spacedBy(V3Space.xs),
         ) {
             // ---- 播放器（固定在顶部，不随评论滚动）----
             Box(
@@ -1943,14 +1960,14 @@ private fun DetailContent(
                 onLoginRequired = onLoginRequired,
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = Space.x3),
+                    .padding(horizontal = V3Space.sm),
             )
         }
         return
     }
 
     LazyColumn(
-        contentPadding = PaddingValues(bottom = Space.x8),
+        contentPadding = PaddingValues(bottom = V3Space.xxl),
         // ⚠️ 卡片之间必须有稳定间距（问题 11 的根因）。
         //
         // 此前所有 item 紧贴在一起，而每个 item 自己都是一张
@@ -1960,7 +1977,7 @@ private fun DetailContent(
         // 用 `verticalArrangement` 统一给间距，而不是在每个 item 里
         // 手写 Spacer：后者必然会漏几处（此前就漏了 tool-row 与
         // owner-meta 之间），且改一次要动多处。
-        verticalArrangement = Arrangement.spacedBy(Space.x2),
+        verticalArrangement = Arrangement.spacedBy(V3Space.xs),
         modifier = Modifier.fillMaxSize(),
     ) {
         // ---- 播放器 / 封面（16:9）----
@@ -2297,24 +2314,23 @@ private fun DetailContent(
                             // 规则见 `Surface.kt` 的 Rhythm 文档：
                             // 「间距只由下方区块的 top 提供，bottom 一律不加」。
                             .padding(
-                                start = Space.x4,
-                                end = Space.x4,
+                                start = V3Space.md,
+                                end = V3Space.md,
                                 top = Rhythm.between,
                             ),
                     ) {
                         Text(
                             text = "选集（${detail.pages.size}）",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = FontSize.body,
+                            style = V3Type.callout.copy(
                                 fontWeight = FontWeight.SemiBold,
                                 color = colors.labelPrimary,
                             ),
-                            modifier = Modifier.padding(horizontal = Space.x4),
+                            modifier = Modifier.padding(horizontal = V3Space.md),
                         )
-                        Spacer(Modifier.height(Space.x2))
+                        Spacer(Modifier.height(V3Space.xs))
                         androidx.compose.foundation.lazy.LazyRow(
-                            contentPadding = PaddingValues(horizontal = Space.x4),
-                            horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                            contentPadding = PaddingValues(horizontal = V3Space.md),
+                            horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
                         ) {
                             items(detail.pages.size) { index ->
                                 val page = detail.pages[index]
@@ -2353,24 +2369,23 @@ private fun DetailContent(
                             .fillMaxWidth()
                             .ruleTop(color = Rule.color)
                             .padding(
-                                start = Space.x4,
-                                end = Space.x4,
+                                start = V3Space.md,
+                                end = V3Space.md,
                                 top = Rhythm.between,
                             ),
                     ) {
                         Text(
                             text = "章节（${chapters.size}）",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = FontSize.body,
+                            style = V3Type.callout.copy(
                                 fontWeight = FontWeight.SemiBold,
                                 color = colors.labelPrimary,
                             ),
-                            modifier = Modifier.padding(horizontal = Space.x4),
+                            modifier = Modifier.padding(horizontal = V3Space.md),
                         )
-                        Spacer(Modifier.height(Space.x2))
+                        Spacer(Modifier.height(V3Space.xs))
                         androidx.compose.foundation.lazy.LazyRow(
-                            contentPadding = PaddingValues(horizontal = Space.x4),
-                            horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                            contentPadding = PaddingValues(horizontal = V3Space.md),
+                            horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
                         ) {
                             items(chapters.size) { index ->
                                 val ch = chapters[index]
@@ -2433,16 +2448,15 @@ private fun DetailContent(
                             // C 方案：相关推荐标题不再单独铺一层 bgCard ——
                             // 下方每张卡片自带容器，标题只需与上方互动栏留出间距。
                             .padding(
-                                start = Space.x4,
-                                end = Space.x4,
-                                top = Space.x5,
-                                bottom = Space.x2,
+                                start = V3Space.md,
+                                end = V3Space.md,
+                                top = V3Space.lg,
+                                bottom = V3Space.xs,
                             ),
                     ) {
                         Text(
                             text = "相关推荐",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontSize = FontSize.titleMd,
+                            style = V3Type.subheadline.copy(
                                 fontWeight = FontWeight.SemiBold,
                                 color = colors.labelPrimary,
                             ),
@@ -2469,8 +2483,8 @@ private fun DetailContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = Space.x3, vertical = Space.x1),
-                        horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                            .padding(horizontal = V3Space.sm, vertical = V3Space.xxs),
+                        horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
                     ) {
                         row.forEach { video ->
                             VideoCard(
@@ -2629,7 +2643,7 @@ private fun PlayerArea(
     onSeekingChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     /**
      * 控件与浮动返回按钮的**共享可见性**。
      *
@@ -2855,9 +2869,9 @@ private fun PlayerArea(
                 // ## 现在（判据：画面是主体，控件是标点）
                 //
                 // - 无面板底、无描边 —— 不形成连续色块
-                // - 圆钮视觉 28dp + 图标 14dp（`Sizes.iconSm`），
+                // - 圆钮视觉 28dp + 图标 14dp（`V3Size.iconXs`），
                 //   触摸热区仍由 `PlayerChromeButton` 撑到 48dp
-                // - 间距压到 `Space.x1`（4dp）—— "整体靠最右上角排列"
+                // - 间距压到 `V3Space.xxs`（4dp）—— "整体靠最右上角排列"
                 // - **右对齐且紧贴右上角**：`Arrangement.End` + 最小外边距，
                 //   而不是居中或留大片空白
                 //
@@ -2865,8 +2879,8 @@ private fun PlayerArea(
                 Row(
                     modifier = Modifier
                         .statusBarsPadding()
-                        .padding(horizontal = Space.x1, vertical = Space.x1),
-                    horizontalArrangement = Arrangement.spacedBy(Space.x1),
+                        .padding(horizontal = V3Space.xxs, vertical = V3Space.xxs),
+                    horizontalArrangement = Arrangement.spacedBy(V3Space.xxs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                         // 小窗入口：只在可播放时显示（没画面时进 PiP 没意义）
@@ -2926,7 +2940,7 @@ private fun PlayerArea(
  * ## 为什么要抽出来（用户反馈"退出键过大"的根因）
  *
  * 此前四个按钮**各写一份**，于是尺寸分叉：
- * 左上角返回用 `Space.minTouchTarget`（48dp），右上角三个用 36dp ——
+ * 左上角返回用 `V3Size.touchMin`（48dp），右上角三个用 36dp ——
  * 同一层浮层里两种圆钮大小，左上角明显大一圈，很抢眼。
  *
  * 现在尺寸/圆角/底色/图标规格全部收敛到这一处：
@@ -2961,28 +2975,48 @@ private fun PlayerChromeButton(
         // 降对比度，工具层要快速点中"。那在**没有真背景模糊**的时代是
         // 完全正确的判断 —— 当时的"玻璃"只是半透明色块，只会降对比度。
         //
-        // 现在 `GlassSurface` 有了**真背景采样 + 模糊**（见 V3Glass）：
-        // 它压在视频画面上时，取的是画面的模糊副本，观感是
-        // "控件与画面融为一体"，而**不是**"一块灰蒙蒙的板"。
-        // 设计系统也正是把"播放器控制"列为 Liquid Glass 的合法位置。
+        // ## 🔴 为什么最终**不用**模糊玻璃（实测两轮后放弃）
         //
-        // ⚠️ 用 [V3Glass.Level.Clear]：压在**高对比媒体**上时，
-        //    clear 变体的近乎不透明底 + 压暗层才能保证图标可读
-        //    （实测：clear 的基础色是 #101010 @1.0，正是为此）。
-        GlassSurface(
-            modifier = Modifier.size(PLAYER_CHROME_BUTTON),
-            shape = CircleShape,
-            level = V3Glass.Level.Clear,
-            tint = colors.materials.clearScrim,
+        // 这条路走过两次，都不成立：
+        //
+        // **第一轮**：`GlassSurface(level = Clear, tint = clearScrim)`
+        // → 控件变成**实心黑饼**。算术原因：`Clear.tintScale = 1.6`
+        // 会放大传入 alpha，`0.50 × 1.6 = 0.80` —— 比改之前的纯色**更黑**。
+        //
+        // **第二轮**：`Thin + 0.25 tint`（有效 0.24）→ 技术上能透出背景了，
+        // 但**观感仍然不对**：播放器控件是**标点**，不是内容。
+        // 给它们加 6dp 模糊，等于在已经很花的画面上再铺一层"有纹理的玻璃"。
+        //
+        // ## 扁平才是对的
+        //
+        // | 维度 | 模糊玻璃 | 扁平半透明 |
+        // |---|---|---|
+        // | 画面干扰 | 引入一层模糊纹理 | 只有均匀压暗 |
+        // | 性能 | 每帧抓帧 + box blur | 一次 `drawRect`，零成本 |
+        // | 可读性 | 背景模糊后对比度下降 | 压暗均匀，白图标始终清晰 |
+        // | 观感 | 与画面抢戏 | **退到画面之后** |
+        //
+        // 🔴 **判据**：**模糊玻璃适合"大面积、静态、内容之上"的浮层**
+        // （底部导航 / Sheet / Dialog）。
+        // **播放器控件是"小面积、压在动态画面上"的标点** ——
+        // 它需要的只是"压暗以保证可读"，不是"材质"。
+        //
+        // ⚠️ 1dp 描边（`controlFlatBorder`）负责在**明亮画面**（雪地/白墙）
+        //    上托住形状 —— 35% 黑压在白色上只是灰，没有描边会糊掉边界。
+        Box(
+            modifier = Modifier
+                .size(PLAYER_CHROME_BUTTON)
+                .clip(CircleShape)
+                .background(colors.materials.controlFlat)
+                .border(1.dp, colors.materials.controlFlatBorder, CircleShape),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = contentDescription,
-                    tint = Color.White,
-                    modifier = Modifier.size(V3Size.iconMd),
-                )
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = Color.White,
+                modifier = Modifier.size(V3Size.iconMd),
+            )
         }
     }
 }
@@ -2994,7 +3028,7 @@ private fun CoverWithPlayButton(
     onClick: (() -> Unit)?,
     loading: Boolean = false,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Box(
         modifier = Modifier
@@ -3016,28 +3050,28 @@ private fun CoverWithPlayButton(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.overlayControl),
+                .background(colors.controlOverlay),
         )
 
         if (loading) {
             androidx.compose.material3.CircularProgressIndicator(
-                color = colors.onOverlay,
-                strokeWidth = Space.trackHeight,
-                modifier = Modifier.size(Sizes.iconXl + Sizes.iconMd),
+                color = colors.labelOnMedia,
+                strokeWidth = V3Space.progressTrack,
+                modifier = Modifier.size(V3Size.iconLg + V3Size.iconMd),
             )
         } else if (onClick != null) {
             Box(
                 modifier = Modifier
                     .size(PLAY_BUTTON)
                     .clip(CircleShape)
-                    .background(colors.overlayControl),
+                    .background(colors.controlOverlay),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.Filled.PlayArrow,
                     contentDescription = "播放",
-                    tint = colors.onOverlay,
-                    modifier = Modifier.size(Sizes.iconXl + Space.x2),
+                    tint = colors.labelOnMedia,
+                    modifier = Modifier.size(V3Size.iconLg + V3Space.xs),
                 )
             }
         }
@@ -3046,13 +3080,12 @@ private fun CoverWithPlayButton(
         if (onClick != null) {
             Text(
                 text = "点击播放",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.onOverlay,
+                style = V3Type.caption1.copy(
+                    color = colors.labelOnMedia,
                 ),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = Space.x4),
+                    .padding(bottom = V3Space.md),
             )
         }
     }
@@ -3065,20 +3098,19 @@ internal fun PageChip(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = label,
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.label,
+        style = V3Type.caption1.copy(
             fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-            color = if (selected) colors.textOnBrand else colors.textSecondarySafe,
+            color = if (selected) colors.labelOnBrand else colors.labelSecondary,
         ),
         maxLines = 1,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.pill))
-            .background(if (selected) colors.brandPrimary else colors.bgHover)
+            .clip(RoundedCornerShape(V3Radius.pill))
+            .background(if (selected) colors.brand else colors.bgTertiary)
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
     )
 }
 
@@ -3105,37 +3137,36 @@ internal fun ChapterChip(
     active: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.interactive))
-            .background(if (active) colors.brandPrimary.copy(alpha = 0.18f) else colors.bgHover)
+            .clip(RoundedCornerShape(V3Radius.xs))
+            .background(if (active) colors.brand.copy(alpha = 0.18f) else colors.bgTertiary)
             .border(
                 width = if (active) 1.dp else 0.dp,
-                color = if (active) colors.brandPrimary else androidx.compose.ui.graphics.Color.Transparent,
-                shape = RoundedCornerShape(Radius.interactive),
+                color = if (active) colors.brand else androidx.compose.ui.graphics.Color.Transparent,
+                shape = RoundedCornerShape(V3Radius.xs),
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = timeLabel,
-            style = MaterialTheme.typography.labelMedium.copy(
+            style = V3Type.footnote.copy(
                 // 等宽：时间读数用 Geek 字体族（§5.1 允许的极客点缀）
                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                fontSize = FontSize.badge,
-                color = if (active) colors.brandPrimary else colors.textTertiary,
+                fontSize = V3Type.caption2.fontSize,
+                color = if (active) colors.brand else colors.labelTertiary,
             ),
             maxLines = 1,
         )
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
         Text(
             text = title,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
+            style = V3Type.caption1.copy(
                 fontWeight = if (active) FontWeight.Medium else FontWeight.Normal,
-                color = if (active) colors.textPrimary else colors.textSecondarySafe,
+                color = if (active) colors.labelPrimary else colors.labelSecondary,
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -3183,23 +3214,23 @@ private fun shareChannelPackage(channel: String): String? = when (channel) {
  */
 @Composable
 private fun DetailSkeleton() {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         SkeletonBox(
             modifier = Modifier.fillMaxWidth(),
             aspectRatio = 16f / 9f,
             shape = RoundedCornerShape(0.dp),
         )
-        Column(modifier = Modifier.padding(Space.x4)) {
+        Column(modifier = Modifier.padding(V3Space.md)) {
             SkeletonBox(Modifier.fillMaxWidth(), height = 16.dp)
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             SkeletonBox(Modifier.fillMaxWidth(0.7f), height = 16.dp)
-            Spacer(Modifier.height(Space.x3))
-            SkeletonBox(Modifier.fillMaxWidth(0.4f), height = Space.x3)
+            Spacer(Modifier.height(V3Space.sm))
+            SkeletonBox(Modifier.fillMaxWidth(0.4f), height = V3Space.sm)
         }
     }
 }
@@ -3243,7 +3274,7 @@ private val PLAY_BUTTON = 56.dp
  * 32dp（原 36dp）：播放区要"更大更干净"，浮层元素整体收一档。
  * 32dp 是 Material 图标的标准档位，辨识度不受影响。
  *
- * 抽成常量而不是各自写死：此前返回键用 `Space.minTouchTarget`(48dp)、
+ * 抽成常量而不是各自写死：此前返回键用 `V3Size.touchMin`(48dp)、
  * 右上角那组用 36dp —— 同一层浮层里两种圆钮大小，
  * 左上角明显比右上角大一圈，用户反馈"退出键过大、太抢眼"。
  */
@@ -3264,7 +3295,7 @@ private val PLAYER_CHROME_BUTTON = 28.dp
  * 做法是外层透明 Box 撑到 48dp、内层画 32dp 的圆。
  * 直接给可见圆钮设 48dp 会让它视觉上变大（就是这次要修的问题）。
  */
-private val PLAYER_CHROME_TOUCH = Space.minTouchTarget
+private val PLAYER_CHROME_TOUCH = V3Size.touchMin
 
 /**
  * 续播提示条。
@@ -3293,7 +3324,7 @@ private fun ResumeBar(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val totalSeconds = (positionMs / 1000).toInt()
     val label = if (totalSeconds >= 3600) {
         "${totalSeconds / 3600}:" +
@@ -3313,16 +3344,15 @@ private fun ResumeBar(
             //
             // 胶囊是"卡片"的语言；直角 + 半透明底是"浮层"的语言，
             // 与右上角按钮组、进度条的直角体系一致。
-            .background(colors.overlayControl)
+            .background(colors.controlOverlay)
             .clickable(onClick = onResume)
-            .padding(horizontal = Space.x4, vertical = Space.x3),
+            .padding(horizontal = V3Space.md, vertical = V3Space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = "上次看到 $label",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
-                color = colors.textPrimary,
+            style = V3Type.caption1.copy(
+                color = colors.labelPrimary,
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -3330,27 +3360,25 @@ private fun ResumeBar(
         )
         Text(
             text = "继续",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
+            style = V3Type.caption1.copy(
                 fontWeight = FontWeight.SemiBold,
-                color = colors.textBrandSafe,
+                color = colors.brandBiliText,
             ),
             modifier = Modifier
-                .clip(RoundedCornerShape(Radius.badge))
+                .clip(RoundedCornerShape(V3Radius.xs))
                 .clickable(onClick = onResume)
-                .padding(horizontal = Space.x2, vertical = Space.x1),
+                .padding(horizontal = V3Space.xs, vertical = V3Space.xxs),
         )
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
         Text(
             text = "从头",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
-                color = colors.textSecondarySafe,
+            style = V3Type.caption1.copy(
+                color = colors.labelSecondary,
             ),
             modifier = Modifier
-                .clip(RoundedCornerShape(Radius.badge))
+                .clip(RoundedCornerShape(V3Radius.xs))
                 .clickable(onClick = onDismiss)
-                .padding(horizontal = Space.x2, vertical = Space.x1),
+                .padding(horizontal = V3Space.xs, vertical = V3Space.xxs),
         )
     }
 }

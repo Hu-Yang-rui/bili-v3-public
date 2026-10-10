@@ -60,11 +60,12 @@ import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.band
 import com.example.biliv3.design.BandLevel
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 私信会话列表页。
@@ -85,13 +86,13 @@ fun MessageListScreen(
     /** 点头像 → 对方主页。 */
     onOpenSpace: (Long) -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 顶栏 ----
         Row(
@@ -100,13 +101,13 @@ fun MessageListScreen(
                 // 顶栏不再是卡片：与页面同明度，靠底边一条发丝线分隔
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -114,32 +115,30 @@ fun MessageListScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = "消息",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
             if (state.unread > 0) {
-                Spacer(Modifier.width(Space.x2))
+                Spacer(Modifier.width(V3Space.xs))
                 Text(
                     text = "${state.unread}",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textOnBrand,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelOnBrand,
                         fontWeight = FontWeight.Medium,
                     ),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.badge))
-                        .background(colors.brandPrimary)
-                        .padding(horizontal = Space.compactHorizontal, vertical = Space.tagVertical),
+                        .clip(RoundedCornerShape(V3Radius.xs))
+                        .background(colors.brand)
+                        .padding(horizontal = V3Space.xs, vertical = V3Space.tagVertical),
                 )
             }
         }
@@ -156,9 +155,9 @@ fun MessageListScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(
-                    color = colors.brandPrimary,
-                    strokeWidth = Space.trackHeight,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    color = colors.brand,
+                    strokeWidth = V3Space.progressTrack,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
 
@@ -176,7 +175,7 @@ fun MessageListScreen(
 
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = Space.x6),
+                contentPadding = PaddingValues(bottom = V3Space.xl),
             ) {
                 items(state.sessions, key = { it.talkerId }) { s ->
                     SessionRow(
@@ -204,7 +203,7 @@ private fun SessionRow(
      */
     onAvatarClick: () -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -216,7 +215,7 @@ private fun SessionRow(
             // 现在：行与行靠留白分隔，整行可点。
             // **列表用留白分组，不用卡片分组。**
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x4, vertical = Space.x3),
+            .padding(horizontal = V3Space.md, vertical = V3Space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AsyncImage(
@@ -230,26 +229,24 @@ private fun SessionRow(
                 // 独立点击：头像进主页、整行进聊天
                 .clickable(onClick = onAvatarClick),
         )
-        Spacer(Modifier.width(Space.x3))
+        Spacer(Modifier.width(V3Space.sm))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = session.talkerName,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
+                style = V3Type.callout.copy(
                     fontWeight = FontWeight.Medium,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             if (session.lastMessage.isNotEmpty()) {
-                Spacer(Modifier.height(Space.micro))
+                Spacer(Modifier.height(V3Space.hairline))
                 Text(
                     text = session.lastMessage,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -257,32 +254,30 @@ private fun SessionRow(
             }
         }
 
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
 
         Column(horizontalAlignment = Alignment.End) {
             if (session.lastTime > 0) {
                 Text(
                     text = formatRelativeTime(session.lastTime),
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textTertiary,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelTertiary,
                     ),
                 )
             }
             // 未读红点：数字比圆点信息量大（能看出积压多少）
             if (session.unreadCount > 0) {
-                Spacer(Modifier.height(Space.x1))
+                Spacer(Modifier.height(V3Space.xxs))
                 Text(
                     text = if (session.unreadCount > 99) "99+" else "${session.unreadCount}",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textOnBrand,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelOnBrand,
                         fontWeight = FontWeight.Medium,
                     ),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.badge))
-                        .background(colors.brandPrimary)
-                        .padding(horizontal = Space.compactHorizontal, vertical = Space.tagVertical),
+                        .clip(RoundedCornerShape(V3Radius.xs))
+                        .background(colors.brand)
+                        .padding(horizontal = V3Space.xs, vertical = V3Space.tagVertical),
                 )
             }
         }
@@ -298,7 +293,7 @@ fun ChatScreen(
     viewModel: ChatViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     var draft by remember { mutableStateOf("") }
@@ -437,7 +432,7 @@ fun ChatScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 顶栏 ----
         Row(
@@ -446,13 +441,13 @@ fun ChatScreen(
                 // 顶栏不再是卡片：与页面同明度，靠底边一条发丝线分隔
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -460,17 +455,16 @@ fun ChatScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = talkerName,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -489,9 +483,9 @@ fun ChatScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(
-                    color = colors.brandPrimary,
-                    strokeWidth = Space.trackHeight,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    color = colors.brand,
+                    strokeWidth = V3Space.progressTrack,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
 
@@ -507,10 +501,10 @@ fun ChatScreen(
                     .weight(1f)
                     .fillMaxWidth(),
                 contentPadding = PaddingValues(
-                    horizontal = Space.x4,
-                    vertical = Space.x3,
+                    horizontal = V3Space.md,
+                    vertical = V3Space.sm,
                 ),
-                verticalArrangement = Arrangement.spacedBy(Space.x2),
+                verticalArrangement = Arrangement.spacedBy(V3Space.xs),
             ) {
                 items(state.messages, key = { it.msgKey }) { m ->
                     MessageBubble(
@@ -547,12 +541,12 @@ fun ChatScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        // ⚠️ 用 `band()` 而不是 `.background(colors.bgCard)`（v1.2.4 统一）。
+                        // ⚠️ 用 `band()` 而不是 `.background(colors.bgSecondary)`（v1.2.4 统一）。
                         // 输入条是全宽直角的分区带（与上方消息列表同宽），不是卡片。
                         .band(BandLevel.Raised)
                         .imePadding()
                         .navigationBarsPadding()
-                        .padding(horizontal = Space.x4, vertical = Space.x2),
+                        .padding(horizontal = V3Space.md, vertical = V3Space.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // ---- 表情入口（未发版）----
@@ -562,7 +556,7 @@ fun ChatScreen(
                     if (viewModel.emoteAvailable) {
                         Box(
                             modifier = Modifier
-                                .size(Sizes.iconXl + Space.x2)
+                                .size(V3Size.iconLg + V3Space.xs)
                                 .clip(CircleShape)
                                 .clickable { viewModel.toggleEmotePanel() },
                             contentAlignment = Alignment.Center,
@@ -570,43 +564,41 @@ fun ChatScreen(
                             Icon(
                                 imageVector = Icons.Outlined.EmojiEmotions,
                                 contentDescription = if (emoteOpen) "收起表情" else "表情",
-                                tint = if (emoteOpen) colors.brandPrimary else colors.textSecondarySafe,
-                                modifier = Modifier.size(Sizes.iconLg),
+                                tint = if (emoteOpen) colors.brand else colors.labelSecondary,
+                                modifier = Modifier.size(V3Size.iconMd),
                             )
                         }
-                        Spacer(Modifier.width(Space.x1))
+                        Spacer(Modifier.width(V3Space.xxs))
                     }
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(CHAT_INPUT_HEIGHT)
-                            .clip(RoundedCornerShape(Radius.pill))
-                            .background(colors.bgHover)
-                            .padding(horizontal = Space.x3),
+                            .clip(RoundedCornerShape(V3Radius.pill))
+                            .background(colors.bgTertiary)
+                            .padding(horizontal = V3Space.sm),
                         contentAlignment = Alignment.CenterStart,
                     ) {
                         if (draft.isEmpty()) {
                             Text(
                                 text = "发消息…",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = FontSize.body,
-                                    color = colors.textTertiary,
+                                style = V3Type.callout.copy(
+                                    color = colors.labelTertiary,
                                 ),
                             )
                         }
                         BasicTextField(
                             value = draft,
                             onValueChange = { draft = it },
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = FontSize.body,
-                                color = colors.textPrimary,
+                            textStyle = V3Type.callout.copy(
+                                color = colors.labelPrimary,
                             ),
-                            cursorBrush = SolidColor(colors.brandPrimary),
+                            cursorBrush = SolidColor(colors.brand),
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                 // 发送按钮：发送中禁用 + 显示进度（v1.4.2 修）。
                 //
                 // 首版完全没有用 `state.sending` —— ViewModel 一直在维护它
@@ -615,10 +607,10 @@ fun ChatScreen(
                 val canSend = draft.isNotBlank() && !state.sending
                 Box(
                     modifier = Modifier
-                        .size(Sizes.iconXl + Space.x2)
+                        .size(V3Size.iconLg + V3Space.xs)
                         .clip(CircleShape)
                         .background(
-                            if (canSend) colors.brandPrimary else colors.bgHover,
+                            if (canSend) colors.brand else colors.bgTertiary,
                         )
                         .clickable(enabled = canSend) {
                             // ⚠️ 不再在这里清空 draft（v1.4.2 修）。
@@ -637,16 +629,16 @@ fun ChatScreen(
                 ) {
                     if (state.sending) {
                         androidx.compose.material3.CircularProgressIndicator(
-                            color = colors.textOnBrand,
-                            strokeWidth = Space.trackHeight,
-                            modifier = Modifier.size(Sizes.iconLg),
+                            color = colors.labelOnBrand,
+                            strokeWidth = V3Space.progressTrack,
+                            modifier = Modifier.size(V3Size.iconMd),
                         )
                     } else {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Send,
                             contentDescription = "发送",
-                            tint = if (canSend) colors.textOnBrand else colors.textTertiary,
-                            modifier = Modifier.size(Sizes.iconLg),
+                            tint = if (canSend) colors.labelOnBrand else colors.labelTertiary,
+                            modifier = Modifier.size(V3Size.iconMd),
                         )
                     }
                 }
@@ -680,17 +672,17 @@ private fun MessageBubble(
      */
     emoteUrl: (String) -> String? = { null },
 ) {
-    val colors = BiliTheme.colors
-    // ⚠️ 气泡**不是玻璃/浮层**，所以不该借 `Radius.card`（§5.2 已限定它只服务
+    val colors = BiliV3.colors
+    // ⚠️ 气泡**不是玻璃/浮层**，所以不该借 `V3Radius.md`（§5.2 已限定它只服务
     // `biliCard`/`Glass` 两个原语）。它是一块有方向的**内容面**，走 `panel`(16dp)。
     //
     // "尾巴角"用 `badge`(4dp)：四角里最贴近说话人的那个收小，
     // 是消息气泡的通用语言（位置 + 形状双重表达归属）。
     val bubbleShape = RoundedCornerShape(
-        topStart = Radius.panel,
-        topEnd = Radius.panel,
-        bottomStart = if (message.isMine) Radius.panel else Radius.badge,
-        bottomEnd = if (message.isMine) Radius.badge else Radius.panel,
+        topStart = V3Radius.lg,
+        topEnd = V3Radius.lg,
+        bottomStart = if (message.isMine) V3Radius.lg else V3Radius.xs,
+        bottomEnd = if (message.isMine) V3Radius.xs else V3Radius.lg,
     )
 
     Row(
@@ -718,7 +710,7 @@ private fun MessageBubble(
                     .width(maxW)
                     .height(h)
                     .clip(bubbleShape)
-                    .background(colors.bgHover),
+                    .background(colors.bgTertiary),
             )
             return@Row
         }
@@ -729,8 +721,8 @@ private fun MessageBubble(
                 .fillMaxWidth(0.78f)
                 .wrapContentWidth(if (message.isMine) Alignment.End else Alignment.Start)
                 .clip(bubbleShape)
-                .background(if (message.isMine) colors.brandPrimary else colors.bgCard)
-                .padding(horizontal = Space.x3, vertical = Space.x2),
+                .background(if (message.isMine) colors.brand else colors.bgSecondary)
+                .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
         ) {
             // 纯表情消息（整条就是一个 token）→ 直接渲染大图，
             // 不套气泡底色（与图片消息同一处理：内容本身就是图）
@@ -745,7 +737,7 @@ private fun MessageBubble(
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .size(EMOTE_BUBBLE)
-                        .clip(RoundedCornerShape(Radius.badge)),
+                        .clip(RoundedCornerShape(V3Radius.xs)),
                 )
             } else {
                 Text(
@@ -756,10 +748,8 @@ private fun MessageBubble(
                     } else {
                         message.text
                     },
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
-                        lineHeight = FontSize.bodyLine,
-                        color = if (message.isMine) colors.textOnBrand else colors.textPrimary,
+                    style = V3Type.callout.copy(
+                        color = if (message.isMine) colors.labelOnBrand else colors.labelPrimary,
                     ),
                 )
             }
@@ -777,7 +767,7 @@ private fun EmptyHint(
     actionLabel: String?,
     onAction: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -786,31 +776,29 @@ private fun EmptyHint(
             Icon(
                 imageVector = Icons.Outlined.MailOutline,
                 contentDescription = null,
-                tint = colors.textTertiary,
-                modifier = Modifier.size(Sizes.iconXl * 2),
+                tint = colors.labelTertiary,
+                modifier = Modifier.size(V3Size.iconLg * 2),
             )
-            Spacer(Modifier.height(Space.x3))
+            Spacer(Modifier.height(V3Space.sm))
             Text(
                 text = text,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = colors.textSecondarySafe,
+                style = V3Type.callout.copy(
+                    color = colors.labelSecondary,
                 ),
             )
             if (actionLabel != null) {
-                Spacer(Modifier.height(Space.x3))
+                Spacer(Modifier.height(V3Space.sm))
                 Text(
                     text = actionLabel,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
+                    style = V3Type.caption1.copy(
                         fontWeight = FontWeight.Medium,
-                        color = colors.textOnBrand,
+                        color = colors.labelOnBrand,
                     ),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.pill))
-                        .background(colors.brandPrimary)
+                        .clip(RoundedCornerShape(V3Radius.pill))
+                        .background(colors.brand)
                         .clickable(onClick = onAction)
-                        .padding(horizontal = Space.x5, vertical = Space.x2),
+                        .padding(horizontal = V3Space.lg, vertical = V3Space.xs),
                 )
             }
         }

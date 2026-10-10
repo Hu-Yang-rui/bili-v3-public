@@ -64,10 +64,6 @@ import com.example.biliv3.design.v3.V3Radius
 import com.example.biliv3.design.v3.V3Size
 import com.example.biliv3.design.v3.V3Space
 import com.example.biliv3.design.v3.V3Type
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.ErrorState
 
 /**
@@ -173,7 +169,7 @@ fun CommentSection(
     /** 完成定位（滚动+高亮）后回调，上层据此清空 focusRpid。 */
     onFocusHandled: () -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // 已展开回复的评论 id 集合
     var expandedReplies by remember { mutableStateOf<Set<Long>>(emptySet()) }
@@ -249,14 +245,13 @@ fun CommentSection(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = Space.x4, end = Space.x4, top = Space.x3),
+                    .padding(start = V3Space.md, end = V3Space.md, top = V3Space.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = if (total > 0) "共 ${formatCount(total)} 条评论" else "评论",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
                 Spacer(Modifier.weight(1f))
@@ -265,7 +260,7 @@ fun CommentSection(
                     selected = sortMode == COMMENT_SORT_HOT,
                     onClick = { onSortChange(COMMENT_SORT_HOT) },
                 )
-                Spacer(Modifier.width(Space.x3))
+                Spacer(Modifier.width(V3Space.sm))
                 SortChip(
                     label = "时间",
                     selected = sortMode == COMMENT_SORT_TIME,
@@ -291,32 +286,31 @@ fun CommentSection(
             loading && comments.isEmpty() -> Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = Space.x6),
+                    .padding(vertical = V3Space.xl),
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(
-                    color = colors.brandPrimary,
-                    strokeWidth = Space.trackHeight,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    color = colors.brand,
+                    strokeWidth = V3Space.progressTrack,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
 
             comments.isEmpty() -> Text(
                 text = "还没有评论，来说两句吧",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    color = colors.textTertiary,
+                style = V3Type.footnote.copy(
+                    color = colors.labelTertiary,
                 ),
                 modifier = Modifier.padding(
-                    horizontal = Space.x4,
-                    vertical = Space.x6,
+                    horizontal = V3Space.md,
+                    vertical = V3Space.xl,
                 ),
             )
 
             else -> LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxWidth(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = Space.x6),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = V3Space.xl),
             ) {
                 items(comments, key = { it.rpid }) { c ->
                     CommentRow(
@@ -374,27 +368,25 @@ fun CommentSection(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = Space.x4),
+                            .padding(vertical = V3Space.md),
                         contentAlignment = Alignment.Center,
                     ) {
                         when {
                             loadingMore -> CircularProgressIndicator(
-                                color = colors.brandPrimary,
-                                strokeWidth = Space.trackHeight,
-                                modifier = Modifier.size(Sizes.iconXl),
+                                color = colors.brand,
+                                strokeWidth = V3Space.progressTrack,
+                                modifier = Modifier.size(V3Size.iconLg),
                             )
                             hasMore -> Text(
                                 text = "上滑加载更多",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = FontSize.label,
-                                    color = colors.textTertiary,
+                                style = V3Type.caption1.copy(
+                                    color = colors.labelTertiary,
                                 ),
                             )
                             else -> Text(
                                 text = "没有更多了",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = FontSize.label,
-                                    color = colors.textTertiary,
+                                style = V3Type.caption1.copy(
+                                    color = colors.labelTertiary,
                                 ),
                             )
                         }
@@ -462,18 +454,17 @@ private fun SortChip(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = label,
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.label,
+        style = V3Type.caption1.copy(
             fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-            color = if (selected) colors.textPrimary else colors.textTertiary,
+            color = if (selected) colors.labelPrimary else colors.labelTertiary,
         ),
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.badge))
+            .clip(RoundedCornerShape(V3Radius.xs))
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x2, vertical = Space.x1),
+            .padding(horizontal = V3Space.xs, vertical = V3Space.xxs),
     )
 }
 
@@ -491,7 +482,7 @@ private fun SortChip(
  *
  * ## ⚠️ 为什么要收敛尺寸与字重（问题 3 的根因）
  *
- * 首版每一行理由都是 `bodyMedium`(14sp) + 上下 `Space.x3`(12dp) 内边距，
+ * 首版每一行理由都是 `bodyMedium`(14sp) + 上下 `V3Space.sm`(12dp) 内边距，
  * 十来个理由铺满整屏，配上半粗体标题 —— 视觉上比视频页任何内容都重，
  * 用户的反馈是"举报后的 UI 太突出、太抢眼"。
  *
@@ -507,24 +498,24 @@ private fun ReportReasonSheet(
     onDismiss: () -> Unit,
     onPick: (Int) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(colors.scrimPanel)
+            .background(colors.scrim)
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.BottomCenter,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
+                .clip(RoundedCornerShape(topStart = V3Radius.lg, topEnd = V3Radius.lg))
                 // 弹层用 surfaceElevated（比卡片亮一档）—— 深色下投影不可见，分层靠提亮
-                .background(colors.surfaceElevated)
+                .background(colors.bgSecondaryElevated)
                 // 阻止点击穿透到遮罩（点面板内部不应关闭）
                 .clickable(enabled = false) {}
                 .navigationBarsPadding()
-                .padding(top = Space.x2, bottom = Space.x2),
+                .padding(top = V3Space.xs, bottom = V3Space.xs),
         ) {
             // 把手：暗示这是可下拉关闭的薄面板，降低"大弹窗"观感
             Box(
@@ -532,22 +523,21 @@ private fun ReportReasonSheet(
                     .align(Alignment.CenterHorizontally)
                     .width(GRABBER_WIDTH)
                     .height(GRABBER_HEIGHT)
-                    .clip(RoundedCornerShape(Radius.pill))
-                    .background(colors.borderStrong),
+                    .clip(RoundedCornerShape(V3Radius.pill))
+                    .background(colors.separatorOpaque),
             )
 
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
 
             Text(
                 text = "举报理由",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption1.copy(
+                    color = colors.labelSecondary,
                 ),
-                modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x1),
+                modifier = Modifier.padding(horizontal = V3Space.md, vertical = V3Space.xxs),
             )
 
-            Spacer(Modifier.height(Space.x1))
+            Spacer(Modifier.height(V3Space.xxs))
 
             // 理由列表：限高 + 可滚动（理由多时不会撑满整屏）
             Column(
@@ -559,32 +549,30 @@ private fun ReportReasonSheet(
                 reasons.forEach { (code, label) ->
                     Text(
                         text = label,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = FontSize.bodySm,
-                            color = colors.textPrimary,
+                        style = V3Type.footnote.copy(
+                            color = colors.labelPrimary,
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onPick(code) }
-                            .padding(horizontal = Space.x4, vertical = Space.x2),
+                            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
                     )
                 }
             }
 
-            Spacer(Modifier.height(Space.x1))
+            Spacer(Modifier.height(V3Space.xxs))
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(onClick = onDismiss)
-                    .padding(vertical = Space.x2),
+                    .padding(vertical = V3Space.xs),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "取消",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = FontSize.bodySm,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.footnote.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
             }
@@ -701,7 +689,7 @@ private fun CommentRow(
             // 每行再画一遍是重复表达，且 20 条回复就是 20 条线。
             //
             // 顶层评论之间同理不画（1168 条 = 1168 条横线，纯噪声）。
-            // 分组靠 `Space.x6` 留白 + 容器那条竖线。
+            // 分组靠 `V3Space.xl` 留白 + 容器那条竖线。
             .then(Modifier)
             // 定位高亮：用品牌色的低透明度铺底，不改文字色 ——
             // 改文字色会破坏对比度约束（见 §5.2 的"文字安全版"）。
@@ -787,8 +775,7 @@ private fun CommentRow(
                     // 时间（非 weight：永远完整可见）
                     Text(
                         text = formatRelativeTime(comment.ctime),
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
+                        style = V3Type.caption2.copy(
                             // ⚠️ 首版用 textTertiary（浅色 #AEB3B9），实测截图里
                             // "5天前""4天前"淡到几乎看不见 —— 它比 textSecondary
                             // 还浅，而 README 早就警告过 textSecondary 只有 2.9:1。
@@ -804,11 +791,10 @@ private fun CommentRow(
                     // 未登录时接口不返回该字段，所以看不到属属是正常的，
                     // 不是渲染 bug（实测 `reply_control.location` 仅登录态存在）。
                     if (comment.hasIpLocation) {
-                        Spacer(Modifier.width(Space.x2))
+                        Spacer(Modifier.width(V3Space.xs))
                         Text(
                             text = "IP属地：${comment.ipLocation}",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
+                            style = V3Type.caption2.copy(
                                 color = colors.labelSecondary,
                             ),
                             maxLines = 1,
@@ -818,14 +804,12 @@ private fun CommentRow(
                     }
                 }
 
-                Spacer(Modifier.height(Space.x1))
+                Spacer(Modifier.height(V3Space.xxs))
 
                 // ---- 正文（点击 = 回复）----
                 Text(
                     text = comment.content,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
-                        lineHeight = FontSize.bodyLine,
+                    style = V3Type.callout.copy(
                         color = colors.labelPrimary,
                     ),
                     maxLines = if (isReply) 3 else 6,
@@ -837,7 +821,7 @@ private fun CommentRow(
                         },
                 )
 
-                Spacer(Modifier.height(Space.x1))
+                Spacer(Modifier.height(V3Space.xxs))
 
                 // ---- 操作行：回复 · 举报 · 删除 · 点赞 ----
                 //
@@ -849,8 +833,7 @@ private fun CommentRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "回复",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
+                        style = V3Type.caption2.copy(
                             color = colors.labelSecondary,
                         ),
                         modifier = Modifier.clickable {
@@ -861,11 +844,10 @@ private fun CommentRow(
                     // 举报：**自己的评论不显示**（举报自己没有意义，
                     // 且会造成"误点后自己的评论消失"的糟糕体验）。
                     if (!comment.isOwn) {
-                        Spacer(Modifier.width(Space.x3))
+                        Spacer(Modifier.width(V3Space.sm))
                         Text(
                             text = "举报",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
+                            style = V3Type.caption2.copy(
                                 color = colors.labelSecondary,
                             ),
                             modifier = Modifier.clickable {
@@ -876,13 +858,13 @@ private fun CommentRow(
 
                     // 删除：只对自己发的评论显示（由 UI 层判断 owner）
                     if (comment.isOwn) {
-                        Spacer(Modifier.width(Space.x3))
+                        Spacer(Modifier.width(V3Space.sm))
                         Icon(
                             imageVector = Icons.Outlined.Delete,
                             contentDescription = "删除评论",
                             tint = colors.labelSecondary,
                             modifier = Modifier
-                                .size(Sizes.iconSm + Space.x1)
+                                .size(V3Size.iconXs + V3Space.xxs)
                                 .clickable { onDelete(comment) },
                         )
                     }
@@ -901,17 +883,16 @@ private fun CommentRow(
                         contentDescription = if (comment.liked) "取消点赞" else "点赞",
                         tint = if (comment.liked) colors.brand else colors.labelSecondary,
                         modifier = Modifier
-                            .size(Sizes.iconSm + Space.x1)
+                            .size(V3Size.iconXs + V3Space.xxs)
                             .clickable {
                                 if (isLoggedIn) onLike(comment) else onLoginRequired()
                             },
                     )
                     if (comment.likeCount > 0) {
-                        Spacer(Modifier.width(Space.micro))
+                        Spacer(Modifier.width(V3Space.hairline))
                         Text(
                             text = formatCount(comment.likeCount),
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
+                            style = V3Type.caption2.copy(
                                 color = if (comment.liked) colors.brand else colors.labelSecondary,
                             ),
                             maxLines = 1,
@@ -943,7 +924,7 @@ private fun CommentRow(
         }
 
         if (showReplyToggle) {
-            Spacer(Modifier.height(Space.x1))
+            Spacer(Modifier.height(V3Space.xxs))
 
             // 折叠态按钮：`展开 N 条回复 ▾` / `收起 ▴`
             Text(
@@ -952,21 +933,20 @@ private fun CommentRow(
                 } else {
                     "展开 ${comment.replyCount} 条回复"
                 },
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
+                style = V3Type.caption2.copy(
                     color = colors.brandText,
                     fontWeight = FontWeight.Medium,
                 ),
                 modifier = Modifier
-                    .padding(start = COMMENT_AVATAR + Space.x2)
-                    .clip(RoundedCornerShape(Radius.badge))
+                    .padding(start = COMMENT_AVATAR + V3Space.xs)
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     .clickable(onClick = onToggleReplies)
-                    .padding(horizontal = Space.x1, vertical = Space.compactVertical),
+                    .padding(horizontal = V3Space.xxs, vertical = V3Space.hairline),
             )
         }
 
         if (showInlineReplies) {
-            Spacer(Modifier.height(Space.x1))
+            Spacer(Modifier.height(V3Space.xxs))
             // 层级竖线颜色：用 hairline 描边色（深浅主题各自成立，
             // 不引入新的硬编码色值 —— 对照 design/tokens）。
             val replyGuideColor = colors.separator
@@ -977,7 +957,7 @@ private fun CommentRow(
                     .then(
                         if (isReply) Modifier.fillMaxWidth()
                         else Modifier
-                            .padding(start = COMMENT_AVATAR + Space.x2)
+                            .padding(start = COMMENT_AVATAR + V3Space.xs)
                             .fillMaxWidth(),
                     )
                     // 🔴 v1.5.2 修「回复左边有两条线」。
@@ -1007,11 +987,11 @@ private fun CommentRow(
                                 color = replyGuideColor,
                                 start = Offset(x, 0f),
                                 end = Offset(x, size.height),
-                                strokeWidth = Space.trackHeight.toPx(),
+                                strokeWidth = V3Space.progressTrack.toPx(),
                             )
                         },
                     )
-                    .padding(start = Space.x3),
+                    .padding(start = V3Space.sm),
                 verticalArrangement = Arrangement.spacedBy(0.dp),
             ) {
                 comment.replies
@@ -1071,23 +1051,22 @@ private fun CommentRow(
                             loading -> "加载中…"
                             else -> "查看全部 ${comment.replyCount} 条回复"
                         },
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
+                        style = V3Type.caption2.copy(
                             // 加载中用弱化色，避免看起来还能点
                             color = if (loading) colors.labelTertiary else colors.brandText,
                             fontWeight = FontWeight.Medium,
                         ),
                         modifier = Modifier
                             .padding(
-                                start = Space.x4,
-                                bottom = Space.x2,
+                                start = V3Space.md,
+                                bottom = V3Space.xs,
                             )
-                            .clip(RoundedCornerShape(Radius.badge))
+                            .clip(RoundedCornerShape(V3Radius.xs))
                             // 就地加载下一页（加载中不可点）
                             .clickable(enabled = !loading) {
                                 onViewAllReplies(comment)
                             }
-                            .padding(horizontal = Space.x1, vertical = Space.compactVertical),
+                            .padding(horizontal = V3Space.xxs, vertical = V3Space.hairline),
                     )
                 }
             }
@@ -1114,7 +1093,7 @@ private const val MAX_INLINE_REPLIES = 3
 
 /** 举报面板的把手尺寸（视觉暗示"可下拉关闭的薄面板"）。 */
 private val GRABBER_WIDTH = 32.dp
-private val GRABBER_HEIGHT = Space.x1
+private val GRABBER_HEIGHT = V3Space.xxs
 
 /**
  * 举报面板理由列表的最大高度。

@@ -40,14 +40,16 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.biliv3.data.FavFolder
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.biliCard
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.ruleTop
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
+import com.example.biliv3.design.v3.v3GlassSurface
+import com.example.biliv3.design.v3.V3Glass
 
 /**
  * 收藏批量整理的 UI 组件（v1.3.0）。
@@ -84,20 +86,20 @@ fun BatchActionBar(
     onSelectPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             // 明度带：提示"当前处于多选模式"，不是内容容器
-            .background(colors.bgHover)
+            .background(colors.bgTertiary)
             .ruleBottom(color = Rule.color)
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Space.x1),
+            horizontalArrangement = Arrangement.spacedBy(V3Space.xxs),
         ) {
             // ⚠️ 全选按钮文案随状态变 —— 已全选时显示「取消全选」，
             // 否则用户点同一个位置会得到相反的结果，很困惑。
@@ -114,9 +116,8 @@ fun BatchActionBar(
 
             Text(
                 text = "${selection.count} 项",
-                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.bodySm,
-                    color = colors.textSecondary,
+                style = V3Type.footnote.copy(
+                    color = colors.labelSecondary,
                 ),
             )
         }
@@ -124,11 +125,10 @@ fun BatchActionBar(
         // 进度：只在批量操作进行中显示
         if (progress != null && batchRunning) {
             val (done, total) = progress
-            Spacer(Modifier.height(Space.x1))
+            Spacer(Modifier.height(V3Space.xxs))
             Text(
                 text = "处理中 $done / $total",
-                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.bodySm,
+                style = V3Type.footnote.copy(
                     color = colors.accentTerminal,
                 ),
             )
@@ -143,18 +143,17 @@ private fun BarTextButton(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = text,
-        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
-            fontSize = FontSize.bodySm,
+        style = V3Type.footnote.copy(
             fontWeight = FontWeight.Medium,
-            color = if (enabled) colors.textPrimary else colors.textTertiary,
+            color = if (enabled) colors.labelPrimary else colors.labelTertiary,
         ),
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.interactive))
+            .clip(RoundedCornerShape(V3Radius.xs))
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = Space.x2, vertical = Space.x1),
+            .padding(horizontal = V3Space.xs, vertical = V3Space.xxs),
     )
 }
 
@@ -176,15 +175,15 @@ fun BatchBottomBar(
     onAddToQueue: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.bgHover)
+            .background(colors.bgTertiary)
             .ruleTop(color = Rule.color)
             .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = Space.x2, vertical = Space.x2),
+            .padding(horizontal = V3Space.xs, vertical = V3Space.xs),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -216,27 +215,26 @@ private fun BatchAction(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
-    val tint = if (enabled) colors.textPrimary else colors.textTertiary
+    val colors = BiliV3.colors
+    val tint = if (enabled) colors.labelPrimary else colors.labelTertiary
 
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.interactive))
+            .clip(RoundedCornerShape(V3Radius.xs))
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x1),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.xxs),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(Sizes.iconLg),
+            modifier = Modifier.size(V3Size.iconMd),
         )
-        Spacer(Modifier.height(Space.x1))
+        Spacer(Modifier.height(V3Space.xxs))
         Text(
             text = label,
-            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.bodySm,
+            style = V3Type.footnote.copy(
                 color = tint,
             ),
             maxLines = 1,
@@ -258,7 +256,7 @@ fun BatchMovePicker(
     onDismiss: () -> Unit,
     onPick: (Long) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -270,52 +268,53 @@ fun BatchMovePicker(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.scrimPanel)
+                .background(colors.scrim)
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
             Column(
                 modifier = Modifier
-                    .padding(horizontal = Space.x6)
+                    .padding(horizontal = V3Space.xl)
                     .fillMaxWidth()
-                    .biliCard(
-                        shape = RoundedCornerShape(Radius.panel),
-                        color = colors.surfaceElevated,
+                    // v3：弹层面板改用 Liquid Glass（判据见 §7.37 坑 219）。
+                    // 用 `Modifier.v3GlassSurface` 而不是 `GlassSurface` 容器 ——
+                    // 一个表达式替换，不动花括号。
+                    .v3GlassSurface(
+                        shape = RoundedCornerShape(V3Radius.sheet),
+                        level = V3Glass.Level.UltraThin,
                     )
                     // 弹层本体不穿透到遮罩
                     .clickable(enabled = false) {}
-                    .padding(vertical = Space.x4),
+                    .padding(vertical = V3Space.md),
             ) {
                 Text(
                     text = "移动 $count 个视频到",
-                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(
-                        fontSize = FontSize.titleMd,
+                    style = V3Type.subheadline.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
-                    modifier = Modifier.padding(horizontal = Space.x5),
+                    modifier = Modifier.padding(horizontal = V3Space.lg),
                 )
 
-                Spacer(Modifier.height(Space.x2))
+                Spacer(Modifier.height(V3Space.xs))
 
                 LazyColumn(
                     // ⚠️ 限高：收藏夹可能几十个，不限高会撑满整屏
                     // 把标题和取消按钮挤出可视区。
-                    modifier = Modifier.heightIn(max = Space.x12 * 8),
+                    modifier = Modifier.heightIn(max = V3Space.huge * 8),
                 ) {
                     items(folders, key = { it.id }) { f ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onPick(f.id) }
-                                .padding(horizontal = Space.x5, vertical = Space.x3),
+                                .padding(horizontal = V3Space.lg, vertical = V3Space.sm),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
                                 text = f.title,
-                                style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(
-                                    fontSize = FontSize.body,
-                                    color = colors.textPrimary,
+                                style = V3Type.callout.copy(
+                                    color = colors.labelPrimary,
                                 ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -323,23 +322,22 @@ fun BatchMovePicker(
                             )
                             Text(
                                 text = "${f.mediaCount}",
-                                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = FontSize.bodySm,
-                                    color = colors.textTertiary,
+                                style = V3Type.footnote.copy(
+                                    color = colors.labelTertiary,
                                 ),
                             )
                         }
                     }
                 }
 
-                Spacer(Modifier.height(Space.x2))
+                Spacer(Modifier.height(V3Space.xs))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("取消", color = colors.textSecondary)
+                        Text("取消", color = colors.labelSecondary)
                     }
                 }
             }
@@ -362,7 +360,7 @@ fun ConfirmDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -374,49 +372,50 @@ fun ConfirmDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.scrimPanel)
+                .background(colors.scrim)
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
             Column(
                 modifier = Modifier
-                    .padding(horizontal = Space.x6)
+                    .padding(horizontal = V3Space.xl)
                     .fillMaxWidth()
-                    .biliCard(
-                        shape = RoundedCornerShape(Radius.panel),
-                        color = colors.surfaceElevated,
+                    // v3：弹层面板改用 Liquid Glass（判据见 §7.37 坑 219）。
+                    // 用 `Modifier.v3GlassSurface` 而不是 `GlassSurface` 容器 ——
+                    // 一个表达式替换，不动花括号。
+                    .v3GlassSurface(
+                        shape = RoundedCornerShape(V3Radius.sheet),
+                        level = V3Glass.Level.UltraThin,
                     )
                     .clickable(enabled = false) {}
-                    .padding(Space.x5),
+                    .padding(V3Space.lg),
             ) {
                 Text(
                     text = title,
-                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(
-                        fontSize = FontSize.titleMd,
+                    style = V3Type.subheadline.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
                 )
-                Spacer(Modifier.height(Space.x2))
+                Spacer(Modifier.height(V3Space.xs))
                 Text(
                     text = message,
-                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.bodySm,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.footnote.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
-                Spacer(Modifier.height(Space.x4))
+                Spacer(Modifier.height(V3Space.md))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("取消", color = colors.textSecondary)
+                        Text("取消", color = colors.labelSecondary)
                     }
                     TextButton(onClick = onConfirm) {
                         Text(
                             text = confirmText,
-                            color = if (destructive) colors.brandPrimary else colors.textPrimary,
+                            color = if (destructive) colors.brand else colors.labelPrimary,
                             fontWeight = FontWeight.SemiBold,
                         )
                     }

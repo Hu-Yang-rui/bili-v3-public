@@ -42,11 +42,8 @@ import coil.request.ImageRequest
 import com.example.biliv3.data.model.VideoItem
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Motion
 import com.example.biliv3.design.tokens.Rhythm
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.biliv3.design.v3.BiliV3
 import com.example.biliv3.design.v3.V3Radius
@@ -285,7 +282,7 @@ private fun videoCoverRequest(
 /**
  * 时长角标。
  *
- * 直角（`Radius.badge` 已随卡片架构删除）。
+ * 直角（`V3Radius.xs` 已随卡片架构删除）。
  * 压在封面上的小标签不需要圆角 —— 圆角在这里反而显"软"。
  */
 @Composable

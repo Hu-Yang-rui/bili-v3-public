@@ -34,10 +34,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 通用选择器 —— **行内展开**，不是弹窗。
@@ -70,7 +71,7 @@ import com.example.biliv3.design.tokens.Space
  * ## 展开区样式
  *
  * - 背景用主题的 `bgHover`（浅一档的卡片色），与页面同色系
- * - 圆角 `Radius.interactive`（4dp），与其它交互元素一致
+ * - 圆角 `V3Radius.xs`（4dp），与其它交互元素一致
  * - **不用纯黑、不用半透明遮罩**
  *
  * ## 收起时机（三种都支持）
@@ -104,7 +105,7 @@ fun <K> InlinePicker(
     onSelect: (K) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(modifier = modifier.fillMaxWidth()) {
         // ================= 选择框本体 =================
@@ -122,31 +123,29 @@ fun <K> InlinePicker(
                 .fillMaxWidth()
                 // 整行可点（触摸目标大）
                 .clickable(onClick = onToggle)
-                .padding(horizontal = Space.x4, vertical = Space.x3),
+                .padding(horizontal = V3Space.md, vertical = V3Space.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = colors.textPrimary,
+                style = V3Type.callout.copy(
+                    color = colors.labelPrimary,
                 ),
             )
             Spacer(Modifier.weight(1f))
             Text(
                 text = currentLabel,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
+                style = V3Type.caption1.copy(
                     // 选中值用品牌色，一眼看出"这是当前值"。
                     // ⚠️ 用 textBrandSafe 而非 brandPrimary —— 浅色下
                     // brandPrimary(#E8578A) 做**文字**只有 3.4:1，不达 AA 4.5:1。
-                    color = colors.textBrandSafe,
+                    color = colors.brandBiliText,
                     fontWeight = FontWeight.Medium,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             PickerArrow(expanded = expanded)
         }
 
@@ -162,15 +161,15 @@ fun <K> InlinePicker(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
-                        start = Space.x3,
-                        end = Space.x3,
-                        bottom = Space.x1,
+                        start = V3Space.sm,
+                        end = V3Space.sm,
+                        bottom = V3Space.xxs,
                     )
-                    .clip(RoundedCornerShape(Radius.interactive))
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     // ⚠️ 用主题的 bgHover，**不用黑色、不用半透明遮罩** ——
                     // 这是"无黑框、不穿模"的关键
-                    .background(colors.bgHover)
-                    .padding(vertical = Space.x1),
+                    .background(colors.bgTertiary)
+                    .padding(vertical = V3Space.xxs),
             ) {
                 options.forEach { opt ->
                     PickerRow(
@@ -208,12 +207,12 @@ private fun PickerRow(
      */
     locked: Boolean = false,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.rowVertical),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.sm),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start,
     ) {
@@ -224,61 +223,57 @@ private fun PickerRow(
                     Icon(
                         imageVector = Icons.Filled.Lock,
                         contentDescription = "需要大会员",
-                        tint = colors.textTertiary,
-                        modifier = Modifier.size(Sizes.iconSm),
+                        tint = colors.labelTertiary,
+                        modifier = Modifier.size(V3Size.iconXs),
                     )
-                    Spacer(Modifier.width(Space.x1))
+                    Spacer(Modifier.width(V3Space.xxs))
                 }
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
+                    style = V3Type.callout.copy(
                         fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
                         // 受限项用次级色：表达"看得到但用不了"，
                         // 但**不是** disabled 灰（它仍可点）
                         color = when {
-                            selected -> colors.brandPrimary
-                            locked -> colors.textSecondarySafe
-                            else -> colors.textPrimary
+                            selected -> colors.brand
+                            locked -> colors.labelSecondary
+                            else -> colors.labelPrimary
                         },
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (badge != null) {
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                     Text(
                         text = badge,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
-                            color = colors.textOnBrand,
+                        style = V3Type.caption2.copy(
+                            color = colors.labelOnBrand,
                             fontWeight = FontWeight.Medium,
                         ),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.badge))
-                            .background(colors.brandPrimary)
-                            .padding(horizontal = Space.compactHorizontal, vertical = Space.tagVertical),
+                            .clip(RoundedCornerShape(V3Radius.xs))
+                            .background(colors.brand)
+                            .padding(horizontal = V3Space.xs, vertical = V3Space.tagVertical),
                     )
                 }
                 // 「大会员」标记：纯文字小角标（不用品牌色块，避免抢视觉）
                 if (locked) {
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                     Text(
                         text = "大会员",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
+                        style = V3Type.caption2.copy(
                             color = colors.accentCoin,
                         ),
                     )
                 }
             }
             if (description != null) {
-                Spacer(Modifier.height(Space.micro))
+                Spacer(Modifier.height(V3Space.hairline))
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -291,11 +286,11 @@ private fun PickerRow(
             Icon(
                 imageVector = Icons.Filled.Check,
                 contentDescription = "已选中",
-                tint = colors.brandPrimary,
-                modifier = Modifier.size(Sizes.iconLg),
+                tint = colors.brand,
+                modifier = Modifier.size(V3Size.iconMd),
             )
         } else {
-            Spacer(Modifier.width(Sizes.iconLg))
+            Spacer(Modifier.width(V3Size.iconMd))
         }
     }
 }
@@ -311,9 +306,9 @@ fun PickerArrow(expanded: Boolean) {
     Icon(
         imageVector = Icons.Filled.KeyboardArrowDown,
         contentDescription = if (expanded) "收起" else "展开",
-        tint = BiliTheme.colors.textTertiary,
+        tint = BiliV3.colors.labelTertiary,
         modifier = Modifier
-            .size(Sizes.iconLg)
+            .size(V3Size.iconMd)
             .rotate(if (expanded) 180f else 0f),
     )
 }

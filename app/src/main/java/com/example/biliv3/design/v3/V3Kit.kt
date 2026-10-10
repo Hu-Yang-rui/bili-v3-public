@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * **BiliV3 组件库 v3 —— 非玻璃内容原语**。
@@ -157,7 +158,28 @@ fun V3SectionTitle(
             fontWeight = if (prominent) FontWeight.Bold else FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
+            // 🔴 必须是 `weight(1f)`，**不能**是 `weight(1f, fill = false)`。
+            //
+            // ## 这个 `fill = false` 是个真 bug（实测发现）
+            //
+            // `fill = false` 让标题只占**自己需要**的宽度，于是 `trailing`
+            // 紧贴在标题右边而不是靠到行尾：
+            //
+            // ```
+            // 搜索历史  清空                          ← 实测截图里的样子（错）
+            // 搜索历史                        清空    ← 应有的样子
+            // ```
+            //
+            // 而 `trailing` 的 KDoc 写的是「**右侧的**次要动作（如"查看全部"）」
+            // —— 语义就是要靠右。`fill = false` 把"右侧"变成了"旁边"。
+            //
+            // ⚠️ 当初大概是想"没有 trailing 时别让标题撑满"。
+            //    但 `weight(1f)` 在**没有** trailing 时视觉完全一样
+            //    （Text 左对齐、占满宽度），所以那个顾虑不成立。
+            //
+            // 判据：**只要一个槽位叫"右侧动作"，它就必须靠右** ——
+            //      用 `weight(1f)` 把标题撑开，而不是让标题按内容收缩。
+            modifier = Modifier.weight(1f),
         )
         if (trailing != null) {
             Spacer(Modifier.width(V3Space.xs))

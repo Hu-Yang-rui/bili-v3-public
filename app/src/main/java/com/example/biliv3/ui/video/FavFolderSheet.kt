@@ -40,12 +40,15 @@ import com.example.biliv3.data.FavFolder
 import com.example.biliv3.data.model.CoverUrls
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.TerminalLoadingState
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
+import com.example.biliv3.design.v3.v3GlassSurface
+import com.example.biliv3.design.v3.V3Glass
 
 /**
  * 收藏夹选择面板（v1.6.7）。
@@ -91,7 +94,7 @@ fun FavFolderSheet(
     onDismiss: () -> Unit,
     onToggle: (Long) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -103,15 +106,29 @@ fun FavFolderSheet(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.scrimPanel)
+                .background(colors.scrim)
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.BottomCenter,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
-                    .background(colors.surfaceElevated)
+                    // 🔴 v3：面板材质从**实心深灰**改为 Liquid Glass。
+                    //
+                    // ⚠️ 用 `Modifier.v3GlassSurface` 而不是 `GlassSurface` 容器 ——
+                    //    前者是**一个表达式替换**，**不动任何花括号**。
+                    //    容器形式要在几百行深的树里配一对括号，实测改坏过两次。
+                    //
+                    // 判据（§7.37 坑 219）：**模糊玻璃适合「大面积、静态、
+                    // 内容之上」的浮层** —— 弹层三条全中。
+                    // ⚠️ 只圆上两角（底部贴屏幕边），与 `GlassSheet` 一致。
+                    .v3GlassSurface(
+                        shape = RoundedCornerShape(
+                            topStart = V3Radius.sheet,
+                            topEnd = V3Radius.sheet,
+                        ),
+                        level = V3Glass.Level.UltraThin,
+                    )
                     .clickable(enabled = false) {}
                     .navigationBarsPadding()
                     .heightIn(max = SHEET_MAX_H),
@@ -120,29 +137,27 @@ fun FavFolderSheet(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Space.x4, vertical = Space.x3),
+                        .padding(horizontal = V3Space.md, vertical = V3Space.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "收藏到收藏夹",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontSize = FontSize.titleMd,
+                        style = V3Type.subheadline.copy(
                             fontWeight = FontWeight.SemiBold,
-                            color = colors.textPrimary,
+                            color = colors.labelPrimary,
                         ),
                     )
                     Spacer(Modifier.weight(1f))
                     Text(
                         text = "完成",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
+                        style = V3Type.caption1.copy(
                             fontWeight = FontWeight.Medium,
-                            color = colors.textBrandSafe,
+                            color = colors.brandBiliText,
                         ),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.interactive))
+                            .clip(RoundedCornerShape(V3Radius.xs))
                             .clickable(onClick = onDismiss)
-                            .padding(horizontal = Space.x3, vertical = Space.x2),
+                            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                     )
                 }
 
@@ -158,26 +173,22 @@ fun FavFolderSheet(
                     state.error != null && state.folders.isEmpty() -> Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(Space.x4),
+                            .padding(V3Space.md),
                     ) {
                         Text(
                             text = state.error,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = FontSize.body,
-                                lineHeight = FontSize.bodyLine,
-                                color = colors.textSecondarySafe,
+                            style = V3Type.callout.copy(
+                                color = colors.labelSecondary,
                             ),
                         )
                     }
 
                     state.folders.isEmpty() -> Text(
                         text = "还没有收藏夹。可以先在「我的 → 收藏」里创建一个。",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = FontSize.bodySm,
-                            lineHeight = FontSize.bodySmLine,
-                            color = colors.textTertiary,
+                        style = V3Type.footnote.copy(
+                            color = colors.labelTertiary,
                         ),
-                        modifier = Modifier.padding(Space.x4),
+                        modifier = Modifier.padding(V3Space.md),
                     )
 
                     else -> LazyColumn(
@@ -195,15 +206,13 @@ fun FavFolderSheet(
                             item(key = "unknown-hint") {
                                 Text(
                                     text = "⚠️ 无法读取当前收藏状态，下方勾选可能不准确",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontSize = FontSize.badge,
-                                        lineHeight = FontSize.labelLine,
+                                    style = V3Type.caption2.copy(lineHeight = V3Type.caption1.lineHeight,
                                         color = colors.accentCoin,
                                     ),
                                     modifier = Modifier.padding(
-                                        start = Space.x4,
-                                        end = Space.x4,
-                                        top = Space.x3,
+                                        start = V3Space.md,
+                                        end = V3Space.md,
+                                        top = V3Space.sm,
                                     ),
                                 )
                             }
@@ -214,15 +223,13 @@ fun FavFolderSheet(
                             item(key = "err") {
                                 Text(
                                     text = err,
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontSize = FontSize.badge,
-                                        lineHeight = FontSize.labelLine,
+                                    style = V3Type.caption2.copy(lineHeight = V3Type.caption1.lineHeight,
                                         color = colors.stateError,
                                     ),
                                     modifier = Modifier.padding(
-                                        start = Space.x4,
-                                        end = Space.x4,
-                                        top = Space.x3,
+                                        start = V3Space.md,
+                                        end = V3Space.md,
+                                        top = V3Space.sm,
                                     ),
                                 )
                             }
@@ -239,7 +246,7 @@ fun FavFolderSheet(
                     }
                 }
 
-                Spacer(Modifier.height(Space.x2))
+                Spacer(Modifier.height(V3Space.xs))
             }
         }
     }
@@ -264,15 +271,15 @@ private fun FavFolderRow(
     busy: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = Space.minTouchTarget)
+            .heightIn(min = V3Size.touchMin)
             // 写入进行中禁用点击（防连点导致 add/del 乱序）
             .clickable(enabled = !busy, onClick = onClick)
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // ---- 封面 ----
@@ -281,10 +288,10 @@ private fun FavFolderRow(
             contentDescription = null,
             modifier = Modifier
                 .size(FOLDER_COVER)
-                .clip(RoundedCornerShape(Radius.badge))
-                .background(colors.bgHover),
+                .clip(RoundedCornerShape(V3Radius.xs))
+                .background(colors.bgTertiary),
         )
-        Spacer(Modifier.width(Space.x3))
+        Spacer(Modifier.width(V3Space.sm))
 
         // ---- 名称 + 数量 ----
         Column(modifier = Modifier.weight(1f)) {
@@ -294,17 +301,16 @@ private fun FavFolderRow(
                     Icon(
                         imageVector = Icons.Outlined.Lock,
                         contentDescription = "私密收藏夹",
-                        tint = colors.textTertiary,
-                        modifier = Modifier.size(Sizes.iconSm),
+                        tint = colors.labelTertiary,
+                        modifier = Modifier.size(V3Size.iconXs),
                     )
-                    Spacer(Modifier.width(Space.x1))
+                    Spacer(Modifier.width(V3Space.xxs))
                 }
                 Text(
                     text = folder.title.ifEmpty { "未命名收藏夹" },
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
+                    style = V3Type.callout.copy(
                         fontWeight = if (checked) FontWeight.Medium else FontWeight.Normal,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -313,26 +319,25 @@ private fun FavFolderRow(
             Spacer(Modifier.height(1.dp))
             Text(
                 text = if (busy) "正在保存…" else "${folder.mediaCount} 个内容",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = if (busy) colors.textBrandSafe else colors.textTertiary,
+                style = V3Type.caption2.copy(
+                    color = if (busy) colors.brandBiliText else colors.labelTertiary,
                 ),
                 maxLines = 1,
             )
         }
 
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
 
         // ---- 勾选圈 ----
         Box(
             modifier = Modifier
-                .size(Sizes.iconXl)
+                .size(V3Size.iconLg)
                 .clip(CircleShape)
                 .then(
                     if (checked) {
-                        Modifier.background(colors.brandPrimary)
+                        Modifier.background(colors.brand)
                     } else {
-                        Modifier.border(1.5.dp, colors.borderStrong, CircleShape)
+                        Modifier.border(1.5.dp, colors.separatorOpaque, CircleShape)
                     },
                 ),
             contentAlignment = Alignment.Center,
@@ -341,8 +346,8 @@ private fun FavFolderRow(
                 Icon(
                     imageVector = Icons.Filled.Check,
                     contentDescription = "已收藏",
-                    tint = colors.textOnBrand,
-                    modifier = Modifier.size(Sizes.iconSm),
+                    tint = colors.labelOnBrand,
+                    modifier = Modifier.size(V3Size.iconXs),
                 )
             }
         }

@@ -46,13 +46,14 @@ import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.band
 import com.example.biliv3.design.BandLevel
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 番剧 / 影视索引页。
@@ -90,12 +91,12 @@ fun BangumiScreen(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 顶栏 ----
         // 通栏顶栏：不再是卡片，内容直接排。
@@ -107,13 +108,13 @@ fun BangumiScreen(
                 .fillMaxWidth()
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -121,30 +122,29 @@ fun BangumiScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = "番剧",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
         }
 
         // ---- 类型 Tab ----
-        // ⚠️ 用 `band()` 而不是 `.background(colors.bgCard)`（v1.2.4 统一）。
+        // ⚠️ 用 `band()` 而不是 `.background(colors.bgSecondary)`（v1.2.4 统一）。
         // 与 RankingScreen 的同一结构保持一致 —— 这是全宽直角的分区带。
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .band(BandLevel.Raised),
-            contentPadding = PaddingValues(horizontal = Space.x4),
-            horizontalArrangement = Arrangement.spacedBy(Space.x5),
+            contentPadding = PaddingValues(horizontal = V3Space.md),
+            horizontalArrangement = Arrangement.spacedBy(V3Space.lg),
         ) {
             items(tabs, key = { it.seasonType }) { tab ->
                 val selected = tab.seasonType == selectedType
@@ -152,23 +152,22 @@ fun BangumiScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .clickable { onSelectTab(tab.seasonType) }
-                        .padding(vertical = Space.x3),
+                        .padding(vertical = V3Space.sm),
                 ) {
                     Text(
                         text = tab.name,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.body,
+                        style = V3Type.callout.copy(
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (selected) colors.textPrimary else colors.textSecondarySafe,
+                            color = if (selected) colors.labelPrimary else colors.labelSecondary,
                         ),
                     )
-                    Spacer(Modifier.height(Space.x1))
+                    Spacer(Modifier.height(V3Space.xxs))
                     Box(
                         modifier = Modifier
                             .width(20.dp)
-                            .height(Space.tabIndicator)
-                            .clip(RoundedCornerShape(Radius.badge))
-                            .background(if (selected) colors.brandPrimary else Color.Transparent),
+                            .height(V3Space.tabIndicator)
+                            .clip(RoundedCornerShape(V3Radius.xs))
+                            .background(if (selected) colors.brand else Color.Transparent),
                     )
                 }
             }
@@ -204,13 +203,13 @@ fun BangumiScreen(
             else -> LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 contentPadding = PaddingValues(
-                    start = Space.x4,
-                    end = Space.x4,
-                    top = Space.x3,
-                    bottom = Space.x8,
+                    start = V3Space.md,
+                    end = V3Space.md,
+                    top = V3Space.sm,
+                    bottom = V3Space.xxl,
                 ),
-                horizontalArrangement = Arrangement.spacedBy(Space.x3),
-                verticalArrangement = Arrangement.spacedBy(Space.x4),
+                horizontalArrangement = Arrangement.spacedBy(V3Space.sm),
+                verticalArrangement = Arrangement.spacedBy(V3Space.md),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 items(items, key = { it.seasonId }, contentType = { "bangumi" }) { item ->
@@ -224,7 +223,7 @@ fun BangumiScreen(
 /** 番剧卡片：竖版封面 + 评分角标 + 标题 + 更新状态。 */
 @Composable
 private fun BangumiCard(item: BangumiItem, onClick: () -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = Modifier
@@ -251,15 +250,14 @@ private fun BangumiCard(item: BangumiItem, onClick: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(Space.compactHorizontal)
+                        .padding(V3Space.xs)
                         // 压在封面上的小标签用直角（同 DurationBadge）
-                        .background(colors.overlayCover)
-                        .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
+                        .background(colors.overlay)
+                        .padding(horizontal = V3Space.tagHorizontal, vertical = V3Space.tagVertical),
                 ) {
                     Text(
                         text = "%.1f".format(item.score),
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
+                        style = V3Type.caption2.copy(
                             color = colors.rankThird,
                             fontWeight = FontWeight.Medium,
                         ),
@@ -268,14 +266,12 @@ private fun BangumiCard(item: BangumiItem, onClick: () -> Unit) {
             }
         }
 
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
 
         Text(
             text = item.title,
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = FontSize.bodySm,
-                lineHeight = FontSize.bodySmLine,
-                color = colors.textPrimary,
+            style = V3Type.footnote.copy(
+                color = colors.labelPrimary,
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -284,12 +280,11 @@ private fun BangumiCard(item: BangumiItem, onClick: () -> Unit) {
 
         // 更新状态（如「全8话」）
         if (item.indexShow.isNotEmpty()) {
-            Spacer(Modifier.height(Space.micro))
+            Spacer(Modifier.height(V3Space.hairline))
             Text(
                 text = item.indexShow,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption2.copy(
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

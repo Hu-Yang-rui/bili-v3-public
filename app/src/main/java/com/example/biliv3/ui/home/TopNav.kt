@@ -42,10 +42,6 @@ import com.example.biliv3.design.rule
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import androidx.compose.ui.graphics.Color
 import com.example.biliv3.design.v3.BiliV3
 import com.example.biliv3.design.v3.V3Radius
@@ -101,7 +97,7 @@ fun TopNav(
      */
     onNavItemClick: (String) -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     val height = when (windowSize) {
         WindowSize.Desktop -> V3Size.topBar
@@ -173,9 +169,9 @@ fun TopNav(
 
 /** 页面水平内边距按断点取值。 */
 fun pagePaddingFor(windowSize: WindowSize) = when (windowSize) {
-    WindowSize.Desktop -> Space.pageDesktop
-    WindowSize.Tablet -> Space.pageTablet
-    WindowSize.Mobile -> Space.pageMobile
+    WindowSize.Desktop -> V3Space.xl
+    WindowSize.Tablet -> V3Space.lg
+    WindowSize.Mobile -> V3Space.contentMargin
 }
 
 /**
@@ -214,9 +210,9 @@ fun gridRowSpacingFor(windowSize: WindowSize) = when (windowSize) {
 
 /** 区块纵向间距按断点取值。 */
 fun sectionSpacingFor(windowSize: WindowSize) = when (windowSize) {
-    WindowSize.Desktop -> Space.sectionDesktop
-    WindowSize.Tablet -> Space.sectionTablet
-    WindowSize.Mobile -> Space.sectionMobile
+    WindowSize.Desktop -> V3Space.xxl
+    WindowSize.Tablet -> V3Space.lg
+    WindowSize.Mobile -> V3Space.md
 }
 
 /** 导航项列表。 */
@@ -225,7 +221,7 @@ private fun NavLinks(
     windowSize: WindowSize,
     onNavItemClick: (String) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // 平板收纳"会员购"
     val items = if (windowSize == WindowSize.Tablet) {
@@ -236,7 +232,7 @@ private fun NavLinks(
 
     var selected by remember { mutableStateOf("首页") }
 
-    Row(horizontalArrangement = Arrangement.spacedBy(Space.x5)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(V3Space.lg)) {
         items.forEach { label ->
             val isSelected = label == selected
             val interaction = remember { MutableInteractionSource() }
@@ -244,7 +240,7 @@ private fun NavLinks(
 
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.badge))
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     .clickable(
                         interactionSource = interaction,
                         indication = null,
@@ -257,14 +253,13 @@ private fun NavLinks(
             ) {
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
+                    style = V3Type.callout.copy(
                         // hover / 选中都用"文字安全粉"（5.1:1），
                         // 品牌粉直接做文字不达标
                         color = if (isSelected || hovered) {
-                            colors.textBrandSafe
+                            colors.brandBiliText
                         } else {
-                            colors.textPrimary
+                            colors.labelPrimary
                         },
                         fontWeight = if (isSelected) {
                             FontWeight.SemiBold

@@ -50,14 +50,15 @@ import coil.compose.AsyncImage
 import com.example.biliv3.data.auth.UserInfo
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.ruleTop
-import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
 import com.example.biliv3.ui.component.BrandButtonVariant
 import com.example.biliv3.ui.component.ErrorState
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 「我的」页。
@@ -80,12 +81,12 @@ fun ProfileScreen(
     viewModel: ProfileViewModel,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase)
+            .background(colors.bgPrimary)
             .windowInsetsPadding(WindowInsets.statusBars),
     ) {
         when (val s = state) {
@@ -94,9 +95,9 @@ fun ProfileScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(
-                    color = colors.brandPrimary,
-                    strokeWidth = Space.trackHeight,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    color = colors.brand,
+                    strokeWidth = V3Space.progressTrack,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
 
@@ -129,7 +130,7 @@ private fun GuestPanel(
     onLoginClick: () -> Unit,
     onNavigate: (String) -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = Modifier
@@ -140,35 +141,33 @@ private fun GuestPanel(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = Space.x4, end = Space.x4, top = Rhythm.between),
+                .padding(start = V3Space.md, end = V3Space.md, top = Rhythm.between),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Sizes.upAvatar + Space.x8)
+                    .size(V3Size.avatarXs + V3Space.xxl)
                     .clip(CircleShape)
-                    .background(colors.bgHover),
+                    .background(colors.bgTertiary),
             )
-            Spacer(Modifier.width(Space.x3))
+            Spacer(Modifier.width(V3Space.sm))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "未登录",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = FontSize.titleMd,
+                    style = V3Type.subheadline.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
                 )
-                Spacer(Modifier.height(Space.micro))
+                Spacer(Modifier.height(V3Space.hairline))
                 Text(
                     text = "登录后可同步历史与收藏",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
             }
-            Spacer(Modifier.width(Space.x3))
+            Spacer(Modifier.width(V3Space.sm))
             BrandButton(
                 label = "登录",
                 onClick = onLoginClick,
@@ -234,16 +233,15 @@ private fun GuestPanel(
             onNavigate = onNavigate,
         )
 
-        Spacer(Modifier.height(Space.x6))
+        Spacer(Modifier.height(V3Space.xl))
         Text(
             text = "第三方客户端 · 仅供个人学习自用",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
-                color = colors.textTertiary,
+            style = V3Type.caption1.copy(
+                color = colors.labelTertiary,
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Space.x4),
+                .padding(horizontal = V3Space.md),
         )
     }
 }
@@ -255,7 +253,7 @@ private fun LoggedInPanel(
     onLogout: () -> Unit,
     onNavigate: (String) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = Modifier
@@ -266,7 +264,7 @@ private fun LoggedInPanel(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = Space.x4, end = Space.x4, top = Rhythm.between),
+                .padding(start = V3Space.md, end = V3Space.md, top = Rhythm.between),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AsyncImage(
@@ -274,28 +272,26 @@ private fun LoggedInPanel(
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(Sizes.upAvatar + Space.x8)
+                    .size(V3Size.avatarXs + V3Space.xxl)
                     .clip(CircleShape)
                     .background(colors.avatarPlaceholder),
             )
-            Spacer(Modifier.width(Space.x3))
+            Spacer(Modifier.width(V3Space.sm))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = user.name.ifEmpty { "已登录" },
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = FontSize.titleMd,
+                    style = V3Type.subheadline.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(Space.micro))
+                Spacer(Modifier.height(V3Space.hairline))
                 Text(
                     text = "UID ${user.mid}",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
             }
@@ -327,6 +323,30 @@ private fun LoggedInPanel(
                 // 「查成分」同样不依赖登录态（第三方 aicu 聚合），
                 // 但已登录用户更可能用它查别人，所以两处都放。
                 Entry("查成分", Icons.AutoMirrored.Outlined.ManageSearch, "aicu"),
+                // 🔴 v3：**播放队列 / 插件中心** —— 已登录侧此前漏了两个入口。
+                //
+                // ## 这是「入口只加在一处」的真实事故
+                //
+                // 这两个入口**只写在 `GuestPanel` 里**（未登录那一份列表），
+                // 而已登录走的是 `LoggedInPanel` 的**另一份列表** ——
+                // 于是登录之后「播放队列」和「插件中心」**从 UI 上消失了**。
+                //
+                // 实测证据（模拟器 UI dump，已登录态）：
+                // 可见条目依次是 历史记录 / 我的收藏 / 稍后再看 / 特别关注 /
+                // 竖屏模式 / 离线缓存 / 查成分 / 设置 / 切换账号 / 退出登录 ——
+                // **没有播放队列，也没有插件中心**。
+                //
+                // 两者都不依赖登录态（队列是本地状态、插件是本地解析），
+                // 所以「已登录看不到」纯属漏加，不是有意隐藏。
+                //
+                // 🔴 **判据**：**同一份入口清单如果被抄成两份，
+                // 就一定会漂移** —— 本项目已因同类问题出过
+                // 「设置页 0.6.1 而 versionName 0.6.4」。
+                // ⚠️ 真正该做的是把这份清单抽成常量（见下方 TODO），
+                //    但本轮先补齐条目、不改变现有结构。
+                // TODO：把 Guest/LoggedIn 两份列表合并为一个数据源。
+                Entry("播放队列", Icons.AutoMirrored.Outlined.QueueMusic, "queue"),
+                Entry("插件中心", Icons.Outlined.Extension, "plugins"),
             ),
             enabled = true,
             onNavigate = onNavigate,
@@ -344,15 +364,15 @@ private fun LoggedInPanel(
             onNavigate = onNavigate,
         )
 
-        Spacer(Modifier.height(Space.x6))
-        Box(modifier = Modifier.padding(horizontal = Space.x4)) {
+        Spacer(Modifier.height(V3Space.xl))
+        Box(modifier = Modifier.padding(horizontal = V3Space.md)) {
             BrandButton(
                 label = "退出登录",
                 onClick = onLogout,
                 variant = BrandButtonVariant.Outline,
             )
         }
-        Spacer(Modifier.height(Space.x6))
+        Spacer(Modifier.height(V3Space.xl))
     }
 }
 
@@ -379,7 +399,7 @@ private fun EntryGroup(
     enabled: Boolean,
     onNavigate: (String) -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = Modifier
@@ -400,40 +420,38 @@ private fun EntryGroup(
                         entry.route?.let(onNavigate)
                     }
                     // 组内间距 + 余量，保证行高 ≥ 48dp 触摸目标
-                    .padding(horizontal = Space.x4, vertical = Rhythm.inGroup + Space.x2),
+                    .padding(horizontal = V3Space.md, vertical = Rhythm.inGroup + V3Space.xs),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start,
             ) {
                 Icon(
                     imageVector = entry.icon,
                     contentDescription = null,
-                    tint = if (enabled) colors.textSecondarySafe else colors.textTertiary,
-                    modifier = Modifier.size(Sizes.iconLg),
+                    tint = if (enabled) colors.labelSecondary else colors.labelTertiary,
+                    modifier = Modifier.size(V3Size.iconMd),
                 )
-                Spacer(Modifier.width(Space.x3))
+                Spacer(Modifier.width(V3Space.sm))
                 Text(
                     text = entry.label,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
-                        color = if (enabled) colors.textPrimary else colors.textTertiary,
+                    style = V3Type.callout.copy(
+                        color = if (enabled) colors.labelPrimary else colors.labelTertiary,
                     ),
                     modifier = Modifier.weight(1f),
                 )
                 if (!enabled) {
                     Text(
                         text = "登录后可用",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
-                            color = colors.textTertiary,
+                        style = V3Type.caption1.copy(
+                            color = colors.labelTertiary,
                         ),
                     )
                 }
-                Spacer(Modifier.width(Space.x2))
+                Spacer(Modifier.width(V3Space.xs))
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = colors.textTertiary,
-                    modifier = Modifier.size(Sizes.iconLg),
+                    tint = colors.labelTertiary,
+                    modifier = Modifier.size(V3Size.iconMd),
                 )
             }
         }

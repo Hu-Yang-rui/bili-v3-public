@@ -65,12 +65,13 @@ import com.example.biliv3.R
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.DeviceTier
 import com.example.biliv3.design.LocalDeviceTier
-import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Motion
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import kotlinx.coroutines.launch
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 投币确认弹窗。
@@ -124,7 +125,7 @@ fun CoinDialog(
     onDismiss: () -> Unit,
     onConfirm: (count: Int, alsoLike: Boolean) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val tier = LocalDeviceTier.current
     // 低端机不做悬浮特效（每帧重绘的粒子/波纹），语义不变
     val canAnimate = tier != DeviceTier.Low
@@ -183,21 +184,21 @@ fun CoinDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.scrimPanel)
+                .background(colors.scrim)
                 // 点遮罩 = 取消（投币动画播放中不响应，避免"投到一半被取消"）
                 .clickable(enabled = !throwing, onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
             Column(
                 modifier = Modifier
-                    .padding(horizontal = Space.x6)
+                    .padding(horizontal = V3Space.xl)
                     .fillMaxWidth()
                     // 🔴 v1.5.3：**透明轻量浮层**（用户要求"保留视频背景"）
                     //
                     // 用不透明面板会把正在投币的那个视频糊掉。
                     // 与 §5.1「无卡片」一致：投币面板是**操作**不是内容容器。
                     .clickable(enabled = false) {}
-                    .padding(vertical = Space.x5),
+                    .padding(vertical = V3Space.lg),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // ---- 硬币选择：可点 + 可左右滑 ----
@@ -210,7 +211,7 @@ fun CoinDialog(
                     },
                 )
 
-                Spacer(Modifier.height(Space.x2))
+                Spacer(Modifier.height(V3Space.xs))
 
                 // 页码指示点（滑动的可发现性：没有它用户不知道还能滑）
                 PageDots(
@@ -218,7 +219,7 @@ fun CoinDialog(
                     current = pagerState.currentPage,
                 )
 
-                Spacer(Modifier.height(Space.x4))
+                Spacer(Modifier.height(V3Space.md))
 
                 // ---- 女仆装小人 + 浮空硬币 + 取币投掷动画 ----
                 MaidCoinScene(
@@ -230,92 +231,88 @@ fun CoinDialog(
                         .height(SCENE_H),
                 )
 
-                Spacer(Modifier.height(Space.x2))
+                Spacer(Modifier.height(V3Space.xs))
 
                 Text(
                     text = if (throwing) "投币中…" else "将投出 $selected 枚硬币",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
+                    style = V3Type.caption1.copy(
                         fontWeight = FontWeight.Medium,
-                        color = colors.accentCoinBright,
+                        color = colors.accentCoin,
                     ),
                 )
 
-                Spacer(Modifier.height(Space.x4))
+                Spacer(Modifier.height(V3Space.md))
 
                 // ---- 同时点赞 ----
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.interactive))
+                        .clip(RoundedCornerShape(V3Radius.xs))
                         .clickable(enabled = !throwing) { alsoLike = !alsoLike }
-                        .padding(horizontal = Space.x2, vertical = Space.x1),
+                        .padding(horizontal = V3Space.xs, vertical = V3Space.xxs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CheckBoxGlyph(checked = alsoLike)
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                     Text(
                         text = "同时点赞内容",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
-                            color = colors.textPrimary,
+                        style = V3Type.caption1.copy(
+                            color = colors.labelPrimary,
                         ),
                     )
                 }
 
                 // ---- 余额：未知时整行不渲染（显示 0 会误导）----
                 if (coinBalance != null) {
-                    Spacer(Modifier.height(Space.x2))
+                    Spacer(Modifier.height(V3Space.xs))
                     Text(
                         text = "硬币余额：${formatCoinBalance(coinBalance)}",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
-                            color = colors.textSecondarySafe,
+                        style = V3Type.caption2.copy(
+                            color = colors.labelSecondary,
                         ),
                     )
                 }
 
-                Spacer(Modifier.height(Space.x4))
+                Spacer(Modifier.height(V3Space.md))
 
                 // ---- 主操作：确认投币 ----
                 // 只有这里才真正提交（提交发生在动画播完之后）
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Space.x4)
+                        .padding(horizontal = V3Space.md)
                         .height(CONFIRM_BUTTON_H)
-                        .clip(RoundedCornerShape(Radius.interactive))
+                        .clip(RoundedCornerShape(V3Radius.xs))
                         .background(
-                            if (throwing) colors.accentCoin else colors.accentCoinBright,
+                            if (throwing) colors.accentCoin else colors.accentCoin,
                         )
                         .clickable(enabled = !throwing) { throwing = true },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = if (throwing) "投出中…" else "确认投币",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = FontSize.body,
+                        style = V3Type.callout.copy(
                             fontWeight = FontWeight.SemiBold,
                             color = colors.onAccentCoin,
                         ),
                     )
                 }
 
-                Spacer(Modifier.height(Space.x3))
+                Spacer(Modifier.height(V3Space.sm))
 
                 // ---- 取消（✕）----
                 Box(
                     modifier = Modifier
                         .size(CLOSE_BUTTON)
                         .clip(CircleShape)
-                        .background(colors.bgHover)
+                        .background(colors.bgTertiary)
                         .clickable(enabled = !throwing, onClick = onDismiss),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Close,
                         contentDescription = "取消投币",
-                        tint = colors.textPrimary,
-                        modifier = Modifier.size(Sizes.iconXl),
+                        tint = colors.labelPrimary,
+                        modifier = Modifier.size(V3Size.iconLg),
                     )
                 }
             }
@@ -352,9 +349,9 @@ private fun CoinPager(
     HorizontalPager(
         state = pagerState,
         // 一屏只显示一页，两侧留出相邻页的"边缘"，让用户看得出还能滑
-        pageSpacing = Space.x4,
+        pageSpacing = V3Space.md,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
-            horizontal = Space.x10,
+            horizontal = V3Space.xxxl,
         ),
         userScrollEnabled = enabled,
         modifier = Modifier
@@ -374,15 +371,15 @@ private fun CoinPager(
 /** 页码指示点：让"可以左右滑"这件事可被发现。 */
 @Composable
 private fun PageDots(count: Int, current: Int) {
-    val colors = BiliTheme.colors
-    Row(horizontalArrangement = Arrangement.spacedBy(Space.x1)) {
+    val colors = BiliV3.colors
+    Row(horizontalArrangement = Arrangement.spacedBy(V3Space.xxs)) {
         repeat(count) { i ->
             val on = i == current
             Box(
                 modifier = Modifier
-                    .size(if (on) Sizes.dotLg else Sizes.dotSm)
+                    .size(if (on) V3Size.dotLg else V3Size.dotSm)
                     .clip(CircleShape)
-                    .background(if (on) colors.accentCoinBright else colors.borderStrong),
+                    .background(if (on) colors.accentCoin else colors.separatorOpaque),
             )
         }
     }
@@ -433,7 +430,7 @@ private fun MaidCoinScene(
     canAnimate: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // 静止态的持续脉动（只在没有投币动画时跑，省一次每帧重组）
     val idlePulse = if (canAnimate && elapsedMs < 0L) {
@@ -508,7 +505,7 @@ private fun MaidCoinScene(
                 radius = coinR,
                 intensity = fx,
                 phase = idlePulse,
-                color = colors.accentCoinBright,
+                color = colors.accentCoin,
                 withRings = canAnimate,
             )
         }
@@ -557,9 +554,9 @@ private fun MaidCoinScene(
                 shoulderY = shoulderY,
                 handY = handY,
                 headR = headR,
-                bodyColor = colors.textSecondarySafe,
-                clothColor = colors.bgHover,
-                lineColor = colors.borderStrong,
+                bodyColor = colors.labelSecondary,
+                clothColor = colors.bgTertiary,
+                lineColor = colors.separatorOpaque,
                 strokePx = STROKE.toPx(),
             )
         }
@@ -575,7 +572,7 @@ private fun MaidCoinScene(
                     cy = coinY,
                     radius = coinR * 0.62f,
                     alpha = coinAlpha,
-                    face = colors.accentCoinBright,
+                    face = colors.accentCoin,
                     mark = colors.onAccentCoin,
                 )
             }
@@ -884,9 +881,9 @@ private fun CoinOptionCard(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     // 官方配色：暖棕底 + 白字。选中态更亮、更大、带金色描边。
-    val base = if (selected) colors.accentCoinBright else colors.accentCoin
+    val base = if (selected) colors.accentCoin else colors.accentCoin
     val scale by animateFloatAsState(
         targetValue = if (selected) 1f else 0.9f,
         animationSpec = tween(Motion.FADE_MS, easing = Motion.standard),
@@ -896,13 +893,13 @@ private fun CoinOptionCard(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = Space.x2, vertical = Space.x1)
+            .padding(horizontal = V3Space.xs, vertical = V3Space.xxs)
             // 币数是**可点选的交互元素**（§5.1 硬规则 2：交互元素 4dp）。
-            .clip(RoundedCornerShape(Radius.interactive))
+            .clip(RoundedCornerShape(V3Radius.xs))
             .background(base.copy(alpha = if (selected) 1f else 0.72f))
             .then(
                 if (selected) {
-                    Modifier.androidxBorder(colors.accentCoinBright)
+                    Modifier.androidxBorder(colors.accentCoin)
                 } else {
                     Modifier
                 },
@@ -919,13 +916,13 @@ private fun CoinOptionCard(
                 imageVector = Icons.Filled.MonetizationOn,
                 contentDescription = null,
                 tint = colors.onAccentCoin,
-                modifier = Modifier.size(if (selected) Sizes.iconXl + Space.x2 else Sizes.iconXl),
+                modifier = Modifier.size(if (selected) V3Size.iconLg + V3Space.xs else V3Size.iconLg),
             )
-            Spacer(Modifier.height(Space.x1))
+            Spacer(Modifier.height(V3Space.xxs))
             Text(
                 text = "$count 硬币",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = if (selected) FontSize.body else FontSize.label,
+                style = V3Type.footnote.copy(
+                    fontSize = if (selected) V3Type.callout.fontSize else V3Type.caption1.fontSize,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.onAccentCoin,
                 ),
@@ -941,7 +938,7 @@ private fun Modifier.androidxBorder(color: Color): Modifier =
     border(
         width = 1.dp,
         color = color,
-        shape = RoundedCornerShape(Radius.interactive),
+        shape = RoundedCornerShape(V3Radius.xs),
     )
 
 /**
@@ -952,19 +949,18 @@ private fun Modifier.androidxBorder(color: Color): Modifier =
  */
 @Composable
 private fun CheckBoxGlyph(checked: Boolean) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Box(
         modifier = Modifier
             .size(CHECKBOX_SIZE)
-            .clip(RoundedCornerShape(Radius.control))
-            .background(if (checked) colors.accentCoinBright else colors.borderStrong),
+            .clip(RoundedCornerShape(V3Radius.sm))
+            .background(if (checked) colors.accentCoin else colors.separatorOpaque),
         contentAlignment = Alignment.Center,
     ) {
         if (checked) {
             Text(
                 text = "✓",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
+                style = V3Type.caption2.copy(
                     fontWeight = FontWeight.Bold,
                     color = colors.onAccentCoin,
                 ),

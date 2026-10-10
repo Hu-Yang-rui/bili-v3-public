@@ -40,12 +40,12 @@ import com.example.biliv3.design.rule
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.v3.GlassNavBar
 import com.example.biliv3.design.v3.GlassNavItem
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 页脚。
@@ -68,17 +68,17 @@ fun Footer(
     modifier: Modifier = Modifier,
     onOpenLink: (String) -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     val links = listOf("友情链接", "开源社区", "关于我们", "反馈建议")
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.bgBase)
+            .background(colors.bgPrimary)
             .padding(
                 horizontal = pagePaddingFor(windowSize),
-                vertical = Space.x8,
+                vertical = V3Space.xxl,
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -92,53 +92,52 @@ fun Footer(
         // （本项目不内嵌 WebView 浏览主站，那会变成"套壳浏览器"）。
         if (windowSize != WindowSize.Mobile) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(Space.x4),
+                horizontalArrangement = Arrangement.spacedBy(V3Space.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 links.forEachIndexed { i, label ->
                     Text(
                         text = label,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
-                            color = colors.textSecondarySafe,
+                        style = V3Type.caption1.copy(
+                            color = colors.labelSecondary,
                         ),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.badge))
+                            .clip(RoundedCornerShape(V3Radius.xs))
                             .clickable { onOpenLink(label) }
-                            .padding(horizontal = Space.x1, vertical = Space.compactVertical),
+                            .padding(horizontal = V3Space.xxs, vertical = V3Space.hairline),
                     )
                     if (i != links.lastIndex) {
                         Text(
                             text = "·",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                color = colors.textTertiary,
+                            style = V3Type.footnote.copy(
+                                color = colors.labelTertiary,
                             ),
                         )
                     }
                 }
             }
-            Spacer(Modifier.height(Space.x4))
+            Spacer(Modifier.height(V3Space.md))
         }
 
         // ---- 版权 ----
         Text(
             text = "© 2026 BiliV3 · 仅供个人学习自用，不公开分发",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
-                color = colors.textSecondary,
+            style = V3Type.caption1.copy(
+                color = colors.labelSecondary,
             ),
             textAlign = TextAlign.Center,
         )
 
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
 
         // ---- 备案 ----
         Text(
             text = "备案号 XXXXXXXXXX",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 11.sp,
-                color = colors.textTertiary,
-            ),
+            // 11sp 正好是 v3 的 caption2 档 —— 改用语义令牌而不是
+            // `MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp)`
+            // （后者既走 M3 槽位、又覆盖字号，槽位名与结果无关）
+            style = V3Type.caption2,
+            color = colors.labelTertiary,
             textAlign = TextAlign.Center,
         )
     }

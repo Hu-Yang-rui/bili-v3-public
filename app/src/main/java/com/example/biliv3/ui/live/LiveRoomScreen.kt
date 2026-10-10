@@ -57,12 +57,8 @@ import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
 import com.example.biliv3.ui.component.BrandButtonVariant
 import com.example.biliv3.ui.component.EmptyState
@@ -70,6 +66,11 @@ import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.component.TerminalLoadingState
 import com.example.biliv3.ui.video.PlayerSurfaceBinding
 import com.example.biliv3.ui.video.attachPlayerSurface
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 直播间页（**应用内播放**，v1.6.3）。
@@ -113,7 +114,7 @@ fun LiveRoomScreen(
     modifier: Modifier = Modifier,
     viewModel: LiveRoomViewModel,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val stream by viewModel.stream.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
@@ -207,7 +208,7 @@ fun LiveRoomScreen(
             // 与 `CommentInputSheet` 踩过的坑同源：IME 相关的
             // padding 必须加在**真正被压缩的那一层**。
             .imePadding()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 顶栏 ----
         Row(
@@ -215,13 +216,13 @@ fun LiveRoomScreen(
                 .fillMaxWidth()
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -229,17 +230,16 @@ fun LiveRoomScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = room.title.ifEmpty { "直播间" },
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -251,7 +251,7 @@ fun LiveRoomScreen(
             // 长时间挂着断了之后需要一个明确的重连入口。
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable { viewModel.reload() },
                 contentAlignment = Alignment.Center,
@@ -259,8 +259,8 @@ fun LiveRoomScreen(
                 Icon(
                     imageVector = Icons.Filled.Refresh,
                     contentDescription = "重新取流",
-                    tint = colors.textSecondarySafe,
-                    modifier = Modifier.size(Sizes.iconLg),
+                    tint = colors.labelSecondary,
+                    modifier = Modifier.size(V3Size.iconMd),
                 )
             }
         }
@@ -346,20 +346,19 @@ fun LiveRoomScreen(
                     Row(
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(Space.compactHorizontal)
-                            .clip(RoundedCornerShape(Radius.badge))
+                            .padding(V3Space.xs)
+                            .clip(RoundedCornerShape(V3Radius.xs))
                             .background(colors.stateLive)
                             .padding(
-                                horizontal = Space.tagHorizontal,
-                                vertical = Space.tagVertical,
+                                horizontal = V3Space.tagHorizontal,
+                                vertical = V3Space.tagVertical,
                             ),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = "直播中",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
-                                color = colors.onOverlay,
+                            style = V3Type.caption2.copy(
+                                color = colors.labelOnMedia,
                                 fontWeight = FontWeight.Medium,
                             ),
                         )
@@ -373,8 +372,8 @@ fun LiveRoomScreen(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(
-                        start = Space.x4,
-                        end = Space.x4,
+                        start = V3Space.md,
+                        end = V3Space.md,
                         top = Rhythm.between,
                     ),
             ) {
@@ -384,23 +383,22 @@ fun LiveRoomScreen(
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(Sizes.upAvatar + Space.x8)
+                            .size(V3Size.avatarXs + V3Space.xxl)
                             .clip(CircleShape)
                             .background(colors.avatarPlaceholder),
                     )
-                    Spacer(Modifier.width(Space.x3))
+                    Spacer(Modifier.width(V3Space.sm))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = room.uname,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = FontSize.body,
+                            style = V3Type.callout.copy(
                                 fontWeight = FontWeight.Medium,
-                                color = colors.textPrimary,
+                                color = colors.labelPrimary,
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        Spacer(Modifier.height(Space.micro))
+                        Spacer(Modifier.height(V3Space.hairline))
                         Text(
                             text = buildString {
                                 if (room.online > 0) {
@@ -416,9 +414,8 @@ fun LiveRoomScreen(
                                     append(stream?.qualityLabel)
                                 }
                             },
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.label,
-                                color = colors.textSecondarySafe,
+                            style = V3Type.caption1.copy(
+                                color = colors.labelSecondary,
                             ),
                         )
                     }
@@ -470,7 +467,7 @@ fun LiveRoomScreen(
             onSend = { viewModel.sendDraft() },
             onOpenMemes = { showMemes = true },
             onLoginRequired = onLoginRequired,
-            modifier = Modifier.padding(horizontal = Space.x2),
+            modifier = Modifier.padding(horizontal = V3Space.xs),
         )
 
         // ---- 烂梗库（v1.6.5）----
@@ -598,7 +595,7 @@ fun LiveRoomScreen(
         hostState = snackbar,
         modifier = Modifier
             .align(Alignment.BottomCenter)
-            .padding(bottom = Space.x8),
+            .padding(bottom = V3Space.xxl),
     )
     }   // end Box
 }

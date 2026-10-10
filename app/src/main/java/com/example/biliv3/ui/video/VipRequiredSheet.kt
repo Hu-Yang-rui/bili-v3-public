@@ -30,11 +30,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
+import com.example.biliv3.design.v3.GlassDialog
 
 /**
  * 会员专享提示（**未发版**）。
@@ -75,109 +77,54 @@ fun VipRequiredSheet(
     featureName: String,
     onDismiss: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false,
-        ),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.scrimPanel)
-                .clickable(onClick = onDismiss),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = Space.x4)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(Radius.panel))
-                    // 弹层用 surfaceElevated（比卡片亮一档）—— 深色下分层靠提亮
-                    .background(colors.surfaceElevated)
-                    .clickable(enabled = false) {}
-                    .padding(Space.x4),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Lock,
-                        contentDescription = null,
-                        tint = colors.accentCoin,
-                        modifier = Modifier.size(Sizes.iconLg),
-                    )
-                    Spacer(Modifier.width(Space.x2))
-                    Text(
-                        text = "大会员专享",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontSize = FontSize.titleMd,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colors.textPrimary,
-                        ),
-                    )
-                }
-
-                // 具体能力名（小面积信息，不抢主视觉）
-                if (featureName.isNotEmpty()) {
-                    Spacer(Modifier.height(Space.x1))
-                    Text(
-                        text = featureName,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
-                            color = colors.accentCoin,
-                        ),
-                    )
-                }
-
-                Spacer(Modifier.height(Space.x3))
-
+    // 🔴 v3：改用设计系统的 [GlassDialog]，不再自己拼 Dialog + 圆角容器。
+    //
+    // ## 改之前是什么样（以及为什么不对）
+    //
+    // 手写 `Dialog` + `Column(clip(lg) + background(bgSecondaryElevated))` ——
+    // 一个**实心深灰圆角盒**，看起来像"另一种卡片"。
+    //
+    // ## 为什么弹层该用玻璃（而内容页不该）
+    //
+    // 判据（§7.37 坑 219）：**模糊玻璃适合「大面积、静态、内容之上」的浮层**。
+    // 弹层三条全中：
+    // - **大面积**：占了屏幕中央一大块，模糊半径 3.6dp 的成本摊得开
+    // - **静态**：弹出后不动，不需要每帧重抓背景
+    // - **内容之上**：它确实压在页面内容上面 —— 玻璃"透出底下的内容"
+    //   才有物理意义（这也正是 `GlassDialog` 用 `UltraThin` 的原因）
+    //
+    // ⚠️ 与播放器控件的区别：那些是"小面积 + 压在**动态**视频画面上"，
+    // 所以走扁平（`controlFlat`）。**同一个 App 里两种材质并存是对的**，
+    // 判据是场景而不是"统一用某一种"。
+    GlassDialog(
+        onDismiss = onDismiss,
+        title = "大会员专享",
+        confirmText = "知道了",
+        onConfirm = onDismiss,
+        body = {
+            // 具体能力名（小面积信息，不抢主视觉）
+            if (featureName.isNotEmpty()) {
                 Text(
-                    text = "当前功能需要 Bilibili 大会员权限。",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.bodySm,
-                        lineHeight = FontSize.bodySmLine,
-                        color = colors.textSecondarySafe,
-                    ),
+                    text = featureName,
+                    style = V3Type.caption2,
+                    color = colors.accentCoin,
                 )
-                Spacer(Modifier.height(Space.x1))
-                Text(
-                    text = "当前账号无法使用此功能。",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.bodySm,
-                        lineHeight = FontSize.bodySmLine,
-                        color = colors.textSecondarySafe,
-                    ),
-                )
-
-                Spacer(Modifier.height(Space.x4))
-                RuleLine(color = Rule.subtle)
-                Spacer(Modifier.height(Space.x3))
-
-                // ---- 「知道了」----
-                //
-                // 右对齐的文本按钮，不铺满整行 ——
-                // 与项目其它弹层的次级动作一致。
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    Text(
-                        text = "知道了",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontSize = FontSize.bodySm,
-                            fontWeight = FontWeight.Medium,
-                            color = colors.brandPrimary,
-                        ),
-                        textAlign = TextAlign.End,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.interactive))
-                            .clickable(onClick = onDismiss)
-                            .padding(horizontal = Space.x4, vertical = Space.x2),
-                    )
-                }
+                Spacer(Modifier.height(V3Space.xs))
             }
-        }
-    }
+
+            Text(
+                text = "当前功能需要 Bilibili 大会员权限。",
+                style = V3Type.footnote,
+                color = colors.labelSecondary,
+            )
+            Spacer(Modifier.height(V3Space.xxs))
+            Text(
+                text = "当前账号无法使用此功能。",
+                style = V3Type.footnote,
+                color = colors.labelSecondary,
+            )
+        },
+    )
 }

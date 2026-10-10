@@ -45,17 +45,18 @@ import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.band
 import com.example.biliv3.design.BandLevel
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
 import com.example.biliv3.ui.component.BrandButtonVariant
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import kotlinx.coroutines.delay
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 登录页。
@@ -128,7 +129,7 @@ private fun QrLoginContent(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val formError by viewModel.formError.collectAsStateWithLifecycle()
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     LaunchedEffect(state) {
         if (state is LoginUiState.Success) {
@@ -140,7 +141,7 @@ private fun QrLoginContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 顶栏 ----
         Row(
@@ -149,13 +150,13 @@ private fun QrLoginContent(
                 // 顶栏不再是卡片：与页面同明度，靠底边一条发丝线分隔
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -163,17 +164,16 @@ private fun QrLoginContent(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = "登录",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
         }
@@ -193,7 +193,7 @@ private fun QrLoginContent(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Space.x8, vertical = Space.x6),
+                .padding(horizontal = V3Space.xxl, vertical = V3Space.xl),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             QrSection(
@@ -203,11 +203,10 @@ private fun QrLoginContent(
             )
 
             if (formError != null) {
-                Spacer(Modifier.height(Space.x4))
+                Spacer(Modifier.height(V3Space.md))
                 Text(
                     text = formError.orEmpty(),
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = FontSize.bodySm,
+                    style = V3Type.footnote.copy(
                         color = colors.stateError,
                     ),
                     textAlign = TextAlign.Center,
@@ -218,13 +217,12 @@ private fun QrLoginContent(
                 }
             }
 
-            Spacer(Modifier.height(Space.x8))
+            Spacer(Modifier.height(V3Space.xxl))
             Text(
                 text = "登录后可同步历史记录、收藏与关注\n" +
                     "凭据使用 Android Keystore 加密存储，仅保存在本机",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textTertiary,
+                style = V3Type.caption1.copy(
+                    color = colors.labelTertiary,
                 ),
                 textAlign = TextAlign.Center,
             )
@@ -235,7 +233,7 @@ private fun QrLoginContent(
 /** 登录方式切换 Tab。 */
 @Composable
 private fun ModeTabs(current: LoginMode, onSelect: (LoginMode) -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val items = listOf(
         LoginMode.QR to "扫码登录",
         LoginMode.WEB to "账号登录",
@@ -244,7 +242,7 @@ private fun ModeTabs(current: LoginMode, onSelect: (LoginMode) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // ⚠️ 用 `band()` 而不是 `.background(colors.bgCard)`（v1.2.4 统一）。
+            // ⚠️ 用 `band()` 而不是 `.background(colors.bgSecondary)`（v1.2.4 统一）。
             // 登录方式切换是全宽直角的分区带，不是卡片。
             .band(BandLevel.Raised),
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -256,24 +254,23 @@ private fun ModeTabs(current: LoginMode, onSelect: (LoginMode) -> Unit) {
                 modifier = Modifier
                     .weight(1f)
                     .clickable { onSelect(m) }
-                    .padding(vertical = Space.x3),
+                    .padding(vertical = V3Space.sm),
             ) {
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
+                    style = V3Type.callout.copy(
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (selected) colors.textPrimary else colors.textSecondarySafe,
+                        color = if (selected) colors.labelPrimary else colors.labelSecondary,
                     ),
                 )
-                Spacer(Modifier.height(Space.x1))
+                Spacer(Modifier.height(V3Space.xxs))
                 // 下划线始终占位，切换时高度不抖
                 Box(
                     modifier = Modifier
                         .width(24.dp)
-                        .height(Space.tabIndicator)
-                        .clip(RoundedCornerShape(Radius.badge))
-                        .background(if (selected) colors.brandPrimary else Color.Transparent),
+                        .height(V3Space.tabIndicator)
+                        .clip(RoundedCornerShape(V3Radius.xs))
+                        .background(if (selected) colors.brand else Color.Transparent),
                 )
             }
         }
@@ -287,15 +284,15 @@ private fun QrSection(
     onRefresh: () -> Unit,
     onConfirmManually: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     when (state) {
         is LoginUiState.Loading -> {
-            Spacer(Modifier.height(Space.x12))
+            Spacer(Modifier.height(V3Space.huge))
             CircularProgressIndicator(
-                color = colors.brandPrimary,
-                strokeWidth = Space.trackHeight,
-                modifier = Modifier.size(Sizes.iconXl * 1.5f),
+                color = colors.brand,
+                strokeWidth = V3Space.progressTrack,
+                modifier = Modifier.size(V3Size.iconLg * 1.5f),
             )
         }
 
@@ -311,7 +308,7 @@ private fun QrSection(
 
         is LoginUiState.Expired -> {
             QrPanel(qr = state.qr, hint = "二维码已过期，请刷新", dimmed = true)
-            Spacer(Modifier.height(Space.x5))
+            Spacer(Modifier.height(V3Space.lg))
             BrandButton(
                 label = "刷新二维码",
                 onClick = onRefresh,
@@ -320,16 +317,15 @@ private fun QrSection(
         }
 
         is LoginUiState.Error -> {
-            Spacer(Modifier.height(Space.x8))
+            Spacer(Modifier.height(V3Space.xxl))
             Text(
                 text = state.message,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
+                style = V3Type.callout.copy(
                     color = colors.stateError,
                 ),
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(Space.x5))
+            Spacer(Modifier.height(V3Space.lg))
             BrandButton(
                 label = "重新生成",
                 onClick = onRefresh,
@@ -343,19 +339,18 @@ private fun QrSection(
 
 @Composable
 private fun ManualConfirmHint(onClick: () -> Unit) {
-    val colors = BiliTheme.colors
-    Spacer(Modifier.height(Space.x5))
+    val colors = BiliV3.colors
+    Spacer(Modifier.height(V3Space.lg))
     Text(
         text = "已扫码但没反应？点这里",
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.label,
-            color = colors.textLinkSafe,
+        style = V3Type.caption1.copy(
+            color = colors.brandText,
         ),
         modifier = Modifier
             // 文字链是交互元素 —— 4dp
-            .clip(RoundedCornerShape(Radius.interactive))
+            .clip(RoundedCornerShape(V3Radius.xs))
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x3, vertical = Space.x2),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
     )
 }
 
@@ -366,7 +361,7 @@ private fun QrPanel(
     hint: String,
     dimmed: Boolean = false,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // 二维码内容不变时不重新生成位图 —— 生成是 CPU 操作，每次重组都做会卡。
     // 内容为空（如 cookie 校验失败时的占位 QrCode）则不生成，避免 zxing 抛错。
@@ -379,7 +374,7 @@ private fun QrPanel(
         modifier = Modifier
             .size(QR_BOX)
             // 二维码是图片/面板 —— 直角（圆角只给交互元素）
-            .background(colors.onOverlay),
+            .background(colors.labelOnMedia),
         contentAlignment = Alignment.Center,
     ) {
         if (bitmap != null) {
@@ -400,24 +395,22 @@ private fun QrPanel(
             ) {
                 Text(
                     text = hint,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
+                    style = V3Type.callout.copy(
                         fontWeight = FontWeight.Medium,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(Space.x4),
+                    modifier = Modifier.padding(V3Space.md),
                 )
             }
         }
     }
 
-    Spacer(Modifier.height(Space.x5))
+    Spacer(Modifier.height(V3Space.lg))
     Text(
         text = if (dimmed) "" else hint,
-        style = MaterialTheme.typography.bodyMedium.copy(
-            fontSize = FontSize.body,
-            color = colors.textSecondarySafe,
+        style = V3Type.callout.copy(
+            color = colors.labelSecondary,
         ),
         textAlign = TextAlign.Center,
     )
@@ -429,34 +422,32 @@ private fun SuccessPanel(
     name: String,
     onDone: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(Space.x8),
+            .padding(V3Space.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = "登录成功",
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontSize = FontSize.titleLg,
+            style = V3Type.headline.copy(
                 fontWeight = FontWeight.Bold,
-                color = colors.textPrimary,
+                color = colors.labelPrimary,
             ),
         )
         if (name.isNotEmpty()) {
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             Text(
                 text = "欢迎，$name",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = colors.textSecondarySafe,
+                style = V3Type.callout.copy(
+                    color = colors.labelSecondary,
                 ),
             )
         }
-        Spacer(Modifier.height(Space.x5))
+        Spacer(Modifier.height(V3Space.lg))
         BrandButton(
             label = "完成",
             onClick = onDone,

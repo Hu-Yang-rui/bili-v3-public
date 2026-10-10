@@ -43,11 +43,11 @@ import com.example.biliv3.data.live.LiveMessage
 import com.example.biliv3.data.live.LiveRole
 import com.example.biliv3.data.model.CoverUrls
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import kotlinx.coroutines.launch
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 直播间聊天区（v1.6.4）。
@@ -86,7 +86,7 @@ fun LiveChatPanel(
     onRetryChat: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val listState = rememberLazyListState()
 
     // 最后一项是否可见 = "是否在底部"。可算，不用记。
@@ -135,11 +135,10 @@ fun LiveChatPanel(
                         LiveDanmakuClient.ConnectionState.FAILED -> "聊天连接失败"
                         LiveDanmakuClient.ConnectionState.IDLE -> "聊天未连接"
                     },
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = FontSize.bodySm,
-                        color = colors.textTertiary,
+                    style = V3Type.footnote.copy(
+                        color = colors.labelTertiary,
                     ),
-                    modifier = Modifier.padding(Space.x3),
+                    modifier = Modifier.padding(V3Space.sm),
                 )
                 return@Column
             }
@@ -149,7 +148,7 @@ fun LiveChatPanel(
                 modifier = Modifier
                     .fillMaxSize()
                     // 顶部淡出，暗示"上面还有"
-                    .padding(horizontal = Space.x2),
+                    .padding(horizontal = V3Space.xs),
             ) {
                 items(
                     count = messages.size,
@@ -191,9 +190,9 @@ fun LiveChatPanel(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(Space.x3)
-                    .clip(RoundedCornerShape(Radius.pill))
-                    .background(colors.surfaceElevated)
+                    .padding(V3Space.sm)
+                    .clip(RoundedCornerShape(V3Radius.pill))
+                    .background(colors.bgSecondaryElevated)
                     // ⚠️ 必须有真实动作。只显示不给行为就是死入口（§1.6）。
                     .clickable {
                         scope.launch {
@@ -202,13 +201,12 @@ fun LiveChatPanel(
                             }
                         }
                     }
-                    .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
+                    .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
             ) {
                 Text(
                     text = "回到最新",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
             }
@@ -229,7 +227,7 @@ private fun ConnectionBanner(
     connState: LiveDanmakuClient.ConnectionState,
     onRetry: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     val (text, showRetry) = when (connState) {
         LiveDanmakuClient.ConnectionState.CONNECTED -> return
@@ -242,18 +240,17 @@ private fun ConnectionBanner(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.bgHover)
-            .padding(horizontal = Space.x3, vertical = Space.compactVertical),
+            .background(colors.bgTertiary)
+            .padding(horizontal = V3Space.sm, vertical = V3Space.hairline),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.badge,
+            style = V3Type.caption2.copy(
                 color = if (connState == LiveDanmakuClient.ConnectionState.FAILED) {
                     colors.stateError
                 } else {
-                    colors.textSecondarySafe
+                    colors.labelSecondary
                 },
             ),
             modifier = Modifier.weight(1f),
@@ -261,15 +258,14 @@ private fun ConnectionBanner(
         if (showRetry) {
             Text(
                 text = "重试",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
+                style = V3Type.caption2.copy(
                     fontWeight = FontWeight.Medium,
-                    color = colors.brandPrimary,
+                    color = colors.brand,
                 ),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.badge))
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     .clickable(onClick = onRetry)
-                    .padding(horizontal = Space.x2, vertical = Space.tagVertical),
+                    .padding(horizontal = V3Space.xs, vertical = V3Space.tagVertical),
             )
         }
     }
@@ -302,19 +298,18 @@ private fun LiveChatRow(
     clickable: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     // ---- 系统消息：居中细字 ----
     if (msg.kind == LiveMessage.Kind.SYSTEM) {
         Text(
             text = msg.text,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.badge,
-                color = colors.textTertiary,
+            style = V3Type.caption2.copy(
+                color = colors.labelTertiary,
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = Space.micro, horizontal = Space.x1),
+                .padding(vertical = V3Space.hairline, horizontal = V3Space.xxs),
         )
         return
     }
@@ -332,10 +327,10 @@ private fun LiveChatRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(Radius.badge))
+            .clip(RoundedCornerShape(V3Radius.xs))
             .then(
                 if (self) {
-                    Modifier.background(colors.brandPrimaryDim)
+                    Modifier.background(colors.brandDim)
                 } else {
                     Modifier
                 },
@@ -343,7 +338,7 @@ private fun LiveChatRow(
             .then(
                 if (clickable) Modifier.clickable(onClick = onClick) else Modifier,
             )
-            .padding(horizontal = Space.x1, vertical = Space.micro),
+            .padding(horizontal = V3Space.xxs, vertical = V3Space.hairline),
         verticalAlignment = Alignment.Top,
     ) {
         // ---- 头像（进入/关注类消息不显示头像，省空间）----
@@ -357,7 +352,7 @@ private fun LiveChatRow(
                     .clip(CircleShape)
                     .background(colors.avatarPlaceholder),
             )
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
         }
 
         Column(modifier = Modifier.weight(1f)) {
@@ -365,23 +360,22 @@ private fun LiveChatRow(
                 // 粉丝牌（有才显示）
                 if (msg.medalName.isNotEmpty() && msg.medalLevel > 0) {
                     MedalTag(name = msg.medalName, level = msg.medalLevel)
-                    Spacer(Modifier.width(Space.micro))
+                    Spacer(Modifier.width(V3Space.hairline))
                 }
 
                 // 身份徽章
                 if (role != LiveRole.NORMAL) {
                     RoleTag(role = role)
-                    Spacer(Modifier.width(Space.micro))
+                    Spacer(Modifier.width(V3Space.hairline))
                 }
 
                 // 用户名
                 Text(
                     text = msg.uname.ifEmpty { "用户${msg.uid}" },
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
+                    style = V3Type.caption2.copy(
                         fontWeight = FontWeight.Medium,
                         // 自己用品牌色，与底色一起形成双重表达
-                        color = if (self) colors.textBrandSafe else colors.textSecondarySafe,
+                        color = if (self) colors.brandBiliText else colors.labelSecondary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -389,12 +383,11 @@ private fun LiveChatRow(
                 )
 
                 if (self) {
-                    Spacer(Modifier.width(Space.micro))
+                    Spacer(Modifier.width(V3Space.hairline))
                     Text(
                         text = "我",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
-                            color = colors.textBrandSafe,
+                        style = V3Type.caption2.copy(
+                            color = colors.brandBiliText,
                         ),
                     )
                 }
@@ -412,14 +405,12 @@ private fun LiveChatRow(
                     LiveMessage.Kind.GIFT -> msg.text
                     LiveMessage.Kind.SYSTEM -> msg.text
                 },
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    lineHeight = FontSize.bodySmLine,
+                style = V3Type.footnote.copy(
                     color = if (msg.kind == LiveMessage.Kind.DANMAKU) {
-                        colors.textPrimary
+                        colors.labelPrimary
                     } else {
                         // 事件类消息弱化 —— 它们不是"内容"，是"状态"
-                        colors.textTertiary
+                        colors.labelTertiary
                     },
                 ),
             )
@@ -439,45 +430,43 @@ private fun LiveChatRow(
  */
 @Composable
 private fun RoleTag(role: LiveRole) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val tint = when (role) {
-        LiveRole.ANCHOR -> colors.brandPrimary
+        LiveRole.ANCHOR -> colors.brand
         LiveRole.ADMIN -> colors.accentTerminal
-        LiveRole.NORMAL -> colors.textTertiary
+        LiveRole.NORMAL -> colors.labelTertiary
     }
     if (role == LiveRole.NORMAL) return
 
     Text(
         text = role.label,
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.badge,
+        style = V3Type.caption2.copy(
             fontWeight = FontWeight.Medium,
             color = tint,
         ),
         maxLines = 1,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.badge))
-            .border(1.dp, tint, RoundedCornerShape(Radius.badge))
-            .padding(horizontal = Space.tagHorizontal, vertical = 0.dp),
+            .clip(RoundedCornerShape(V3Radius.xs))
+            .border(1.dp, tint, RoundedCornerShape(V3Radius.xs))
+            .padding(horizontal = V3Space.tagHorizontal, vertical = 0.dp),
     )
 }
 
 /** 粉丝牌：`牌子名 等级`。用中性色，不与身份徽章抢注意力。 */
 @Composable
 private fun MedalTag(name: String, level: Int) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = "$name $level",
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.badge,
-            color = colors.textTertiary,
+        style = V3Type.caption2.copy(
+            color = colors.labelTertiary,
         ),
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.badge))
-            .background(colors.bgHover)
-            .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
+            .clip(RoundedCornerShape(V3Radius.xs))
+            .background(colors.bgTertiary)
+            .padding(horizontal = V3Space.tagHorizontal, vertical = V3Space.tagVertical),
     )
 }
 

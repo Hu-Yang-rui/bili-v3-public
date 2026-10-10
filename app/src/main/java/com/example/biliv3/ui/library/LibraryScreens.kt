@@ -68,14 +68,15 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.saveable.rememberSaveable
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ItemMoreMenu
 import com.example.biliv3.ui.component.MoreMenuAction
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 历史记录页。
@@ -154,7 +155,7 @@ fun ToViewScreen(
                 modifier = Modifier.fillMaxSize(),
             )
             else -> LazyColumn(
-                contentPadding = PaddingValues(vertical = Space.x2),
+                contentPadding = PaddingValues(vertical = V3Space.xs),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 items(videos, key = { it.bvid }, contentType = { "video" }) { v ->
@@ -244,7 +245,7 @@ fun FavoriteScreen(
                 modifier = Modifier.fillMaxSize(),
             )
             else -> LazyColumn(
-                contentPadding = PaddingValues(bottom = Space.x8),
+                contentPadding = PaddingValues(bottom = V3Space.xxl),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 items(folders, key = { it.id }) { folder ->
@@ -273,19 +274,19 @@ private fun FolderGroup(
     onOpen: () -> Unit,
     onVideoClick: (String) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = Space.x3, bottom = Space.x2),
+            .padding(top = V3Space.sm, bottom = V3Space.xs),
     ) {
         // ---- 分组标题 ----
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onOpen)
-                .padding(horizontal = Space.x4, vertical = Space.x3),
+                .padding(horizontal = V3Space.md, vertical = V3Space.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // ⚠️ 标题用 weight(1f) 独占剩余空间，数量与箭头才会**贴齐右边缘**。
@@ -295,10 +296,9 @@ private fun FolderGroup(
             // 而不同标题长度会让它**左右浮动**，看起来"没有固定在最右边"。
             Text(
                 text = folder.title,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -314,23 +314,22 @@ private fun FolderGroup(
             // 视觉刻意低调：小字号 + 弱底色胶囊，不抢标题。
             // 用文字而不是图标：图标需要额外学习成本，且"公开/私密"
             // 只有两个状态，文字最直白。
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
             VisibilityBadge(isPrivate = folder.isPrivate)
 
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
             Text(
                 text = "· ${folder.mediaCount}个内容",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption1.copy(
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 1,
             )
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "进入收藏夹",
-                tint = colors.textTertiary,
-                modifier = Modifier.size(Sizes.iconLg),
+                tint = colors.labelTertiary,
+                modifier = Modifier.size(V3Size.iconMd),
             )
         }
 
@@ -339,22 +338,21 @@ private fun FolderGroup(
             // 空夹也要占位，否则分组标题下面突然没了内容会以为是 bug
             Text(
                 text = "这个收藏夹是空的",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textTertiary,
+                style = V3Type.caption1.copy(
+                    color = colors.labelTertiary,
                 ),
                 modifier = Modifier.padding(
-                    start = Space.x4,
-                    end = Space.x4,
-                    bottom = Space.x2,
+                    start = V3Space.md,
+                    end = V3Space.md,
+                    bottom = V3Space.xs,
                 ),
             )
         } else {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = Space.x4),
-                horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                    .padding(horizontal = V3Space.md),
+                horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
             ) {
                 // 固定 3 列：不足 3 张时用占位撑住列宽，
                 // 避免 1 张图被拉成整行宽（比例失真）
@@ -388,25 +386,24 @@ private fun FolderGroup(
  * ## 视觉为什么这么弱
  *
  * 它只是标题的**附属属性**，不该和标题抢视觉。所以：
- * - 字号用最小的 `FontSize.badge`
+ * - 字号用最小的 `V3Type.caption2.fontSize`
  * - 私密用中性底色 + 次文字色，**不用品牌粉** —— 粉色在这套主题里
  *   表示"可交互/激活"，拿来标记"私密"会让用户误以为可点
- * - 圆角用 `Radius.badge`(2dp) 的小标签规格，不是胶囊
+ * - 圆角用 `V3Radius.xs`(2dp) 的小标签规格，不是胶囊
  */
 @Composable
 private fun VisibilityBadge(isPrivate: Boolean) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = if (isPrivate) "私密" else "公开",
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.badge,
-            color = colors.textTertiary,
+        style = V3Type.caption2.copy(
+            color = colors.labelTertiary,
         ),
         maxLines = 1,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.badge))
-            .background(colors.bgHover)
-            .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
+            .clip(RoundedCornerShape(V3Radius.xs))
+            .background(colors.bgTertiary)
+            .padding(horizontal = V3Space.tagHorizontal, vertical = V3Space.tagVertical),
     )
 }
 
@@ -415,7 +412,7 @@ private fun VisibilityBadge(isPrivate: Boolean) {
 private fun FavPreviewCell(    entry: FavoriteEntry,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val v = entry.video
 
     Column(
@@ -423,12 +420,12 @@ private fun FavPreviewCell(    entry: FavoriteEntry,
             .fillMaxWidth()
             // 无卡片：预览格直接排在网格里，分组靠列间距
             .clickable(enabled = !entry.isInvalid, onClick = onClick)
-            .padding(Space.x1),
+            .padding(V3Space.xxs),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(Sizes.coverAspectRatio)
+                .aspectRatio(V3Size.coverAspect)
                 // 封面直角 —— 圆角只留给交互元素
                 .background(colors.coverPlaceholder),
         ) {
@@ -441,17 +438,15 @@ private fun FavPreviewCell(    entry: FavoriteEntry,
                     .graphicsLayer { alpha = if (entry.isInvalid) 0.35f else 1f },
             )
         }
-        Spacer(Modifier.height(Space.x1))
+        Spacer(Modifier.height(V3Space.xxs))
         Text(
             text = if (entry.isInvalid) "已失效视频" else v.title,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
-                lineHeight = FontSize.labelLine,
-                color = if (entry.isInvalid) colors.textTertiary else colors.textPrimary,
+            style = V3Type.caption1.copy(
+                color = if (entry.isInvalid) colors.labelTertiary else colors.labelPrimary,
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = Space.x1, vertical = Space.x1),
+            modifier = Modifier.padding(horizontal = V3Space.xxs, vertical = V3Space.xxs),
         )
     }
 }
@@ -539,10 +534,10 @@ fun FavoriteFolderScreen(
             if (!selectMode && isLoggedIn && entries.isNotEmpty()) {
                 // 快速整理：规则筛出候选 → 人工确认
                 TextButton(onClick = onOrganize) {
-                    Text("整理", color = BiliTheme.colors.textSecondary)
+                    Text("整理", color = BiliV3.colors.labelSecondary)
                 }
                 TextButton(onClick = { selectMode = true }) {
-                    Text("选择", color = BiliTheme.colors.textPrimary)
+                    Text("选择", color = BiliV3.colors.labelPrimary)
                 }
             }
         },
@@ -706,7 +701,7 @@ private fun FavoriteRow(
     selected: Boolean = false,
     onToggleSelect: () -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val v = entry.video
 
     Row(
@@ -727,7 +722,7 @@ private fun FavoriteRow(
                 enabled = selectMode || !entry.isInvalid,
                 onClick = { if (selectMode) onToggleSelect() else onClick() },
             )
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
         // ⚠️ Bottom：⋮ 要贴**右下角**，不是垂直居中。
         //
         // 居中时它会浮在行高中间，与右侧文字列"对齐但不贴合"，
@@ -747,15 +742,15 @@ private fun FavoriteRow(
                 checked = selected,
                 onCheckedChange = { onToggleSelect() },
                 colors = CheckboxDefaults.colors(
-                    checkedColor = colors.brandPrimary,
-                    uncheckedColor = colors.textTertiary,
-                    checkmarkColor = colors.textOnBrand,
+                    checkedColor = colors.brand,
+                    uncheckedColor = colors.labelTertiary,
+                    checkmarkColor = colors.labelOnBrand,
                 ),
                 modifier = Modifier
                     .align(Alignment.CenterVertically)
-                    .size(Sizes.iconXl),
+                    .size(V3Size.iconLg),
             )
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
         }
 
         Box(
@@ -776,32 +771,30 @@ private fun FavoriteRow(
             if (v.durationLabel.isNotEmpty()) {
                 Text(
                     text = v.durationLabel,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.onOverlay,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelOnMedia,
                     ),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(2.dp)
-                        .clip(RoundedCornerShape(Radius.badge))
-                        .background(colors.overlayCover)
-                        .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
+                        .clip(RoundedCornerShape(V3Radius.xs))
+                        .background(colors.overlay)
+                        .padding(horizontal = V3Space.tagHorizontal, vertical = V3Space.tagVertical),
                 )
             }
         }
-        Spacer(Modifier.width(Space.x3))
+        Spacer(Modifier.width(V3Space.sm))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = if (entry.isInvalid) "已失效视频" else v.title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = if (entry.isInvalid) colors.textTertiary else colors.textPrimary,
+                style = V3Type.callout.copy(
+                    color = if (entry.isInvalid) colors.labelTertiary else colors.labelPrimary,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
 
             // UP 头像 + 昵称 + 播放量 + 弹幕数（一行，紧凑）
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -815,7 +808,7 @@ private fun FavoriteRow(
                             .clip(CircleShape)
                             .background(colors.coverPlaceholder),
                     )
-                    Spacer(Modifier.width(Space.x1))
+                    Spacer(Modifier.width(V3Space.xxs))
                 }
                 Text(
                     text = buildString {
@@ -829,9 +822,8 @@ private fun FavoriteRow(
                             append(formatCount(v.danmakuCount))
                         }
                     },
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -848,7 +840,7 @@ private fun FavoriteRow(
         // 所以"看着小、点着准"。
         Box(
             modifier = Modifier
-                .size(Space.minTouchTarget)
+                .size(V3Size.touchMin)
                 .clip(CircleShape)
                 .clickable(onClick = onMore),
             contentAlignment = Alignment.Center,
@@ -856,8 +848,8 @@ private fun FavoriteRow(
             Icon(
                 imageVector = Icons.Filled.MoreVert,
                 contentDescription = "更多操作",
-                tint = colors.textTertiary,
-                modifier = Modifier.size(Sizes.iconMd),
+                tint = colors.labelTertiary,
+                modifier = Modifier.size(V3Size.iconMd),
             )
         }
     }
@@ -885,11 +877,11 @@ private fun LibraryScaffold(
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         Row(
             modifier = Modifier
@@ -897,13 +889,13 @@ private fun LibraryScaffold(
                 // 顶栏不再是卡片：与页面同明度，只留底边一条发丝线
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -911,17 +903,16 @@ private fun LibraryScaffold(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -945,7 +936,7 @@ private fun <T> LoadMoreList(
     onLoadMore: () -> Unit,
     row: @Composable (T) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val state = rememberLazyListState()
 
     // 距底 3 项触发
@@ -962,7 +953,7 @@ private fun <T> LoadMoreList(
 
     LazyColumn(
         state = state,
-        contentPadding = PaddingValues(vertical = Space.x2),
+        contentPadding = PaddingValues(vertical = V3Space.xs),
         modifier = Modifier.fillMaxSize(),
     ) {
         items(items, key = keyOf, contentType = { "row" }) { item -> row(item) }
@@ -971,20 +962,19 @@ private fun <T> LoadMoreList(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = Space.x4),
+                    .padding(vertical = V3Space.md),
                 contentAlignment = Alignment.Center,
             ) {
                 when {
                     loadingMore -> CircularProgressIndicator(
-                        color = colors.brandPrimary,
-                        strokeWidth = Space.trackHeight,
-                        modifier = Modifier.size(Sizes.iconXl),
+                        color = colors.brand,
+                        strokeWidth = V3Space.progressTrack,
+                        modifier = Modifier.size(V3Size.iconLg),
                     )
                     !hasMore -> Text(
                         text = "没有更多了",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
-                            color = colors.textTertiary,
+                        style = V3Type.caption1.copy(
+                            color = colors.labelTertiary,
                         ),
                     )
                 }
@@ -996,7 +986,7 @@ private fun <T> LoadMoreList(
 /** 历史记录行：封面 + 标题 + 进度。 */
 @Composable
 private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val v = entry.video
 
     Row(
@@ -1005,7 +995,7 @@ private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
             // ⚠️ 列表行**不再是卡片** —— 与收藏行同一原则：
             // 列表用留白分组，不用卡片分组。
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
         verticalAlignment = Alignment.Top,
     ) {
         // 封面 + 底部进度条
@@ -1027,52 +1017,49 @@ private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .fillMaxWidth()
-                        .height(Space.trackHeight)
-                        .background(colors.overlayCover),
+                        .height(V3Space.progressTrack)
+                        .background(colors.overlay),
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(entry.progressRatio)
-                            .height(Space.trackHeight)
-                            .background(colors.brandPrimary),
+                            .height(V3Space.progressTrack)
+                            .background(colors.brand),
                     )
                 }
             }
         }
-        Spacer(Modifier.width(Space.x3))
+        Spacer(Modifier.width(V3Space.sm))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = v.title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = colors.textPrimary,
+                style = V3Type.callout.copy(
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(Space.x1))
+            Spacer(Modifier.height(V3Space.xxs))
             Text(
                 text = buildString {
                     append(v.authorName)
                     append(" · ")
                     append(formatRelativeTime(entry.viewAt))
                 },
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption1.copy(
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             // 继续播放提示
             if (entry.progressSeconds > 0 && !entry.isFinished) {
-                Spacer(Modifier.height(Space.micro))
+                Spacer(Modifier.height(V3Space.hairline))
                 Text(
                     text = "看到 ${formatDuration(entry.progressSeconds)}",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.brandPrimary,
+                    style = V3Type.caption2.copy(
+                        color = colors.brand,
                     ),
                 )
             }
@@ -1083,7 +1070,7 @@ private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
 /** 通用视频行（稍后再看 / 收藏夹共用）。 */
 @Composable
 private fun VideoRow(video: VideoItem, onClick: () -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = Modifier
@@ -1091,7 +1078,7 @@ private fun VideoRow(video: VideoItem, onClick: () -> Unit) {
             // ⚠️ 列表行**不再是卡片** —— 与收藏行同一原则：
             // 列表用留白分组，不用卡片分组。
             .clickable(onClick = onClick)
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
         // 🔴 内容**垂直居中**，不是 `Alignment.Top`（v1.4.2 修 #2）。
         //
         // 首版是 Top：缩略图 80dp 高，而文字块只有 2 行标题 + 1 行元信息
@@ -1118,15 +1105,13 @@ private fun VideoRow(video: VideoItem, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        Spacer(Modifier.width(Space.x3))
+        Spacer(Modifier.width(V3Space.sm))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = video.title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    lineHeight = FontSize.bodyLine,
-                    color = colors.textPrimary,
+                style = V3Type.callout.copy(
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -1137,12 +1122,11 @@ private fun VideoRow(video: VideoItem, onClick: () -> Unit) {
                 // 滚动时不会有"忽高忽低"的跳动。
                 modifier = Modifier.heightIn(min = ROW_TITLE_MIN_HEIGHT),
             )
-            Spacer(Modifier.height(Space.x1))
+            Spacer(Modifier.height(V3Space.xxs))
             Text(
                 text = "${video.authorName} · ${formatCount(video.playCount)} 播放",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption1.copy(
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -1154,31 +1138,29 @@ private fun VideoRow(video: VideoItem, onClick: () -> Unit) {
 /** 未登录引导。 */
 @Composable
 private fun LoginRequiredPanel(onLogin: () -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(Space.x8),
+            .padding(V3Space.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = "登录后查看",
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontSize = FontSize.titleMd,
+            style = V3Type.subheadline.copy(
                 fontWeight = FontWeight.SemiBold,
-                color = colors.textPrimary,
+                color = colors.labelPrimary,
             ),
         )
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
         Text(
             text = "该功能需要登录 B 站账号",
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = FontSize.bodySm,
-                color = colors.textSecondarySafe,
+            style = V3Type.footnote.copy(
+                color = colors.labelSecondary,
             ),
         )
-        Spacer(Modifier.height(Space.x5))
+        Spacer(Modifier.height(V3Space.lg))
         com.example.biliv3.ui.component.BrandButton(
             label = "去登录",
             onClick = onLogin,
@@ -1194,9 +1176,9 @@ private fun LoadingPanel() {
         contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator(
-            color = BiliTheme.colors.brandPrimary,
-            strokeWidth = Space.trackHeight,
-            modifier = Modifier.size(Sizes.iconXl * 1.5f),
+            color = BiliV3.colors.brand,
+            strokeWidth = V3Space.progressTrack,
+            modifier = Modifier.size(V3Size.iconLg * 1.5f),
         )
     }
 }
@@ -1240,7 +1222,7 @@ private val HISTORY_THUMB_HEIGHT = 80.dp
  * 同一屏里不同视频的 UP 名/播放量不在同一条基线上。
  *
  * `VideoCard` 用 `heightIn(min = 40.dp)` 解决同一问题。
- * 这里取 42dp：`FontSize.bodyLine` 是 21sp，两行即 42 ——
+ * 这里取 42dp：`V3Type.callout.lineHeight` 是 21sp，两行即 42 ——
  * 字面量在这里可接受，因为 `sp → dp` 需要 `LocalDensity`，
  * 而本常量在 Composable 之外（注释记下这个换算关系即可）。
  */

@@ -39,9 +39,10 @@ import coil.compose.AsyncImage
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.DeviceTier
 import com.example.biliv3.design.LocalDeviceTier
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.player.QueueItem
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 黑胶唱片模式。
@@ -94,7 +95,7 @@ fun VinylPlayer(
     /** 封面下方的内容（进度条、控制按钮、歌词入口）。 */
     controls: @Composable () -> Unit = {},
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val tier = LocalDeviceTier.current
     val canAnimate = tier != DeviceTier.Low
 
@@ -104,7 +105,7 @@ fun VinylPlayer(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = Space.x6),
+            .padding(horizontal = V3Space.xl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -125,7 +126,7 @@ fun VinylPlayer(
                     // （§5.1 明确禁止）
                     .background(
                         Brush.radialGradient(
-                            colors = listOf(colors.bgHover, colors.playerBackground),
+                            colors = listOf(colors.bgTertiary, colors.playerBackground),
                         ),
                     ),
             )
@@ -152,40 +153,38 @@ fun VinylPlayer(
             // 中心孔：黑胶唱片的视觉特征（小圆点）
             Box(
                 modifier = Modifier
-                    .size(Space.x3)
+                    .size(V3Space.sm)
                     .clip(CircleShape)
-                    .background(colors.bgBase),
+                    .background(colors.bgPrimary),
             )
         }
 
-        Spacer(Modifier.height(Space.x8))
+        Spacer(Modifier.height(V3Space.xxl))
 
         // ---- 标题 / 作者 ----
         Text(
             text = item?.title.orEmpty().ifEmpty { "暂无播放" },
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontSize = FontSize.titleMd,
+            style = V3Type.subheadline.copy(
                 fontWeight = FontWeight.SemiBold,
-                color = colors.textPrimary,
+                color = colors.labelPrimary,
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
         )
         if (!item?.author.isNullOrEmpty()) {
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             Text(
                 text = item.author,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    color = colors.textSecondarySafe,
+                style = V3Type.footnote.copy(
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
 
-        Spacer(Modifier.height(Space.x5))
+        Spacer(Modifier.height(V3Space.lg))
 
         // ---- 进度读数（等宽：数字跳动时不抖，§5.2 等宽只用于读数） ----
         Row(
@@ -196,7 +195,7 @@ fun VinylPlayer(
             MonoTime(durationMs)
         }
 
-        Spacer(Modifier.height(Space.x4))
+        Spacer(Modifier.height(V3Space.md))
 
         controls()
     }
@@ -205,12 +204,12 @@ fun VinylPlayer(
 /** 等宽时间读数。 */
 @Composable
 private fun MonoTime(ms: Long) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = formatTime(ms),
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.monoReadout,
-            color = colors.textSecondarySafe,
+        style = V3Type.footnote.copy(
+            fontSize = V3Type.readout().fontSize,
+            color = colors.labelSecondary,
             fontFamily = com.example.biliv3.design.tokens.FontFamilies.mono,
         ),
     )

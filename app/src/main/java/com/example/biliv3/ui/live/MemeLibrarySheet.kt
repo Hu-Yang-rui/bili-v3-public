@@ -43,11 +43,12 @@ import com.example.biliv3.data.meme.Meme
 import com.example.biliv3.data.meme.MemeSearch
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 烂梗库弹层（v1.6.5）。
@@ -88,7 +89,7 @@ fun MemeLibrarySheet(
     /** 直接发送（走现有发送流程）。 */
     onSend: (String) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     var query by remember { mutableStateOf("") }
 
     // 搜索 + 分组（纯函数，已单测）
@@ -105,15 +106,15 @@ fun MemeLibrarySheet(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.scrimPanel)
+                .background(colors.scrim)
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.BottomCenter,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = Radius.panel, topEnd = Radius.panel))
-                    .background(colors.surfaceElevated)
+                    .clip(RoundedCornerShape(topStart = V3Radius.lg, topEnd = V3Radius.lg))
+                    .background(colors.bgSecondaryElevated)
                     .clickable(enabled = false) {}
                     // v1.6.6：底部弹层补导航栏避让（否则最后一行被手势条压住）
                     .navigationBarsPadding()
@@ -123,30 +124,29 @@ fun MemeLibrarySheet(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Space.x4, vertical = Space.x3),
+                        .padding(horizontal = V3Space.md, vertical = V3Space.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "烂梗库",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontSize = FontSize.titleMd,
+                        style = V3Type.subheadline.copy(
                             fontWeight = FontWeight.SemiBold,
-                            color = colors.textPrimary,
+                            color = colors.labelPrimary,
                         ),
                     )
                     Spacer(Modifier.weight(1f))
                     Box(
                         modifier = Modifier
-                            .size(Sizes.iconXl + Space.x2)
-                            .clip(RoundedCornerShape(Radius.interactive))
+                            .size(V3Size.iconLg + V3Space.xs)
+                            .clip(RoundedCornerShape(V3Radius.xs))
                             .clickable(onClick = onDismiss),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Close,
                             contentDescription = "关闭",
-                            tint = colors.textSecondarySafe,
-                            modifier = Modifier.size(Sizes.iconLg),
+                            tint = colors.labelSecondary,
+                            modifier = Modifier.size(V3Size.iconMd),
                         )
                     }
                 }
@@ -154,15 +154,13 @@ fun MemeLibrarySheet(
                 // ---- 来源说明（常驻，不可关闭）----
                 Text(
                     text = "内容为本项目整理的常用直播用语，不是 B 站官方内容",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        lineHeight = FontSize.labelLine,
-                        color = colors.textTertiary,
+                    style = V3Type.caption2.copy(lineHeight = V3Type.caption1.lineHeight,
+                        color = colors.labelTertiary,
                     ),
                     modifier = Modifier.padding(
-                        start = Space.x4,
-                        end = Space.x4,
-                        bottom = Space.x2,
+                        start = V3Space.md,
+                        end = V3Space.md,
+                        bottom = V3Space.xs,
                     ),
                 )
 
@@ -170,26 +168,25 @@ fun MemeLibrarySheet(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Space.x4, vertical = Space.x2)
-                        .clip(RoundedCornerShape(Radius.interactive))
-                        .background(colors.bgHover)
-                        .padding(horizontal = Space.x3, vertical = Space.x2),
+                        .padding(horizontal = V3Space.md, vertical = V3Space.xs)
+                        .clip(RoundedCornerShape(V3Radius.xs))
+                        .background(colors.bgTertiary)
+                        .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Search,
                         contentDescription = null,
-                        tint = colors.textTertiary,
-                        modifier = Modifier.size(Sizes.iconSm),
+                        tint = colors.labelTertiary,
+                        modifier = Modifier.size(V3Size.iconXs),
                     )
-                    Spacer(Modifier.width(Space.x2))
+                    Spacer(Modifier.width(V3Space.xs))
                     Box(modifier = Modifier.weight(1f)) {
                         if (query.isEmpty()) {
                             Text(
                                 text = "搜索梗或分类",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = FontSize.bodySm,
-                                    color = colors.textTertiary,
+                                style = V3Type.footnote.copy(
+                                    color = colors.labelTertiary,
                                 ),
                             )
                         }
@@ -197,25 +194,23 @@ fun MemeLibrarySheet(
                             value = query,
                             onValueChange = { query = it },
                             singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = FontSize.bodySm,
-                                color = colors.textPrimary,
+                            textStyle = V3Type.footnote.copy(
+                                color = colors.labelPrimary,
                             ),
-                            cursorBrush = SolidColor(colors.brandPrimary),
+                            cursorBrush = SolidColor(colors.brand),
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
                     if (query.isNotEmpty()) {
                         Text(
                             text = "清空",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
-                                color = colors.textSecondarySafe,
+                            style = V3Type.caption2.copy(
+                                color = colors.labelSecondary,
                             ),
                             modifier = Modifier
-                                .clip(RoundedCornerShape(Radius.badge))
+                                .clip(RoundedCornerShape(V3Radius.xs))
                                 .clickable { query = "" }
-                                .padding(horizontal = Space.x2, vertical = Space.tagVertical),
+                                .padding(horizontal = V3Space.xs, vertical = V3Space.tagVertical),
                         )
                     }
                 }
@@ -226,11 +221,10 @@ fun MemeLibrarySheet(
                 if (grouped.isEmpty()) {
                     Text(
                         text = "没有匹配的梗",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = FontSize.bodySm,
-                            color = colors.textTertiary,
+                        style = V3Type.footnote.copy(
+                            color = colors.labelTertiary,
                         ),
-                        modifier = Modifier.padding(Space.x4),
+                        modifier = Modifier.padding(V3Space.md),
                     )
                 } else {
                     LazyColumn(
@@ -242,16 +236,15 @@ fun MemeLibrarySheet(
                             item(key = "cat-${cat.name}") {
                                 Text(
                                     text = "${cat.name}（${cat.count}）",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontSize = FontSize.badge,
+                                    style = V3Type.caption2.copy(
                                         fontWeight = FontWeight.Medium,
-                                        color = colors.textTertiary,
+                                        color = colors.labelTertiary,
                                     ),
                                     modifier = Modifier.padding(
-                                        start = Space.x4,
-                                        end = Space.x4,
-                                        top = Space.x3,
-                                        bottom = Space.compactVertical,
+                                        start = V3Space.md,
+                                        end = V3Space.md,
+                                        top = V3Space.sm,
+                                        bottom = V3Space.hairline,
                                     ),
                                 )
                             }
@@ -269,7 +262,7 @@ fun MemeLibrarySheet(
                     }
                 }
 
-                Spacer(Modifier.height(Space.x2))
+                Spacer(Modifier.height(V3Space.xs))
             }
         }
     }
@@ -302,22 +295,21 @@ private fun MemeRow(
     onCopy: () -> Unit,
     onSend: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = Space.minTouchTarget)
+            .heightIn(min = V3Size.touchMin)
             .clickable(onClick = onPick)
-            .padding(horizontal = Space.x4, vertical = Space.compactVertical),
+            .padding(horizontal = V3Space.md, vertical = V3Space.hairline),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = meme.text,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.body,
-                    color = colors.textPrimary,
+                style = V3Type.callout.copy(
+                    color = colors.labelPrimary,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -326,9 +318,8 @@ private fun MemeRow(
                 Spacer(Modifier.height(1.dp))
                 Text(
                     text = meme.note,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textTertiary,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelTertiary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -336,13 +327,13 @@ private fun MemeRow(
             }
         }
 
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
 
         ActionChip(label = "复制", enabled = true, onClick = onCopy)
 
         // 只有能发的时候才出现 —— 不显示灰按钮
         if (canSend) {
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             ActionChip(
                 label = "发送",
                 // 发送在途时禁用（防连点）
@@ -362,24 +353,23 @@ private fun ActionChip(
     onClick: () -> Unit,
     highlight: Boolean = false,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = label,
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.badge,
+        style = V3Type.caption2.copy(
             fontWeight = if (highlight) FontWeight.Medium else FontWeight.Normal,
             color = when {
-                !enabled -> colors.textTertiary
-                highlight -> colors.textBrandSafe
-                else -> colors.textSecondarySafe
+                !enabled -> colors.labelTertiary
+                highlight -> colors.brandBiliText
+                else -> colors.labelSecondary
             },
         ),
         maxLines = 1,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.badge))
-            .background(colors.bgHover)
+            .clip(RoundedCornerShape(V3Radius.xs))
+            .background(colors.bgTertiary)
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = Space.x2, vertical = Space.tagVertical),
+            .padding(horizontal = V3Space.xs, vertical = V3Space.tagVertical),
     )
 }
 

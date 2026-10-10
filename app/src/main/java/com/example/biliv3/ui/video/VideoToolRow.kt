@@ -30,10 +30,11 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 播放器正下方的**左右两栏工具条**。
@@ -88,7 +89,7 @@ fun VideoToolRow(
      */
     onOpenSummary: (() -> Unit)? = null,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = modifier
@@ -101,12 +102,12 @@ fun VideoToolRow(
             //
             // 现在直接落在页面底上，靠留白与下方卡片分开。
             // 官方客户端此处也是通栏、无容器。
-            .padding(horizontal = Space.x4, vertical = Space.x2),
+            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // ================= 左栏：视图切换 =================
         Row(
-            horizontalArrangement = Arrangement.spacedBy(Space.x5),
+            horizontalArrangement = Arrangement.spacedBy(V3Space.lg),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f),
         ) {
@@ -124,7 +125,7 @@ fun VideoToolRow(
 
         // ================= 右栏：AI 总结 + 发弹幕 + 开关 =================
         Row(
-            horizontalArrangement = Arrangement.spacedBy(Space.x2),
+            horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // ---- AI 总结入口（v1.6.3）----
@@ -135,24 +136,23 @@ fun VideoToolRow(
             if (onOpenSummary != null) {
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.pill))
-                        .background(colors.bgHover)
+                        .clip(RoundedCornerShape(V3Radius.pill))
+                        .background(colors.bgTertiary)
                         .clickable(onClick = onOpenSummary)
-                        .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
+                        .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.AutoAwesome,
                         contentDescription = null,
-                        tint = colors.textLinkSafe,
-                        modifier = Modifier.size(Sizes.iconSm),
+                        tint = colors.brandText,
+                        modifier = Modifier.size(V3Size.iconXs),
                     )
-                    Spacer(Modifier.width(Space.x1))
+                    Spacer(Modifier.width(V3Space.xxs))
                     Text(
                         text = "AI 总结",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.badge,
-                            color = colors.textSecondarySafe,
+                        style = V3Type.caption2.copy(
+                            color = colors.labelSecondary,
                         ),
                         maxLines = 1,
                     )
@@ -162,24 +162,23 @@ fun VideoToolRow(
             // 发弹幕入口：胶囊形，一眼看出可点
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.pill))
-                    .background(colors.bgHover)
+                    .clip(RoundedCornerShape(V3Radius.pill))
+                    .background(colors.bgTertiary)
                     .clickable(onClick = onSendDanmaku)
-                    .padding(horizontal = Space.x3, vertical = Space.compactHorizontal),
+                    .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Edit,
                     contentDescription = null,
-                    tint = colors.textSecondarySafe,
-                    modifier = Modifier.size(Sizes.iconSm),
+                    tint = colors.labelSecondary,
+                    modifier = Modifier.size(V3Size.iconXs),
                 )
-                Spacer(Modifier.width(Space.x1))
+                Spacer(Modifier.width(V3Space.xxs))
                 Text(
                     text = "点我发弹幕",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelSecondary,
                     ),
                     maxLines = 1,
                 )
@@ -188,16 +187,16 @@ fun VideoToolRow(
             // 弹幕总开关：图标按钮，开启时高亮
             Box(
                 modifier = Modifier
-                    .size(Sizes.iconXl + Space.x2)
-                    .clip(RoundedCornerShape(Radius.interactive))
+                    .size(V3Size.iconLg + V3Space.xs)
+                    .clip(RoundedCornerShape(V3Radius.xs))
                     .clickable(onClick = onToggleDanmaku),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.Outlined.ChatBubbleOutline,
                     contentDescription = if (danmakuEnabled) "关闭弹幕" else "开启弹幕",
-                    tint = if (danmakuEnabled) colors.brandPrimary else colors.textTertiary,
-                    modifier = Modifier.size(Sizes.iconLg),
+                    tint = if (danmakuEnabled) colors.brand else colors.labelTertiary,
+                    modifier = Modifier.size(V3Size.iconMd),
                 )
             }
         }
@@ -216,36 +215,35 @@ private fun TabItem(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.interactive))
+            .clip(RoundedCornerShape(V3Radius.xs))
             .clickable(onClick = onClick)
-            .padding(vertical = Space.x1),
+            .padding(vertical = V3Space.xxs),
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
+            style = V3Type.callout.copy(
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (selected) colors.textPrimary else colors.textSecondarySafe,
+                color = if (selected) colors.labelPrimary else colors.labelSecondary,
             ),
             maxLines = 1,
         )
-        Spacer(Modifier.height(Space.micro))
+        Spacer(Modifier.height(V3Space.hairline))
         // 下划线：选中时才显示（高度固定，避免切换时行高跳动）
         //
-        // ⚠️ 用 `Space.tabIndicator`(3dp) 而不是 `trackHeight`(2dp)（v1.4.2 修）。
+        // ⚠️ 用 `V3Space.tabIndicator`(3dp) 而不是 `trackHeight`(2dp)（v1.4.2 修）。
         // 两者语义不同：`tabIndicator` 专指 Tab 下划线，`trackHeight` 是进度条。
         // 同项目里其它 Tab 都用 tabIndicator，这里用 2dp 会让切 Tab 时
         // 下划线粗细与相邻页面不一致。
         Box(
             modifier = Modifier
                 .width(TAB_UNDERLINE)
-                .height(Space.tabIndicator)
+                .height(V3Space.tabIndicator)
                 .background(
-                    if (selected) colors.brandPrimary else androidx.compose.ui.graphics.Color.Transparent,
+                    if (selected) colors.brand else androidx.compose.ui.graphics.Color.Transparent,
                 ),
         )
     }
@@ -294,7 +292,7 @@ private fun TabItem(
  *
  * ### 修法：**统一容器尺寸**（而不是加负 margin 硬凑）
  *
- * 两个按钮都用 `Space.minTouchTarget`（48dp）：
+ * 两个按钮都用 `V3Size.touchMin`（48dp）：
  * - 图标中心都落在 `右边缘 − 24dp` → 天然对齐
  * - 顺带满足 48dp 最小触摸目标（原来的 32dp 是偏小的）
  * - **没有负 margin、没有 magic number** —— 只是让两个同类控件用同一个 token
@@ -309,12 +307,12 @@ fun DescToggleButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Box(
         modifier = modifier
             // ⚠️ 必须与「更多操作」用同一个容器尺寸，否则中心对不齐
             //    （见上方长说明：8dp 容器差 = 21px 中心偏移）
-            .size(Space.minTouchTarget)
+            .size(V3Size.touchMin)
             .clip(CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -322,9 +320,9 @@ fun DescToggleButton(
         Icon(
             imageVector = Icons.Filled.KeyboardArrowDown,
             contentDescription = if (expanded) "收起简介" else "展开简介",
-            tint = colors.textSecondarySafe,
+            tint = colors.labelSecondary,
             modifier = Modifier
-                .size(Sizes.iconXl)
+                .size(V3Size.iconLg)
                 // 展开时翻转成向上箭头
                 .rotate(if (expanded) 180f else 0f),
         )

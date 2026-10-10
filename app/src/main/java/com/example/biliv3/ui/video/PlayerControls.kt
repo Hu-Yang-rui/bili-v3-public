@@ -78,13 +78,16 @@ import com.example.biliv3.design.tokens.Motion
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
+import com.example.biliv3.design.v3.GlassSurface
+import com.example.biliv3.design.v3.V3Glass
 
 /**
  * 播放器控制层：手势 + 精简控制条。
@@ -186,7 +189,7 @@ fun PlayerControls(
      */
     skipSegments: List<SkipSegment> = emptyList(),
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     var isPlaying by remember { mutableStateOf(player.isPlaying) }
     var duration by remember { mutableLongStateOf(player.duration.coerceAtLeast(0)) }
     var position by remember { mutableLongStateOf(player.currentPosition) }
@@ -398,18 +401,44 @@ fun PlayerControls(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = Space.x4)
-                    .clip(RoundedCornerShape(Radius.pill))
-                    .background(colors.overlayControl)
-                    .padding(horizontal = Space.x3, vertical = Space.x1 + Space.micro),
+                    .padding(top = V3Space.md),
             ) {
-                MonoReadout(
-                    text = if (pressSpeed > 1f) "${formatSpeed(pressSpeed)}× 快进中"
-                    else "${formatSpeed(pressSpeed)}× 慢放中",
-                    color = colors.onOverlay,
-                    fontSize = FontSize.label,
-                    weight = FontWeight.Medium,
-                )
+                // 🔴 v3：临时读数胶囊 = **扁平半透明**（不是模糊玻璃）。
+                //
+                // 旧版 `background(colors.controlOverlay)` 是 **70% 不透明黑** ——
+                // 太重，一颗黑饼压在画面上。
+                //
+                // ## 为什么不用模糊玻璃（实测两轮后放弃）
+                //
+                // 播放器控件是**标点**，不是内容。给它加 6dp 模糊 =
+                // 在已经很花的画面上再铺一层"有纹理的玻璃"。
+                // 而且读数胶囊是**临时浮出**的，用户只想扫一眼数字，
+                // 不需要"材质感"。
+                //
+                // 扁平方案：均匀压暗 35%，零 GPU 成本，读数始终清晰。
+                // 详见 `V3Materials.controlFlat` 的判据。
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(V3Radius.pill))
+                        .background(colors.materials.controlFlat)
+                        .border(
+                            1.dp,
+                            colors.materials.controlFlatBorder,
+                            RoundedCornerShape(V3Radius.pill),
+                        )
+                        .padding(
+                            horizontal = V3Space.sm,
+                            vertical = V3Space.xxs + V3Space.hairline,
+                        ),
+                ) {
+                    MonoReadout(
+                        text = if (pressSpeed > 1f) "${formatSpeed(pressSpeed)}× 快进中"
+                        else "${formatSpeed(pressSpeed)}× 慢放中",
+                        color = colors.labelOnMedia,
+                        fontSize = V3Type.caption1.fontSize,
+                        weight = FontWeight.Medium,
+                    )
+                }
             }
         }
 
@@ -422,16 +451,26 @@ fun PlayerControls(
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    // seek 预览是**读数浮层**，不是交互元素。
-                    // 它用 `pill` 才读得出"这是个临时读数胶囊"（与底部时间轴同族）。
-                    .clip(RoundedCornerShape(Radius.pill))
-                    .background(colors.overlayControl)
-                    .padding(horizontal = Space.x3, vertical = Space.x1 + Space.micro),
+                    // seek 预览是**读数浮层**，不是交互元素 ——
+                    // 用 pill 才读得出"这是个临时读数胶囊"（与底部时间轴同族）。
+                    //
+                    // 🔴 v3：同变速胶囊，用**扁平半透明**（不是模糊玻璃）。
+                    .clip(RoundedCornerShape(V3Radius.pill))
+                    .background(colors.materials.controlFlat)
+                    .border(
+                        1.dp,
+                        colors.materials.controlFlatBorder,
+                        RoundedCornerShape(V3Radius.pill),
+                    )
+                    .padding(
+                        horizontal = V3Space.sm,
+                        vertical = V3Space.xxs + V3Space.hairline,
+                    ),
             ) {
                 MonoReadout(
                     text = "${formatTime(target)} / ${formatTime(duration)}",
-                    color = colors.onOverlay,
-                    fontSize = FontSize.label,
+                    color = colors.labelOnMedia,
+                    fontSize = V3Type.caption1.fontSize,
                     weight = FontWeight.Medium,
                 )
             }
@@ -448,9 +487,9 @@ fun PlayerControls(
             ) {
                 androidx.compose.material3.CircularProgressIndicator(
                     // 纯黑播放器底上必须用高对比的白
-                    color = colors.onOverlay,
-                    strokeWidth = Space.trackHeight,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    color = colors.labelOnMedia,
+                    strokeWidth = V3Space.progressTrack,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
         } else {
@@ -479,20 +518,48 @@ fun PlayerControls(
                             label = "centerButtonAlpha",
                         ).value,
                     )
-                    .size(CENTER_BUTTON)
-                    .clip(CircleShape)
-                    .background(colors.overlayCover)
-                    .clickable {
-                        if (player.isPlaying) player.pause() else player.play()
-                    },
+                    .size(CENTER_BUTTON),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = if (isPlaying) "暂停" else "播放",
-                    tint = colors.onOverlay,
-                    modifier = Modifier.size(Sizes.iconXl + Space.x1),
-                )
+                // 🔴 v3：中央播放/暂停钮 = **扁平半透明**（不是模糊玻璃）。
+                //
+                // ## 为什么不用模糊玻璃（实测两轮后放弃）
+                //
+                // **第一轮** `Level.Clear + clearScrim`：控件变成**实心黑饼** ——
+                // `Clear.tintScale = 1.6` 会放大传入 alpha，`0.50 × 1.6 = 0.80`，
+                // 比改之前的纯色（54%）**更黑**。
+                //
+                // **第二轮** `Thin + 0.25`（有效 0.24）：能透出背景了，
+                // 但**观感仍不对** —— 播放器控件是**标点**不是内容，
+                // 加 6dp 模糊等于在已经很花的画面上再铺一层有纹理的玻璃。
+                //
+                // ## 扁平才是对的
+                //
+                // 均匀压暗 35%，零 GPU 成本（一次 `drawRect`，不抓帧不模糊），
+                // 白图标在任何画面上都清晰。播放键只是个"能点的圆"，
+                // 它不需要材质，只需要**可读 + 不抢戏**。
+                //
+                // ⚠️ 可点性由**外层 Box** 提供 —— 保持 v1.4.1 的教训：
+                //    控件始终在组合里、始终可点，只用 alpha 控制视觉
+                //    （不能用 AnimatedVisibility 移出组合）。
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(colors.materials.controlFlat)
+                        .border(1.dp, colors.materials.controlFlatBorder, CircleShape)
+                        .clickable {
+                            if (player.isPlaying) player.pause() else player.play()
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = if (isPlaying) "暂停" else "播放",
+                        tint = Color.White,
+                        modifier = Modifier.size(V3Size.iconLg + V3Space.xxs),
+                    )
+                }
             }
         }
 
@@ -545,7 +612,7 @@ fun PlayerControls(
                         ),
                     )
                     // 紧凑：垂直 2dp、水平 8dp（播放器每多一像素都是从画面里抢的）
-                    .padding(horizontal = Space.x2, vertical = Space.compactVertical),
+                    .padding(horizontal = V3Space.xs, vertical = V3Space.hairline),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // 当前进度（等宽）
@@ -553,12 +620,12 @@ fun PlayerControls(
                     text = formatTime(
                         if (isDragging) (dragFraction * duration).toLong() else position,
                     ),
-                    color = colors.onOverlay,
-                    fontSize = FontSize.badge,
+                    color = colors.labelOnMedia,
+                    fontSize = V3Type.caption2.fontSize,
                     weight = FontWeight.Medium,
                 )
 
-                Spacer(Modifier.width(Space.x2))
+                Spacer(Modifier.width(V3Space.xs))
 
                 // ---- 自绘进度条 ----
                 //
@@ -613,7 +680,7 @@ fun PlayerControls(
                         durationMs = duration,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = Space.x1),
+                            .padding(horizontal = V3Space.xxs),
                     )
 
                     // ---- 拖动时的画面预览（v1.5.3）----
@@ -634,13 +701,13 @@ fun PlayerControls(
                     }
                 }
 
-                Spacer(Modifier.width(Space.x2))
+                Spacer(Modifier.width(V3Space.xs))
 
                 // 总时长（同样等宽，与左侧读数同族）
                 MonoReadout(
                     text = formatTime(duration),
-                    color = colors.onOverlay,
-                    fontSize = FontSize.badge,
+                    color = colors.labelOnMedia,
+                    fontSize = V3Type.caption2.fontSize,
                     weight = FontWeight.Normal,
                 )
             }
@@ -686,7 +753,7 @@ private fun SeekPreview(
     fraction: Float,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val density = LocalDensity.current
     val context = LocalContext.current
 
@@ -765,13 +832,13 @@ private fun SeekPreview(
                 .offset(
                     x = with(density) { clampedX.toDp() },
                     // 向上偏移一个气泡高 + 8dp，浮在进度条上方
-                    y = -(previewH + Space.x2),
+                    y = -(previewH + V3Space.xs),
                 )
                 .width(previewW)
                 .height(previewH)
-                .clip(RoundedCornerShape(Radius.badge))
-                .background(colors.bgHover)
-                .border(1.dp, colors.borderHairline, RoundedCornerShape(Radius.badge)),
+                .clip(RoundedCornerShape(V3Radius.xs))
+                .background(colors.bgTertiary)
+                .border(1.dp, colors.separator, RoundedCornerShape(V3Radius.xs)),
         )
     }
 }
@@ -798,8 +865,8 @@ private fun ProgressBar(
     durationMs: Long = 0L,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
-    val active = colors.brandPrimary
+    val colors = BiliV3.colors
+    val active = colors.brand
     val inactive = colors.trackInactive
 
     androidx.compose.foundation.Canvas(modifier = modifier) {
@@ -874,7 +941,7 @@ private fun ProgressBar(
         )
         // 白描边让圆点在深色轨道上更清晰
         drawCircle(
-            color = colors.onOverlay,
+            color = colors.labelOnMedia,
             radius = dotR,
             center = Offset(playedX.coerceIn(dotR, size.width - dotR), centerY),
             style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx()),
@@ -908,7 +975,7 @@ private fun ProgressBar(
  * 复用会让"已播"与"会被跳过"混成一个意思。
  */
 private fun skipSegmentColor(
-    colors: com.example.biliv3.design.tokens.BiliColors,
+    colors: com.example.biliv3.design.v3.V3Colors,
     category: String,
 ): androidx.compose.ui.graphics.Color = when (category) {
     "sponsor" -> colors.stateError
@@ -924,20 +991,20 @@ private fun SmallIconButton(
     contentDescription: String,
     onClick: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Box(
         modifier = Modifier
             .size(SMALL_BUTTON)
             .clip(CircleShape)
-            .background(colors.overlayControl)
+            .background(colors.controlOverlay)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = colors.onOverlay,
-            modifier = Modifier.size(Sizes.iconLg),
+            tint = colors.labelOnMedia,
+            modifier = Modifier.size(V3Size.iconMd),
         )
     }
 }

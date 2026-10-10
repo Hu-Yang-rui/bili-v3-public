@@ -62,16 +62,17 @@ import com.example.biliv3.data.model.formatRelativeTime
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.ruleTop
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.ui.component.BrandButton
 import com.example.biliv3.ui.component.BrandButtonVariant
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * aicu.cc「查成分」页。
@@ -129,7 +130,7 @@ fun AicuScreen(
      */
     onOpenCommentInApp: (avId: String, rpid: String, dynType: Int) -> Unit = { _, _, _ -> },
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     val uidInput by viewModel.uidInput.collectAsStateWithLifecycle()
     val queryUid by viewModel.queryUid.collectAsStateWithLifecycle()
@@ -167,7 +168,7 @@ fun AicuScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.bgBase),
+            .background(colors.bgPrimary),
     ) {
         // ---- 顶栏 ----
         // 通栏：不再是卡片，内容直接排。
@@ -180,13 +181,13 @@ fun AicuScreen(
                 .fillMaxWidth()
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .height(Sizes.topBarMobile)
-                .padding(horizontal = Space.x2),
+                .height(V3Size.topBar)
+                .padding(horizontal = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(Space.minTouchTarget)
+                    .size(V3Size.touchMin)
                     .clip(CircleShape)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
@@ -194,17 +195,16 @@ fun AicuScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(Sizes.iconXl),
+                    tint = colors.labelPrimary,
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
             }
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 text = "查成分",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
+                style = V3Type.subheadline.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
         }
@@ -237,9 +237,9 @@ fun AicuScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(
-                        color = colors.brandPrimary,
-                        strokeWidth = Space.trackHeight,
-                        modifier = Modifier.size(Sizes.iconXl),
+                        color = colors.brand,
+                        strokeWidth = V3Space.progressTrack,
+                        modifier = Modifier.size(V3Size.iconLg),
                     )
                 }
 
@@ -254,7 +254,7 @@ fun AicuScreen(
                 // 4) 内容列表
                 else -> LazyColumn(
                     state = listState,
-                    contentPadding = PaddingValues(bottom = Space.x8),
+                    contentPadding = PaddingValues(bottom = V3Space.xxl),
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     // 用户资料卡 + 成分标记（有内容才渲染，不留空壳）
@@ -351,20 +351,19 @@ fun AicuScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = Space.x5),
+                                .padding(vertical = V3Space.lg),
                             contentAlignment = Alignment.Center,
                         ) {
                             when {
                                 loadingMore -> CircularProgressIndicator(
-                                    color = colors.brandPrimary,
-                                    strokeWidth = Space.trackHeight,
-                                    modifier = Modifier.size(Sizes.iconXl),
+                                    color = colors.brand,
+                                    strokeWidth = V3Space.progressTrack,
+                                    modifier = Modifier.size(V3Size.iconLg),
                                 )
                                 !hasMore -> Text(
                                     text = "没有更多了",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontSize = FontSize.label,
-                                        color = colors.textTertiary,
+                                    style = V3Type.caption1.copy(
+                                        color = colors.labelTertiary,
                                     ),
                                 )
                             }
@@ -375,13 +374,12 @@ fun AicuScreen(
                     item(key = "source") {
                         Text(
                             text = "数据来源：aicu.cc（第三方聚合站点，数据取自 B 站公开数据）",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
-                                color = colors.textTertiary,
+                            style = V3Type.caption2.copy(
+                                color = colors.labelTertiary,
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = Space.x4, vertical = Space.x3),
+                                .padding(horizontal = V3Space.md, vertical = V3Space.sm),
                         )
                     }
                 }
@@ -409,34 +407,32 @@ private fun isEmpty(
  */
 @Composable
 private fun GuideState() {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = Space.x8),
+            .padding(horizontal = V3Space.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(
             imageVector = Icons.Outlined.Search,
             contentDescription = null,
-            tint = colors.textTertiary,
+            tint = colors.labelTertiary,
             modifier = Modifier.size(48.dp),
         )
-        Spacer(Modifier.height(Space.x4))
+        Spacer(Modifier.height(V3Space.md))
         Text(
             text = "输入 UID 查询该用户在 B 站的评论与弹幕",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                color = colors.textSecondarySafe,
+            style = V3Type.callout.copy(
+                color = colors.labelSecondary,
             ),
         )
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
         Text(
             text = "数据来自第三方站点 aicu.cc，非官方接口",
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = FontSize.bodySm,
-                color = colors.textTertiary,
+            style = V3Type.footnote.copy(
+                color = colors.labelTertiary,
             ),
         )
     }
@@ -450,12 +446,12 @@ private fun UidSearchBar(
     onSubmit: () -> Unit,
     loading: Boolean,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Space.x3, vertical = Space.x2),
+            .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OutlinedTextField(
@@ -464,9 +460,8 @@ private fun UidSearchBar(
             placeholder = {
                 Text(
                     text = "UID",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.body,
-                        color = colors.textTertiary,
+                    style = V3Type.callout.copy(
+                        color = colors.labelTertiary,
                     ),
                 )
             },
@@ -474,20 +469,20 @@ private fun UidSearchBar(
             // UID 是纯数字 —— 直接弹数字键盘，少一次切换
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             // 输入框：交互元素，4dp
-            shape = RoundedCornerShape(Radius.interactive),
+            shape = RoundedCornerShape(V3Radius.xs),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = colors.brandPrimary,
-                unfocusedBorderColor = colors.borderHairline,
-                focusedTextColor = colors.textPrimary,
-                unfocusedTextColor = colors.textPrimary,
-                cursorColor = colors.brandPrimary,
-                focusedContainerColor = colors.bgCard,
-                unfocusedContainerColor = colors.bgCard,
+                focusedBorderColor = colors.brand,
+                unfocusedBorderColor = colors.separator,
+                focusedTextColor = colors.labelPrimary,
+                unfocusedTextColor = colors.labelPrimary,
+                cursorColor = colors.brand,
+                focusedContainerColor = colors.bgSecondary,
+                unfocusedContainerColor = colors.bgSecondary,
             ),
             modifier = Modifier.weight(1f),
         )
 
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
 
         BrandButton(
             label = if (loading) "查询中" else "查询",
@@ -505,15 +500,15 @@ private fun TabRow(
     selected: AicuTab,
     onSelect: (AicuTab) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             // ⚠️ Tab 条**不再是卡片** —— 它是一条切换栏，不是独立内容块。
             // 现在是一行纯文字 strip，选中态靠下划线表达。
-            .padding(horizontal = Space.x4),
-        horizontalArrangement = Arrangement.spacedBy(Space.x2),
+            .padding(horizontal = V3Space.md),
+        horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AicuTab.entries.forEach { t ->
@@ -523,25 +518,24 @@ private fun TabRow(
                 modifier = Modifier
                     .weight(1f)
                     .clickable { onSelect(t) }
-                    .padding(vertical = Space.x2),
+                    .padding(vertical = V3Space.xs),
             ) {
                 Text(
                     text = t.label,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = FontSize.bodySm,
+                    style = V3Type.footnote.copy(
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) colors.textPrimary else colors.textSecondarySafe,
+                        color = if (isSelected) colors.labelPrimary else colors.labelSecondary,
                     ),
                 )
-                Spacer(Modifier.height(Space.micro))
+                Spacer(Modifier.height(V3Space.hairline))
                 // 下划线固定高度，切换时不抖
-                // 高度用 `Space.tabIndicator`(3dp) —— 与其它页 Tab 一致（v1.4.2）
+                // 高度用 `V3Space.tabIndicator`(3dp) —— 与其它页 Tab 一致（v1.4.2）
                 Box(
                     modifier = Modifier
                         .width(20.dp)
-                        .height(Space.tabIndicator)
+                        .height(V3Space.tabIndicator)
                         .background(
-                            if (isSelected) colors.brandPrimary
+                            if (isSelected) colors.brand
                             else androidx.compose.ui.graphics.Color.Transparent,
                         ),
                 )
@@ -554,14 +548,13 @@ private fun TabRow(
 @Composable
 private fun TotalHint(text: String) {
     if (text.isEmpty()) return
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = text,
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = FontSize.label,
-            color = colors.textSecondarySafe,
+        style = V3Type.caption1.copy(
+            color = colors.labelSecondary,
         ),
-        modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
+        modifier = Modifier.padding(horizontal = V3Space.md, vertical = V3Space.xs),
     )
 }
 
@@ -586,7 +579,7 @@ private fun UserCard(
     uid: Long,
     onOpenSpace: (Long) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Column(
         modifier = Modifier
@@ -594,7 +587,7 @@ private fun UserCard(
             // ⚠️ 查询对象信息块**不再是卡片** —— 它是通栏的整体信息块。
             // 靠上边一条发丝线 + 组间距与上方输入区/ Tab 分开。
             .ruleTop(color = Rule.subtle)
-            .padding(start = Space.x4, end = Space.x4, top = Rhythm.between),
+            .padding(start = V3Space.md, end = V3Space.md, top = Rhythm.between),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
@@ -606,20 +599,19 @@ private fun UserCard(
                     .clip(CircleShape)
                     .background(colors.avatarPlaceholder),
             )
-            Spacer(Modifier.width(Space.x3))
+            Spacer(Modifier.width(V3Space.sm))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = card?.name.orEmpty().ifEmpty { "UID $uid" },
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = FontSize.titleMd,
+                    style = V3Type.subheadline.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = colors.textPrimary,
+                        color = colors.labelPrimary,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(Space.micro))
+                Spacer(Modifier.height(V3Space.hairline))
                 Text(
                     text = buildString {
                         append("UID $uid")
@@ -630,9 +622,8 @@ private fun UserCard(
                             append(" · ${formatCount(card.fans.toInt())} 粉丝")
                         }
                     },
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.label,
-                        color = colors.textSecondarySafe,
+                    style = V3Type.caption1.copy(
+                        color = colors.labelSecondary,
                     ),
                 )
             }
@@ -641,37 +632,35 @@ private fun UserCard(
             Box(
                 modifier = Modifier
                     // 按钮：交互元素，4dp
-                    .clip(RoundedCornerShape(Radius.interactive))
-                    .background(colors.bgHover)
+                    .clip(RoundedCornerShape(V3Radius.xs))
+                    .background(colors.bgTertiary)
                     .clickable { onOpenSpace(uid) }
-                    .padding(horizontal = Space.x3, vertical = Space.x2),
+                    .padding(horizontal = V3Space.sm, vertical = V3Space.xs),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "主页",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = FontSize.label,
-                            color = colors.textSecondarySafe,
+                        style = V3Type.caption1.copy(
+                            color = colors.labelSecondary,
                         ),
                     )
-                    Spacer(Modifier.width(Space.x1))
+                    Spacer(Modifier.width(V3Space.xxs))
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
                         contentDescription = null,
-                        tint = colors.textSecondarySafe,
-                        modifier = Modifier.size(Sizes.iconSm),
+                        tint = colors.labelSecondary,
+                        modifier = Modifier.size(V3Size.iconXs),
                     )
                 }
             }
         }
 
         if (card != null && card.sign.isNotEmpty()) {
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             Text(
                 text = card.sign,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    color = colors.textSecondarySafe,
+                style = V3Type.footnote.copy(
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -680,8 +669,8 @@ private fun UserCard(
 
         // ---- 成分标记 ----
         if (mark != null && mark.hasContent) {
-            Spacer(Modifier.height(Space.x3))
-            Column(verticalArrangement = Arrangement.spacedBy(Space.x1)) {
+            Spacer(Modifier.height(V3Space.sm))
+            Column(verticalArrangement = Arrangement.spacedBy(V3Space.xxs)) {
                 mark.gh.takeIf { it.isNotEmpty() }?.let { MarkRow("成分", it) }
                 mark.gh2.takeIf { it.isNotEmpty() }?.let { MarkRow("标签", it) }
                 mark.text.takeIf { it.isNotEmpty() }?.let { MarkRow("说明", it) }
@@ -702,21 +691,19 @@ private fun UserCard(
 /** 成分标记的一行：左侧标签 + 右侧内容。 */
 @Composable
 private fun MarkRow(label: String, value: String) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(verticalAlignment = Alignment.Top) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.badge,
-                color = colors.textTertiary,
+            style = V3Type.caption2.copy(
+                color = colors.labelTertiary,
             ),
             modifier = Modifier.width(48.dp),
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = FontSize.bodySm,
-                color = colors.textSecondarySafe,
+            style = V3Type.footnote.copy(
+                color = colors.labelSecondary,
             ),
             modifier = Modifier.weight(1f),
         )
@@ -737,7 +724,7 @@ private fun ReplyCard(
     onOpen: (String) -> Unit,
     onOpenInApp: (String, String, Int) -> Unit = { _, _, _ -> },
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val canOpen = reply.targetUrl.isNotEmpty()
     // 只有视频类评论能站内跳（dyn.type == 1，oid 即 av 号）。
     // 专栏 / 动态在 App 内没有对应页面，硬跳会得到空白页。
@@ -748,49 +735,44 @@ private fun ReplyCard(
             .fillMaxWidth()
             // ⚠️ 评论/弹幕**不再是卡片** —— 它们是列表里的一行。
             // 列表用留白分组，不用卡片分组。
-            .padding(horizontal = Space.x4, vertical = Space.x3),
+            .padding(horizontal = V3Space.md, vertical = V3Space.sm),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (reply.isNested) {
                 Text(
                     text = "回复",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textOnBrand,
+                    style = V3Type.caption2.copy(
+                        color = colors.labelOnBrand,
                         fontWeight = FontWeight.Medium,
                     ),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.badge))
-                        .background(colors.brandPrimaryDim)
-                        .padding(horizontal = Space.tagHorizontal, vertical = Space.tagVertical),
+                        .clip(RoundedCornerShape(V3Radius.xs))
+                        .background(colors.brandDim)
+                        .padding(horizontal = V3Space.tagHorizontal, vertical = V3Space.tagVertical),
                 )
-                Spacer(Modifier.width(Space.x2))
+                Spacer(Modifier.width(V3Space.xs))
             }
             Text(
                 text = dynTypeLabel(reply.dynType),
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = colors.textTertiary,
+                style = V3Type.caption2.copy(
+                    color = colors.labelTertiary,
                 ),
             )
             Spacer(Modifier.weight(1f))
             Text(
                 text = formatRelativeTime(reply.timeSeconds),
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = colors.textTertiary,
+                style = V3Type.caption2.copy(
+                    color = colors.labelTertiary,
                 ),
             )
         }
 
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
 
         Text(
             text = reply.message,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                lineHeight = FontSize.bodyLine,
-                color = colors.textPrimary,
+            style = V3Type.callout.copy(
+                color = colors.labelPrimary,
             ),
             maxLines = 6,
             overflow = TextOverflow.Ellipsis,
@@ -808,32 +790,31 @@ private fun ReplyCard(
         // - 「在 App 内看评论」：只有视频类评论才有（有站内页）
         // - 「原站查看」：始终可用，但明确标注是外部打开
         if (canOpen || canOpenInApp) {
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Space.x4),
+                horizontalArrangement = Arrangement.spacedBy(V3Space.md),
             ) {
                 if (canOpenInApp) {
                     // 站内：带视频图标，主色，视觉上优先
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.badge))
+                            .clip(RoundedCornerShape(V3Radius.xs))
                             .clickable { onOpenInApp(reply.oid, reply.rpid, reply.dynType) }
-                            .padding(vertical = Space.compactVertical),
+                            .padding(vertical = V3Space.hairline),
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.PlayCircleOutline,
                             contentDescription = null,
-                            tint = colors.textBrandSafe,
-                            modifier = Modifier.size(Sizes.iconSm),
+                            tint = colors.brandBiliText,
+                            modifier = Modifier.size(V3Size.iconXs),
                         )
-                        Spacer(Modifier.width(Space.x1))
+                        Spacer(Modifier.width(V3Space.xxs))
                         Text(
                             text = "在 App 内看评论",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
-                                color = colors.textBrandSafe,
+                            style = V3Type.caption2.copy(
+                                color = colors.brandBiliText,
                                 fontWeight = FontWeight.Medium,
                             ),
                         )
@@ -844,22 +825,21 @@ private fun ReplyCard(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.badge))
+                            .clip(RoundedCornerShape(V3Radius.xs))
                             .clickable { onOpen(reply.targetUrl) }
-                            .padding(vertical = Space.compactVertical),
+                            .padding(vertical = V3Space.hairline),
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
                             contentDescription = null,
-                            tint = colors.textTertiary,
-                            modifier = Modifier.size(Sizes.iconSm),
+                            tint = colors.labelTertiary,
+                            modifier = Modifier.size(V3Size.iconXs),
                         )
-                        Spacer(Modifier.width(Space.x1))
+                        Spacer(Modifier.width(V3Space.xxs))
                         Text(
                             text = "原站查看",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
-                                color = colors.textTertiary,
+                            style = V3Type.caption2.copy(
+                                color = colors.labelTertiary,
                             ),
                         )
                     }
@@ -872,7 +852,7 @@ private fun ReplyCard(
 /** 视频弹幕卡片。 */
 @Composable
 private fun VideoDanmakuCard(item: AicuVideoDanmaku, onOpen: (String) -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val canOpen = item.targetUrl.isNotEmpty()
 
     Column(
@@ -882,55 +862,51 @@ private fun VideoDanmakuCard(item: AicuVideoDanmaku, onOpen: (String) -> Unit) {
             .then(
                 if (canOpen) Modifier.clickable { onOpen(item.targetUrl) } else Modifier,
             )
-            .padding(horizontal = Space.x4, vertical = Space.x3),
+            .padding(horizontal = V3Space.md, vertical = V3Space.sm),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Outlined.Subtitles,
                 contentDescription = null,
-                tint = colors.brandPrimary,
-                modifier = Modifier.size(Sizes.iconMd),
+                tint = colors.brand,
+                modifier = Modifier.size(V3Size.iconMd),
             )
-            Spacer(Modifier.width(Space.x1))
+            Spacer(Modifier.width(V3Space.xxs))
             Text(
                 // progress 是毫秒，这里换算成时间轴 —— 直接当秒用会显示成 20 分钟
                 text = AicuRepository.formatDanmakuTime(item.progressMs),
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
+                style = V3Type.caption1.copy(
                     fontWeight = FontWeight.Medium,
-                    color = colors.textPrimary,
+                    color = colors.labelPrimary,
                 ),
             )
             Spacer(Modifier.weight(1f))
             Text(
                 text = formatRelativeTime(item.ctimeSeconds),
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = colors.textTertiary,
+                style = V3Type.caption2.copy(
+                    color = colors.labelTertiary,
                 ),
             )
         }
 
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
 
         Text(
             text = item.content,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = FontSize.body,
-                color = colors.textPrimary,
+            style = V3Type.callout.copy(
+                color = colors.labelPrimary,
             ),
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
         )
 
-        Spacer(Modifier.height(Space.x2))
+        Spacer(Modifier.height(V3Space.xs))
 
         Text(
             // oid 是 av 号（不是 bvid）—— 标注出来便于用户核对
             text = "视频 av${item.oid}",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.badge,
-                color = colors.textTertiary,
+            style = V3Type.caption2.copy(
+                color = colors.labelTertiary,
             ),
         )
     }
@@ -939,7 +915,7 @@ private fun VideoDanmakuCard(item: AicuVideoDanmaku, onOpen: (String) -> Unit) {
 /** 直播弹幕卡片：一个直播间 + 其中的发言。 */
 @Composable
 private fun LiveDanmakuCard(item: AicuLiveDanmaku, onOpen: (String) -> Unit) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val canOpen = item.targetUrl.isNotEmpty()
 
     Column(
@@ -947,53 +923,58 @@ private fun LiveDanmakuCard(item: AicuLiveDanmaku, onOpen: (String) -> Unit) {
             .fillMaxWidth()
             // ⚠️ 评论/弹幕**不再是卡片** —— 它们是列表里的一行。
             // 列表用留白分组，不用卡片分组。
-            .padding(horizontal = Space.x4, vertical = Space.x3),
+            .padding(horizontal = V3Space.md, vertical = V3Space.sm),
     ) {
         // 房间头
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = item.upName.ifEmpty { "未知主播" },
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = FontSize.bodySm,
-                    fontWeight = FontWeight.Medium,
-                    color = colors.textPrimary,
-                ),
+                style = V3Type.footnote,
+                fontWeight = FontWeight.Medium,
+                color = colors.labelPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
+                // 🔴 这里**不要** `fill = false`。
+                //
+                // 同一行里下面还有一个 `Spacer(weight(1f))` 用来把右侧的
+                // "进入直播间"推到行尾。两个 weight 争夺同一段剩余空间时，
+                // 标题会按内容宽度收缩、而 Spacer 吃掉剩下的 ——
+                // 房间号的位置就会**随主播名长度左右浮动**。
+                //
+                // 与 `LibraryScreens.kt` 里那段注释记的是同一个坑：
+                // 「第一版写成 `weight(1f, fill = false)` + 再加一个
+                //  `Spacer(weight(1f))` —— 两个 weight 争夺同一段剩余空间」。
+                //
+                // 判据：**一行里只能有一个"吃掉剩余空间"的元素。**
+                modifier = Modifier.weight(1f),
             )
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
             Text(
                 // roomid 接口给的是字符串，仓库层已转 Long
                 text = "房间 ${item.roomId}",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.badge,
-                    color = colors.textTertiary,
-                ),
+                style = V3Type.caption2,
+                color = colors.labelTertiary,
             )
-            Spacer(Modifier.weight(1f))
             if (canOpen) {
                 Text(
                     text = "进直播间 ›",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = FontSize.badge,
-                        color = colors.textBrandSafe,
+                    style = V3Type.caption2.copy(
+                        color = colors.brandBiliText,
                     ),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(Radius.badge))
+                        .clip(RoundedCornerShape(V3Radius.xs))
                         .clickable { onOpen(item.targetUrl) }
-                        .padding(horizontal = Space.x1, vertical = Space.compactVertical),
+                        .padding(horizontal = V3Space.xxs, vertical = V3Space.hairline),
                 )
             }
         }
 
         if (item.roomName.isNotEmpty()) {
-            Spacer(Modifier.height(Space.x1))
+            Spacer(Modifier.height(V3Space.xxs))
             Text(
                 text = item.roomName,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption1.copy(
+                    color = colors.labelSecondary,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -1002,33 +983,31 @@ private fun LiveDanmakuCard(item: AicuLiveDanmaku, onOpen: (String) -> Unit) {
 
         // 发言列表
         if (item.lines.isNotEmpty()) {
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     // 发言列表是面板（非交互）→ 直角
-                    .background(colors.bgHover)
-                    .padding(Space.x2),
+                    .background(colors.bgTertiary)
+                    .padding(V3Space.xs),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(Space.x1)) {
+                Column(verticalArrangement = Arrangement.spacedBy(V3Space.xxs)) {
                     item.lines.take(5).forEach { line ->
                         Row(verticalAlignment = Alignment.Top) {
                             Text(
                                 text = line.uname,
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = FontSize.badge,
-                                    color = colors.textSecondarySafe,
+                                style = V3Type.caption2.copy(
+                                    color = colors.labelSecondary,
                                 ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.width(72.dp),
                             )
-                            Spacer(Modifier.width(Space.x1))
+                            Spacer(Modifier.width(V3Space.xxs))
                             Text(
                                 text = line.text,
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontSize = FontSize.bodySm,
-                                    color = colors.textPrimary,
+                                style = V3Type.footnote.copy(
+                                    color = colors.labelPrimary,
                                 ),
                                 modifier = Modifier.weight(1f),
                             )
@@ -1038,9 +1017,8 @@ private fun LiveDanmakuCard(item: AicuLiveDanmaku, onOpen: (String) -> Unit) {
                     if (item.lines.size > 5) {
                         Text(
                             text = "另有 ${item.lines.size - 5} 条未显示",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = FontSize.badge,
-                                color = colors.textTertiary,
+                            style = V3Type.caption2.copy(
+                                color = colors.labelTertiary,
                             ),
                         )
                     }

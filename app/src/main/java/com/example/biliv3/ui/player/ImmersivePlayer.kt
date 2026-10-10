@@ -55,14 +55,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.data.lyrics.LyricsUiState
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Motion
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
 import com.example.biliv3.player.PlaybackMode
 import com.example.biliv3.player.QueueItem
 import kotlinx.coroutines.delay
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * **沉浸式播放器** —— 听视频 / 黑胶 / 歌词的统一宿主。
@@ -108,7 +109,7 @@ fun ImmersivePlayer(
     onRetryLyrics: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val context = LocalContext.current
 
     // 控件可见性：**只影响视觉与点击穿透**，不影响组合
@@ -194,7 +195,7 @@ fun ImmersivePlayer(
                     modifier = Modifier
                         .fillMaxSize()
                         // 上下留白避开顶栏与底部控件（间距令牌最大到 x12）
-                        .padding(top = Space.x12, bottom = Space.x12),
+                        .padding(top = V3Space.huge, bottom = V3Space.huge),
                 )
             }
         }
@@ -254,7 +255,7 @@ private fun ChromeLayer(
     onOpenQueue: () -> Unit,
     onToggleLyrics: () -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val alpha = if (visible) 1f else 0f
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -268,7 +269,7 @@ private fun ChromeLayer(
                 .fillMaxWidth()
                 .alpha(alpha)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(horizontal = Space.x2, vertical = Space.x4),
+                .padding(horizontal = V3Space.xs, vertical = V3Space.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ImmersiveIconButton(
@@ -277,12 +278,11 @@ private fun ChromeLayer(
                 enabled = visible,
                 onClick = onBack,
             )
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
             Text(
                 text = item?.title.orEmpty(),
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = FontSize.titleMd,
-                    color = colors.textPrimary,
+                style = V3Type.subheadline.copy(
+                    color = colors.labelPrimary,
                     fontWeight = FontWeight.Medium,
                 ),
                 maxLines = 1,
@@ -293,7 +293,7 @@ private fun ChromeLayer(
                 icon = Icons.Filled.Lyrics,
                 description = "歌词",
                 enabled = visible,
-                tint = if (lyricsExpanded) colors.brandPrimary else colors.textSecondarySafe,
+                tint = if (lyricsExpanded) colors.brand else colors.labelSecondary,
                 onClick = onToggleLyrics,
             )
             ImmersiveIconButton(
@@ -313,7 +313,7 @@ private fun ChromeLayer(
                 .fillMaxWidth()
                 .alpha(alpha)
                 .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(horizontal = Space.x6, vertical = Space.x8),
+                .padding(horizontal = V3Space.xl, vertical = V3Space.xxl),
         ) {
             // 🔴 黑胶模式**不画这条进度条**（v1.4.2 修「两个进度条」）。
             //
@@ -333,7 +333,7 @@ private fun ChromeLayer(
                     onSeek = onSeek,
                 )
 
-                Spacer(Modifier.height(Space.x6))
+                Spacer(Modifier.height(V3Space.xl))
             }
 
             Row(
@@ -382,10 +382,10 @@ private fun ImmersiveIconButton(
     size: androidx.compose.ui.unit.Dp = 24.dp,
     tint: Color = Color.Unspecified,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Box(
         modifier = Modifier
-            .size(if (size > 24.dp) size + Space.x4 else Space.minTouchTarget)
+            .size(if (size > 24.dp) size + V3Space.md else V3Size.touchMin)
             .clip(CircleShape)
             .pointerInput(enabled) {
                 if (enabled) {
@@ -397,7 +397,7 @@ private fun ImmersiveIconButton(
         Icon(
             imageVector = icon,
             contentDescription = description,
-            tint = if (tint == Color.Unspecified) colors.onOverlay else tint,
+            tint = if (tint == Color.Unspecified) colors.labelOnMedia else tint,
             modifier = Modifier.size(size),
         )
     }
@@ -411,7 +411,7 @@ private fun ImmersiveProgressBar(
     enabled: Boolean,
     onSeek: (Long) -> Unit,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     val progress = if (durationMs > 0L) {
         (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
     } else {
@@ -422,7 +422,7 @@ private fun ImmersiveProgressBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(Space.minTouchTarget)
+                .height(V3Size.touchMin)
                 .pointerInput(enabled, durationMs) {
                     if (enabled && durationMs > 0L) {
                         detectTapGestures { offset ->
@@ -437,15 +437,15 @@ private fun ImmersiveProgressBar(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(Space.trackHeight)
+                    .height(V3Space.progressTrack)
                     .background(colors.trackInactive),
             )
             // 已播段（品牌粉）
             Box(
                 modifier = Modifier
                     .fillMaxWidth(progress)
-                    .height(Space.trackHeight)
-                    .background(colors.brandPrimary),
+                    .height(V3Space.progressTrack)
+                    .background(colors.brand),
             )
         }
 
@@ -455,17 +455,17 @@ private fun ImmersiveProgressBar(
         ) {
             Text(
                 text = formatTime(positionMs),
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = FontSize.monoReadout,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption1.copy(
+                    fontSize = V3Type.readout().fontSize,
+                    color = colors.labelSecondary,
                     fontFamily = com.example.biliv3.design.tokens.FontFamilies.mono,
                 ),
             )
             Text(
                 text = formatTime(durationMs),
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = FontSize.monoReadout,
-                    color = colors.textSecondarySafe,
+                style = V3Type.caption1.copy(
+                    fontSize = V3Type.readout().fontSize,
+                    color = colors.labelSecondary,
                     fontFamily = com.example.biliv3.design.tokens.FontFamilies.mono,
                 ),
             )
@@ -476,11 +476,11 @@ private fun ImmersiveProgressBar(
 /** 听视频模式的主舞台：封面 + 明确的"音频模式"状态指示。 */
 @Composable
 private fun AudioStage(item: QueueItem?, positionMs: Long, durationMs: Long) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = Space.x8),
+            .padding(horizontal = V3Space.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -496,34 +496,33 @@ private fun AudioStage(item: QueueItem?, positionMs: Long, durationMs: Long) {
         // - 文字直接写结论「听视频 · 已启用」，而不是解释原理
         Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(Radius.pill))
-                .background(colors.surfaceElevated)
+                .clip(RoundedCornerShape(V3Radius.pill))
+                .background(colors.bgSecondaryElevated)
                 .border(
                     width = 1.dp,
-                    color = colors.brandPrimary,
-                    shape = RoundedCornerShape(Radius.pill),
+                    color = colors.brand,
+                    shape = RoundedCornerShape(V3Radius.pill),
                 )
-                .padding(horizontal = Space.x4, vertical = Space.x2),
+                .padding(horizontal = V3Space.md, vertical = V3Space.xs),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Space.x2),
+            horizontalArrangement = Arrangement.spacedBy(V3Space.xs),
         ) {
             Icon(
                 imageVector = Icons.Filled.Headphones,
                 contentDescription = null,
-                tint = colors.brandPrimary,
-                modifier = Modifier.size(Sizes.iconMd),
+                tint = colors.brand,
+                modifier = Modifier.size(V3Size.iconMd),
             )
             Text(
                 text = "听视频 · 已启用",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = FontSize.label,
-                    color = colors.brandPrimary,
+                style = V3Type.caption1.copy(
+                    color = colors.brand,
                     fontWeight = FontWeight.Medium,
                 ),
             )
         }
 
-        Spacer(Modifier.height(Space.x6))
+        Spacer(Modifier.height(V3Space.xl))
 
         Box(
             modifier = Modifier
@@ -539,34 +538,31 @@ private fun AudioStage(item: QueueItem?, positionMs: Long, durationMs: Long) {
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        Spacer(Modifier.height(Space.x8))
+        Spacer(Modifier.height(V3Space.xxl))
         Text(
             text = item?.title.orEmpty().ifEmpty { "暂无播放" },
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontSize = FontSize.titleMd,
-                color = colors.textPrimary,
+            style = V3Type.subheadline.copy(
+                color = colors.labelPrimary,
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
         if (!item?.author.isNullOrEmpty()) {
-            Spacer(Modifier.height(Space.x2))
+            Spacer(Modifier.height(V3Space.xs))
             Text(
                 text = item.author,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = FontSize.bodySm,
-                    color = colors.textSecondarySafe,
+                style = V3Type.footnote.copy(
+                    color = colors.labelSecondary,
                 ),
             )
         }
-        Spacer(Modifier.height(Space.x5))
+        Spacer(Modifier.height(V3Space.lg))
         // 补一句原理说明（不是主指示，主指示已在上方徽章）——
         // 让好奇的用户知道"为什么没画面"，而不是以为坏了。
         Text(
             text = "视频轨未装配，不占用视频解码器",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = FontSize.label,
-                color = colors.textTertiary,
+            style = V3Type.caption1.copy(
+                color = colors.labelTertiary,
             ),
         )
     }

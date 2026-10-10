@@ -20,10 +20,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Sizes
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Size
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 播放器占位：加载中 / 失败。
@@ -41,7 +42,7 @@ fun PlayerPlaceholder(
     loading: Boolean = false,
     onRetry: (() -> Unit)? = null,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
 
     Box(
         modifier = modifier.background(colors.playerBackground),
@@ -49,36 +50,34 @@ fun PlayerPlaceholder(
     ) {
         if (loading) {
             CircularProgressIndicator(
-                color = colors.brandPrimary,
-                strokeWidth = Space.trackHeight,
-                modifier = Modifier.size(Sizes.iconXl + Sizes.iconMd),
+                color = colors.brand,
+                strokeWidth = V3Space.progressTrack,
+                modifier = Modifier.size(V3Size.iconLg + V3Size.iconMd),
             )
         } else {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(Space.x6),
+                modifier = Modifier.padding(V3Space.xl),
             ) {
                 Text(
                     text = message,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = FontSize.bodySm,
-                        color = colors.onOverlay,
+                    style = V3Type.footnote.copy(
+                        color = colors.labelOnMedia,
                     ),
                     textAlign = TextAlign.Center,
                 )
                 if (onRetry != null) {
-                    Spacer(Modifier.height(Space.x3))
+                    Spacer(Modifier.height(V3Space.sm))
                     Text(
                         text = "点击重试",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = FontSize.bodySm,
-                            color = colors.onOverlay,
+                        style = V3Type.footnote.copy(
+                            color = colors.labelOnMedia,
                         ),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.interactive))
-                            .background(colors.brandPrimary)
+                            .clip(RoundedCornerShape(V3Radius.xs))
+                            .background(colors.brand)
                             .clickable(onClick = onRetry)
-                            .padding(horizontal = Space.x4, vertical = Space.x2),
+                            .padding(horizontal = V3Space.md, vertical = V3Space.xs),
                     )
                 }
             }

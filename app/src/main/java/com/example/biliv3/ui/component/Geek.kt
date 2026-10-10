@@ -37,10 +37,11 @@ import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.DeviceTier
 import com.example.biliv3.design.LocalDeviceTier
 import com.example.biliv3.design.tokens.FontFamilies
-import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Motion
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 极客点缀组件集。
@@ -88,16 +89,16 @@ import com.example.biliv3.design.tokens.Space
 fun MonoReadout(
     text: String,
     modifier: Modifier = Modifier,
-    color: Color = BiliTheme.colors.textSecondarySafe,
-    fontSize: TextUnit = FontSize.monoReadout,
+    color: Color = BiliV3.colors.labelSecondary,
+    fontSize: TextUnit = V3Type.readout().fontSize,
     weight: FontWeight = FontWeight.Medium,
 ) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelMedium.copy(
+        style = V3Type.footnote.copy(
             fontFamily = FontFamilies.mono,
             fontSize = fontSize,
-            lineHeight = FontSize.monoReadoutLine,
+            lineHeight = V3Type.readout().lineHeight,
             color = color,
             fontWeight = weight,
             // 轻微字距：等宽数字之间太挤会显得"糊成一团"
@@ -136,30 +137,30 @@ fun PromptLine(
     text: String,
     modifier: Modifier = Modifier,
     symbol: String = "$",
-    textColor: Color = BiliTheme.colors.textSecondarySafe,
+    textColor: Color = BiliV3.colors.labelSecondary,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = symbol,
-            style = MaterialTheme.typography.labelMedium.copy(
+            style = V3Type.footnote.copy(
                 fontFamily = FontFamilies.mono,
-                fontSize = FontSize.label,
+                fontSize = V3Type.caption1.fontSize,
                 color = colors.accentTerminal,
                 fontWeight = FontWeight.Bold,
             ),
             maxLines = 1,
         )
-        Spacer(Modifier.width(Space.x2))
+        Spacer(Modifier.width(V3Space.xs))
         Text(
             text = text,
-            style = MaterialTheme.typography.labelMedium.copy(
+            style = V3Type.footnote.copy(
                 fontFamily = FontFamilies.mono,
-                fontSize = FontSize.label,
-                lineHeight = FontSize.labelLine,
+                fontSize = V3Type.caption1.fontSize,
+                lineHeight = V3Type.caption1.lineHeight,
                 color = textColor,
             ),
             maxLines = 2,
@@ -189,7 +190,7 @@ fun PromptLine(
 @Composable
 fun BlockCursor(
     modifier: Modifier = Modifier,
-    color: Color = BiliTheme.colors.accentTerminal,
+    color: Color = BiliV3.colors.accentTerminal,
     size: Dp = 8.dp,
 ) {
     val tier = LocalDeviceTier.current
@@ -248,20 +249,20 @@ fun TechTag(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Text(
         text = text,
-        style = MaterialTheme.typography.labelMedium.copy(
+        style = V3Type.footnote.copy(
             fontFamily = FontFamilies.mono,
-            fontSize = FontSize.badge,
-            color = colors.textTertiary,
+            fontSize = V3Type.caption2.fontSize,
+            color = colors.labelTertiary,
             letterSpacing = 0.5.sp,
         ),
         maxLines = 1,
         modifier = modifier
-            .clip(RoundedCornerShape(Radius.badge))
-            .background(colors.bgHover)
-            .padding(horizontal = Space.compactHorizontal, vertical = Space.tagVertical),
+            .clip(RoundedCornerShape(V3Radius.xs))
+            .background(colors.bgTertiary)
+            .padding(horizontal = V3Space.xs, vertical = V3Space.tagVertical),
     )
 }
 
@@ -292,7 +293,7 @@ fun Modifier.gridBackdrop(
     val tier = LocalDeviceTier.current
     if (tier == DeviceTier.Low) return this
 
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     return this.drawBehind {
         val step = cell.toPx()
         if (step <= 0f) return@drawBehind
@@ -341,7 +342,7 @@ fun StatusLine(
     modifier: Modifier = Modifier,
     symbol: String = "$",
     showCursor: Boolean = false,
-    textColor: Color = BiliTheme.colors.textSecondarySafe,
+    textColor: Color = BiliV3.colors.labelSecondary,
 ) {
     Row(
         modifier = modifier,
@@ -349,7 +350,7 @@ fun StatusLine(
     ) {
         PromptLine(text = text, symbol = symbol, textColor = textColor)
         if (showCursor) {
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(V3Space.xs))
             BlockCursor()
         }
     }
@@ -369,29 +370,29 @@ fun TechInfoRow(
     pairs: List<Pair<String, String>>,
     modifier: Modifier = Modifier,
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Column(modifier = modifier.fillMaxWidth()) {
         pairs.forEach { (k, v) ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = Space.compactVertical),
+                    .padding(vertical = V3Space.hairline),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = k,
-                    style = MaterialTheme.typography.labelMedium.copy(
+                    style = V3Type.footnote.copy(
                         fontFamily = FontFamilies.mono,
-                        fontSize = FontSize.badge,
-                        color = colors.textTertiary,
+                        fontSize = V3Type.caption2.fontSize,
+                        color = colors.labelTertiary,
                     ),
                     modifier = Modifier.width(72.dp),
                     maxLines = 1,
                 )
                 MonoReadout(
                     text = v,
-                    color = colors.textSecondarySafe,
-                    fontSize = FontSize.label,
+                    color = colors.labelSecondary,
+                    fontSize = V3Type.caption1.fontSize,
                 )
             }
         }

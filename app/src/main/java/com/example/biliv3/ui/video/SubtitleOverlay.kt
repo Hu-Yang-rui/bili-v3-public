@@ -24,10 +24,11 @@ import androidx.compose.ui.unit.dp
 import com.example.biliv3.design.BiliTheme
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.biliv3.data.subtitle.SubtitleBody
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
-import com.example.biliv3.design.tokens.Space
 import kotlinx.coroutines.delay
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.V3Space
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 字幕渲染层。
@@ -97,8 +98,8 @@ fun SubtitleOverlay(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    start = Space.x4,
-                    end = Space.x4,
+                    start = V3Space.md,
+                    end = V3Space.md,
                     // 留出控制条高度：控制条是单行约 40dp + 渐变
                     bottom = SUBTITLE_BOTTOM_MARGIN,
                 ),
@@ -132,20 +133,20 @@ fun SubtitleOverlay(
  */
 @Composable
 private fun SubtitleLine(text: String, emphasized: Boolean) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(Radius.control))
+            .clip(RoundedCornerShape(V3Radius.sm))
             .background(colors.subtitleScrim)
-            .padding(horizontal = Space.x2, vertical = Space.compactVertical),
+            .padding(horizontal = V3Space.xs, vertical = V3Space.hairline),
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = if (emphasized) FontSize.titleMd else FontSize.bodySm,
-                lineHeight = if (emphasized) FontSize.titleMdLine else FontSize.bodySmLine,
+            style = V3Type.callout.copy(
+                fontSize = if (emphasized) V3Type.subheadline.fontSize else V3Type.footnote.fontSize,
+                lineHeight = if (emphasized) V3Type.subheadline.lineHeight else V3Type.footnote.lineHeight,
                 fontWeight = if (emphasized) FontWeight.Medium else FontWeight.Normal,
-                color = colors.onOverlay,
+                color = colors.labelOnMedia,
             ),
             textAlign = TextAlign.Center,
         )

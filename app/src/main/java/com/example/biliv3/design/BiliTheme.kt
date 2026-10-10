@@ -14,11 +14,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.biliv3.design.tokens.BiliColors
 import com.example.biliv3.design.tokens.DarkColors
-import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.v3.BiliV3Theme
 import com.example.biliv3.design.v3.V3DarkColors
 import com.example.biliv3.design.v3.V3WindowSize
+import com.example.biliv3.design.v3.V3Radius
+import com.example.biliv3.design.v3.V3Type
 
 /**
  * 中文字形回落链。
@@ -160,11 +161,11 @@ fun BiliTheme(
  *
  * | M3 槽位 | M3 默认 | 我们应给 | 用在哪 |
  * |---|---|---|---|
- * | `extraSmall` | 4dp | `Radius.badge` 4dp | 角标 |
- * | `small` | 8dp | `Radius.badge` 4dp | 小标签 |
- * | `medium` | 12dp | `Radius.interactive` 4dp | 按钮、输入框（交互元素） |
- * | `large` | 16dp | `Radius.panel` 16dp | 底部面板、浮层 |
- * | `extraLarge` | 28dp | `Radius.panel` 16dp | 大面板（不放大到 28） |
+ * | `extraSmall` | 4dp | `V3Radius.xs` 4dp | 角标 |
+ * | `small` | 8dp | `V3Radius.xs` 4dp | 小标签 |
+ * | `medium` | 12dp | `V3Radius.xs` 4dp | 按钮、输入框（交互元素） |
+ * | `large` | 16dp | `V3Radius.lg` 16dp | 底部面板、浮层 |
+ * | `extraLarge` | 28dp | `V3Radius.lg` 16dp | 大面板（不放大到 28） |
  *
  * 首版没传这个参数，所以 `CoinDialog` 里的 `Checkbox`、`BrandButton`、
  * `Switch` 各自是 M3 默认圆角 —— 这就是"圆角看着不是一套"的来源。
@@ -172,11 +173,11 @@ fun BiliTheme(
  * ⚠️ v1.2.1 起 `medium` 由 12dp 收敛到 4dp（§5.2：圆角只给交互元素 4dp）。
  */
 val BiliShapes = Shapes(
-    extraSmall = RoundedCornerShape(Radius.badge),
-    small = RoundedCornerShape(Radius.badge),
-    medium = RoundedCornerShape(Radius.interactive),
-    large = RoundedCornerShape(Radius.panel),
-    extraLarge = RoundedCornerShape(Radius.panel),
+    extraSmall = RoundedCornerShape(V3Radius.xs),
+    small = RoundedCornerShape(V3Radius.xs),
+    medium = RoundedCornerShape(V3Radius.xs),
+    large = RoundedCornerShape(V3Radius.lg),
+    extraLarge = RoundedCornerShape(V3Radius.lg),
 )
 
 /** `BiliTheme.colors.textPrimary` 取色。 */
@@ -201,43 +202,43 @@ val BiliTypography
     get() = androidx.compose.material3.Typography(
         displaySmall = TextStyle(
             fontFamily = CjkFontFamily,
-            fontSize = FontSize.display,
-            lineHeight = FontSize.displayLine,
+            fontSize = V3Type.title3.fontSize,
+            lineHeight = V3Type.title3.lineHeight,
             fontWeight = FontWeight.Bold,
         ),
         titleLarge = TextStyle(
             fontFamily = CjkFontFamily,
-            fontSize = FontSize.titleLg,
-            lineHeight = FontSize.titleLgLine,
+            fontSize = V3Type.headline.fontSize,
+            lineHeight = V3Type.headline.lineHeight,
             fontWeight = FontWeight.Bold,
         ),
         titleMedium = TextStyle(
             fontFamily = CjkFontFamily,
-            fontSize = FontSize.titleMd,
-            lineHeight = FontSize.titleMdLine,
+            fontSize = V3Type.subheadline.fontSize,
+            lineHeight = V3Type.subheadline.lineHeight,
             fontWeight = FontWeight.SemiBold,
         ),
         bodyMedium = TextStyle(
             fontFamily = CjkFontFamily,
-            fontSize = FontSize.body,
-            lineHeight = FontSize.bodyLine,
+            fontSize = V3Type.callout.fontSize,
+            lineHeight = V3Type.callout.lineHeight,
             fontWeight = FontWeight.Normal,
         ),
         bodySmall = TextStyle(
             fontFamily = CjkFontFamily,
-            fontSize = FontSize.bodySm,
-            lineHeight = FontSize.bodySmLine,
+            fontSize = V3Type.footnote.fontSize,
+            lineHeight = V3Type.footnote.lineHeight,
             fontWeight = FontWeight.Normal,
         ),
         labelMedium = TextStyle(
             fontFamily = CjkFontFamily,
-            fontSize = FontSize.label,
-            lineHeight = FontSize.labelLine,
+            fontSize = V3Type.caption1.fontSize,
+            lineHeight = V3Type.caption1.lineHeight,
             fontWeight = FontWeight.Normal,
         ),
         labelSmall = TextStyle(
             fontFamily = CjkFontFamily,
-            fontSize = FontSize.micro,
+            fontSize = V3Type.caption2.fontSize,
             lineHeight = 16.sp,
             fontWeight = FontWeight.Normal,
         ),

@@ -52,7 +52,7 @@ import com.example.biliv3.data.FavFolder
 import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
 import com.example.biliv3.design.tokens.Motion
-import com.example.biliv3.design.tokens.Space
+import com.example.biliv3.design.v3.ProvideHazeState
 import com.example.biliv3.ui.aicu.AicuScreen
 import com.example.biliv3.ui.bangumi.BangumiScreen
 import com.example.biliv3.ui.bangumi.BangumiViewModel
@@ -94,6 +94,9 @@ import com.example.biliv3.ui.video.VideoDetailScreen
 import com.example.biliv3.ui.video.VideoDetailViewModelFactory
 import com.example.biliv3.ui.video.ReplyDetailScreen
 import com.example.biliv3.ui.video.ReplyDetailVmFactory
+import com.example.biliv3.design.v3.BiliV3
+import com.example.biliv3.design.v3.GlassSurface
+import com.example.biliv3.design.v3.V3Space
 
 /**
  * 应用外壳：`NavHost` + 底部导航。
@@ -127,7 +130,7 @@ fun MainShell(
     isInPip: Boolean = false,
     navController: NavHostController = rememberNavController(),
 ) {
-    val colors = BiliTheme.colors
+    val colors = BiliV3.colors
     // 收藏夹里的「分享」要唤起系统面板，需要 Context
     val context = androidx.compose.ui.platform.LocalContext.current
     // 把播放器弹层里的弹幕调整写回全局设置（协程作用域）
@@ -192,7 +195,7 @@ fun MainShell(
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
-            containerColor = colors.bgBase,
+            containerColor = colors.bgPrimary,
             // inset 由各页面自行消费（HomeScreen 的顶栏要 statusBars），
             // 这里只处理底栏的 navigationBars。
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -826,7 +829,7 @@ fun MainShell(
                         hostState = detailSnackbar,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = Space.x12),
+                            .padding(bottom = V3Space.huge),
                     )
                 }
             }
@@ -1382,7 +1385,7 @@ fun MainShell(
                         hostState = dlSnackbar,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = Space.x12),
+                            .padding(bottom = V3Space.huge),
                     )
                 }
             }
@@ -1569,7 +1572,7 @@ fun MainShell(
                         hostState = favSnackbar,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = Space.x12),
+                            .padding(bottom = V3Space.huge),
                     )
                 }
             }
@@ -1648,7 +1651,7 @@ fun MainShell(
                         hostState = orgSnackbar,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = Space.x12),
+                            .padding(bottom = V3Space.huge),
                     )
                 }
             }
@@ -1755,7 +1758,7 @@ fun MainShell(
                         hostState = favSnackbar,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = Space.x12),
+                            .padding(bottom = V3Space.huge),
                     )
                 }
             }
@@ -2055,22 +2058,51 @@ fun MainShell(
         //
         // 详见上方 `hazeState` 的说明。
         if (showBottomNav) {
-            BottomNav(
-                selectedIndex = selectedTab,
-                onSelect = { index ->
-                    navController.navigate(tabRoutes[index]) {
-                        // 三个 Tab 之间切换不要堆栈，且保留各自状态
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+            // 🔴 必须把 hazeState 注入子树，`GlassSurface` 才会走 Haze 路径。
+            //
+            // ## 这里曾经漏掉，导致整条 Haze 链路**从未生效**
+            //
+            // `GlassSurface` 的路径选择逻辑是：
+            //
+            // ```
+            // val hazeState = LocalHazeState.current
+            // if (hazeState != null) { HazeGlassSurface(...) ; return }   // ← 真折射
+            // // 否则退回内置四层合成（只有模糊 + 高光边）
+            // ```
+            //
+            // 而 `LocalHazeState` 的唯一写入方是 `ProvideHazeState(...)` ——
+            // **本项目零调用点**。于是 `LocalHazeState.current` 恒为 null，
+            // 底栏永远走"内置四层合成"分支：
+            //
+            // - 没有边缘折射、没有色散（Haze 的核心能力）
+            // - `hazeSource(hazeState)` 采集的那份内容**没人消费**
+            //   → 白付一次离屏合成的代价，零收益
+            //
+            // ⚠️ 后果不止于观感：整条 **AGP 9 / Gradle 9.3.1 / Kotlin 2.4**
+            // 工具链升级（§5.4.7）就是为了接入 Haze —— 工具链升了、
+            // 依赖进了、`hazeSource` 也挂了，但**最后一步注入漏了**，
+            // 于是"接入 Haze"这件事实际上从未发生。
+            //
+            // 判据：**新能力的开关是 CompositionLocal 时，必须确认有人 provide**。
+            // 只 grep 到"有默认值"不算接线 —— 默认值恰好是"关"的那一侧。
+            ProvideHazeState(hazeState) {
+                BottomNav(
+                    selectedIndex = selectedTab,
+                    onSelect = { index ->
+                        navController.navigate(tabRoutes[index]) {
+                            // 三个 Tab 之间切换不要堆栈，且保留各自状态
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .windowInsetsPadding(WindowInsets.navigationBars),
-            )
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .windowInsetsPadding(WindowInsets.navigationBars),
+                )
+            }
         }
     }
 }
