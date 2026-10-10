@@ -7,6 +7,34 @@
 #
 # ASCII-only on purpose: Windows PowerShell 5.1 reads .ps1 as ANSI/GBK,
 # which mangles non-ASCII and breaks string terminators.
+#
+# ---- -Beta switch: publish a PRERELEASE without touching the version ----
+#
+# Why this exists:
+#   Version numbers may only be bumped when the user explicitly asks
+#   (AGENTS.md 2.5). But a build can still be worth shipping to the owner
+#   for testing BEFORE that. Those two facts conflict if the only publish
+#   path requires a version bump.
+#
+# So: -Beta publishes the CURRENT versionName as a prerelease under a
+# distinct tag, leaving build.gradle.kts untouched.
+#
+#   tag         v1.6.8-beta.1   (auto-increments: -beta.2, -beta.3, ...)
+#   name        BiliV3 v1.6.8-beta.1
+#   prerelease  true            (GitHub marks it "Pre-release", and
+#                                /releases/latest does NOT return it)
+#   APK name    bili-v3-v1.6.8-beta.1-release.apk
+#
+# The APK still reports versionName 1.6.8 on-device, so the ONLY thing
+# distinguishing a beta build from the real 1.6.8 is which Release page it
+# came from. That is intentional: the code is identical, and the owner needs
+# to be told which one they are being handed.
+#
+# ALWAYS state clearly, when offering to publish, whether the target is the
+# official release or a beta. See prompts/ (volume: checklist, section 6.5).
+param(
+    [switch]$Beta
+)
 $ErrorActionPreference = 'Stop'
 
 $owner = 'Hu-Yang-rui'
@@ -35,8 +63,42 @@ if (-not $vm.Success -or -not $cm.Success) {
 }
 $ver = $vm.Groups[1].Value
 $code = $cm.Groups[1].Value
-$tag = "v$ver"
-Write-Host ("version {0} (code {1}) -> tag {2}" -f $ver, $code, $tag)
+
+# ---- tag: official vs beta ----
+#
+# Beta tags are derived by scanning existing tags so a re-run never
+# overwrites the previous beta (each beta is an immutable snapshot of a
+# distinct build). Scanning is done with an explicit @() wrap -- see the
+# single-tag bug documented further down; the same PowerShell unwrapping
+# trap applies here.
+if ($Beta) {
+    # NOTE: do NOT build the pattern from [regex]::Escape(...).
+    # Escaping yields 'v1\.6\.8-beta\.' and embedding that inside a larger
+    # pattern silently fails to match ('v1.6.8-beta.2' returns Success=False),
+    # which would restart the counter at 1 and overwrite beta.1 forever.
+    # The version string only contains digits and dots, so escaping it for a
+    # literal match is unnecessary -- match on the raw prefix instead.
+    $prefix = "v$ver-beta."
+    $existing = @(@(& git -C $root tag -l "v$ver-beta.*" 2>$null) | Where-Object { $_ })
+    $max = 0
+    foreach ($t in $existing) {
+        if ($t.StartsWith($prefix)) {
+            $tail = $t.Substring($prefix.Length)
+            if ($tail -match '^\d+$') {
+                $n = [int]$tail
+                if ($n -gt $max) { $max = $n }
+            }
+        }
+    }
+    $next = $max + 1
+    $tag = "v$ver-beta.$next"
+    $isPre = $true
+    Write-Host ("BETA: version {0} (code {1}) -> tag {2} (prerelease)" -f $ver, $code, $tag)
+} else {
+    $tag = "v$ver"
+    $isPre = $false
+    Write-Host ("version {0} (code {1}) -> tag {2}" -f $ver, $code, $tag)
+}
 
 $cred = "protocol=https`nhost=github.com`n`n" | git credential fill 2>&1
 $tok = ($cred | Select-String '^password=').Line -replace '^password=', ''
@@ -80,12 +142,29 @@ $rawNotes = [System.IO.File]::ReadAllText($notesPath, [System.Text.Encoding]::UT
 # (this .ps1 has to stay pure ASCII -- see the header).
 $highlightsPath = Join-Path $root ("tool\highlights\{0}.md" -f $tag)
 
+# For a beta the exact tag (v1.6.8-beta.3) will not have a file -- and the
+# plain v1.6.8.md describes the OFFICIAL release, so reusing it would tell
+# testers about features that are not what they are installing. Fall back to
+# a per-version beta file, then to the git-derived list.
+#
+# A beta file is therefore OPTIONAL: without one, the notes are still correct
+# (git-derived), just less polished.
+if (-not (Test-Path $highlightsPath) -and $Beta) {
+    $betaPath = Join-Path $root ("tool\highlights\{0}-beta.md" -f $tag)
+    if (-not (Test-Path $betaPath)) {
+        $betaPath = Join-Path $root ("tool\highlights\v{0}-beta.md" -f $ver)
+    }
+    if (Test-Path $betaPath) {
+        $highlightsPath = $betaPath
+    }
+}
+
 $changes = $null
 if (Test-Path $highlightsPath) {
     $changes = [System.IO.File]::ReadAllText($highlightsPath, [System.Text.Encoding]::UTF8).Trim()
     if ($changes) {
         Write-Host ("changelog: using hand-written highlights ({0})" -f
-            ("tool/highlights/{0}.md" -f $tag))
+            ("tool/highlights/{0}" -f (Split-Path $highlightsPath -Leaf)))
     } else {
         $changes = $null
         Write-Host ("changelog: highlights file is empty; falling back to git log")
@@ -208,20 +287,23 @@ if (-not $existing) {
         name             = "BiliV3 $tag"
         body             = $notes
         draft            = $false
-        prerelease       = $false
+        prerelease       = $isPre
     } | ConvertTo-Json
 
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
     $rel = Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/$owner/$repo/releases" -Headers $hdr -Body $bytes -ContentType 'application/json; charset=utf-8' -TimeoutSec 60
-    Write-Host ("created release id={0} tag={1}" -f $rel.id, $rel.tag_name)
+    Write-Host ("created release id={0} tag={1} prerelease={2}" -f $rel.id, $rel.tag_name, $rel.prerelease)
 } else {
     # Re-running must be able to FIX an existing release (e.g. the body was
     # written in English before release-notes.md existed). Without this the
     # script would silently keep the stale body.
-    $payload = @{ name = "BiliV3 $tag"; body = $notes } | ConvertTo-Json
+    #
+    # prerelease is re-asserted too: an existing v1.6.8 must never be
+    # silently flipped to prerelease (or vice versa) by a stray re-run.
+    $payload = @{ name = "BiliV3 $tag"; body = $notes; prerelease = $isPre } | ConvertTo-Json
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
     $rel = Invoke-RestMethod -Method Patch -Uri "https://api.github.com/repos/$owner/$repo/releases/$($existing.id)" -Headers $hdr -Body $bytes -ContentType 'application/json; charset=utf-8' -TimeoutSec 60
-    Write-Host ("updated release id={0} body+name" -f $rel.id)
+    Write-Host ("updated release id={0} body+name+prerelease={1}" -f $rel.id, $rel.prerelease)
 }
 
 # ONLY the release APK is published.
