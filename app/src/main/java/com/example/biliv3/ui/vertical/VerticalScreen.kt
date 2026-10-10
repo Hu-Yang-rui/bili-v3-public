@@ -156,6 +156,38 @@ fun VerticalScreen(
         com.example.biliv3.design.ProvideGlassBackdrop(
             backdrop = holder.backdrop,
         ) {
+        // 🔴 深度重构：**返回按钮提到 `when` 之外**。
+        //
+        // ## 原来为什么是"出不去"的页面（实测发现）
+        //
+        // 返回按钮原本写在 `else ->`（有内容）分支里，于是：
+        //
+        // | 状态 | 有返回按钮？ |
+        // |---|---|
+        // | 正常播放 | ✅ |
+        // | **加载中** | ❌ 只能等 |
+        // | **加载失败** | ❌ **用户进了这个页面就出不去** |
+        // | **没有竖屏内容** | ❌ 同上 |
+        //
+        // 实测：竖屏探测失败时整屏只有「重试」按钮 —— 而「重试」在
+        // 网络不通时同样失败，形成**死循环**。系统返回键是唯一出路，
+        // 但那是"隐藏操作"，用户不该被迫知道。
+        //
+        // ⚠️ 竖屏是全屏页（无底部导航），所以它是**唯一**的退路，
+        //    必须无条件存在。
+        //
+        // ⚠️ `ProvideGlassBackdrop` 的 `content` 是**普通 lambda**
+        //    （`@Composable () -> Unit`，没有 `BoxScope` 接收者），
+        //    所以这里不能直接 `.align(...)` —— 用一个铺满的 `Box`
+        //    自己承担定位（`TopStart` + `statusBars` inset）。
+        //
+        // 位置：左上角，`statusBars` inset 之内（不压状态栏）。
+        // 材质：`overlay`（半透明黑）—— 背景可能是任意视频画面，
+        // 不能依赖主题底色保证对比度。
+        Box(modifier = Modifier.fillMaxSize()) {
+            VerticalBackButton(onBack = onBack)
+        }
+
         when {
             state.error != null && state.items.isEmpty() -> ErrorState(
                 title = "竖屏内容加载失败",
@@ -271,33 +303,79 @@ fun VerticalScreen(
                         },
                 )
 
+                // ⚠️ 有内容时复用 `VerticalBackButton`（与"加载/失败/空"
+                //    三个状态用的是**同一个**按钮实现），差别只是这里
+                //    额外挂了自动淡出 —— 沉浸观看时不该一直有控件压着画面。
                 AnimatedVisibility(
                     visible = showBack,
                     enter = fadeIn(),
                     exit = fadeOut(),
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .windowInsetsPadding(WindowInsets.statusBars),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .padding(V3Space.xs)
-                            .size(V3Size.iconLg + V3Space.sm)
-                            .clip(CircleShape)
-                            .background(colors.overlay)
-                            .clickable(onClick = onBack),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回",
-                            tint = colors.labelOnMedia,
-                            modifier = Modifier.size(V3Size.iconLg),
-                        )
-                    }
+                    VerticalBackButton(onBack = onBack)
                 }
             }
         }
+        }
+    }
+}
+
+/**
+ * 竖屏页的返回按钮（**唯一实现**）。
+ *
+ * ---
+ *
+ * ## 🔴 为什么必须抽成一个函数（原来它只存在于"有内容"分支）
+ *
+ * 改之前，返回按钮写在 `else ->`（有内容）分支里，于是：
+ *
+ * | 状态 | 有返回按钮？ |
+ * |---|---|
+ * | 正常播放 | ✅（2.5s 后淡出，点空白唤回）|
+ * | 加载中 | ❌ |
+ * | **加载失败** | ❌ **进了这个页面就出不去** |
+ * | **没有竖屏内容** | ❌ 同上 |
+ *
+ * **实测**（模拟器，竖屏探测失败）：整屏只有「重试」按钮。
+ * 而「重试」在探测持续失败时同样无效 —— 形成死循环。
+ * 系统返回键是唯一出路，但那是隐藏操作，不该要求用户知道。
+ *
+ * ⚠️ 竖屏是**全屏页**（`showBottomNav` 的 tabRoutes 不含它），
+ *    没有底部导航兜底，所以返回键是**唯一**退路，必须无条件存在。
+ *
+ * ## 为什么不是 `Modifier.align(...)`
+ *
+ * 调用点在 `ProvideGlassBackdrop` 的 `content` 里，而那是
+ * `@Composable () -> Unit`（**没有 `BoxScope` 接收者**），
+ * 拿不到 `.align()`。所以这个函数**自己包一层铺满的 Box**
+ * 来承担定位。
+ *
+ * ## 材质
+ *
+ * `overlay`（半透明黑）+ 圆形。背景可能是任意视频画面，
+ * 不能依赖主题底色保证对比度。
+ */
+@Composable
+private fun VerticalBackButton(onBack: () -> Unit) {
+    val colors = BiliV3.colors
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(V3Space.xs)
+                .size(V3Size.iconLg + V3Space.sm)
+                .clip(CircleShape)
+                .background(colors.overlay)
+                .clickable(onClick = onBack),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "返回",
+                tint = colors.labelOnMedia,
+                modifier = Modifier.size(V3Size.iconLg),
+            )
         }
     }
 }
