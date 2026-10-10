@@ -293,10 +293,17 @@ class SettingsViewModel(
      */
     var authStore: com.example.biliv3.data.auth.AuthStore? = null
 
-    // ⚠️ 原 `setThemeMode` 已移除（v1.1.3 移除浅色主题）。
+    // ⚠️ 原 `setThemeMode` 已移除（v1.1.3 移除浅色主题时删的）。
     //
+    // **v1.6.9 加回浅色主题，但这个方法仍然不恢复** —— 理由是：
+    // 用户明确要求「全应用统一浅色主题，不保留切换功能」。
     // 没有消费者了就删掉 —— 留着一个"改了没反应"的方法
     // 等于埋一个死入口（§1.6）。
+    //
+    // 🔴 若将来要做主题切换，**不要只恢复这个方法** ——
+    //    还要处理：设置项 UI、`Settings.themeMode` 的消费方、
+    //    以及"切换后玻璃材质要重算"（浅深两套材质方向相反）。
+    //    单独恢复它只会得到一个"能存但没效果"的死开关。
 
     private fun launch(block: suspend () -> Unit) {
         viewModelScope.launch { block() }
