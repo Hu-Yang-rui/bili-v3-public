@@ -117,7 +117,7 @@ fun DynamicScreen(
                     // 与返回键占位）。页面间来回切换时标题会横向跳动。
                     //
                     // 现在与标准顶栏结构一致；标题不再单独加 padding。
-                    .padding(horizontal = V3Space.xs),
+                    .padding(horizontal = V3Space.topBarMargin),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 Text(

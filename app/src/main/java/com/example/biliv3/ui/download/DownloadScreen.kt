@@ -110,7 +110,7 @@ fun DownloadScreen(
                 .ruleBottom(color = Rule.color)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(V3Size.topBar)
-                .padding(horizontal = V3Space.xs),
+                .padding(horizontal = V3Space.topBarMargin),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
