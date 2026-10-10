@@ -377,7 +377,8 @@ private fun ProfileHeader(
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(64.dp)
+                    // 用户主页顶部头像 —— 用最大档（avatarXl）
+                    .size(V3Size.avatarXl)
                     .clip(CircleShape)
                     .background(colors.avatarPlaceholder),
             )

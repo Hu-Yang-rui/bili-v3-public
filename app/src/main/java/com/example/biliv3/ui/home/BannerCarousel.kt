@@ -257,7 +257,8 @@ private fun CarouselArrow(
 
     Box(
         modifier = modifier
-            .size(44.dp)
+            // 触摸目标用令牌（44dp = 最小触摸目标）
+            .size(V3Size.touchMin)
             .clip(CircleShape)
             .background(
                 if (hovered) colors.labelOnMedia else colors.qrSurface,

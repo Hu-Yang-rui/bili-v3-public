@@ -258,7 +258,8 @@ private fun RootCommentCard(comment: CommentItem, onAvatarClick: (Long) -> Unit)
                 contentDescription = "进入用户主页",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(32.dp)
+                    // 楼中楼头像 —— 用 avatarSm（比顶层评论小一档）
+                    .size(V3Size.avatarSm)
                     .clip(CircleShape)
                     .background(colors.avatarPlaceholder)
                     .clickable { onAvatarClick(comment.mid) },

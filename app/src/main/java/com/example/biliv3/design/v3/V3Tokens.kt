@@ -486,6 +486,32 @@ object V3Size {
     val iconLg = 24.dp
     /** 28dp —— 特大（播放器主控制）。 */
     val iconXl = 28.dp
+    /**
+     * 48dp —— **空态 / 错误态的图标**（比 [iconLg] 大一倍）。
+     *
+     * ## 为什么单列一档
+     *
+     * 空态（"还没有内容"）与错误态（"加载失败"）需要一个大而弱的图形
+     * 来占据视觉中心 —— 它**不是"更大的图标"**，而是**插画级的占位**。
+     *
+     * ⚠️ 实测发现这个值在 **4 个地方各写了一遍 `48.dp`**
+     * （`States.kt` × 2、`AicuScreen`、`LyricsView`）——
+     * 属于"同一个语义散落成多个魔法数字"。单列成令牌后，
+     * 以后要统一调大小时只改一处。
+     */
+    val iconEmpty = 48.dp
+
+    /**
+     * 36dp —— **页面级加载指示器**（`iconLg * 1.5`）。
+     *
+     * 列表**行内**的加载用 [iconLg]（24dp，如触底加载）；
+     * **整页**加载用本档（36dp）—— 页面空着时，24dp 的转圈太小、显得单薄。
+     *
+     * ⚠️ 原来这个值在 6 个地方写成 `V3Size.iconLg * 1.5f`
+     * （`LibraryScreens` / `LoginScreen` / `WebViewLoginScreen` /
+     * `RankingScreen` / `VerticalScreen` × 2）—— 同样是散落的算式。
+     */
+    val spinnerPage = 36.dp
 
     // ---- 状态点 ----
     /** 5dp —— 角标内的点。 */

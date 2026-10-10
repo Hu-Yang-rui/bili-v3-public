@@ -40,6 +40,7 @@ import com.example.biliv3.design.v3.BiliV3
 import com.example.biliv3.design.v3.V3Space
 import com.example.biliv3.design.v3.V3Radius
 import com.example.biliv3.design.v3.V3Type
+import com.example.biliv3.design.v3.V3Size
 
 /**
  * 歌词视图（播放器内嵌）。
@@ -255,7 +256,7 @@ private fun LyricsHint(
             imageVector = Icons.Filled.Lyrics,
             contentDescription = null,
             tint = colors.labelTertiary,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(V3Size.iconEmpty),
         )
         Spacer(Modifier.height(V3Space.md))
         Text(

@@ -417,7 +417,7 @@ private fun GuideState() {
             imageVector = Icons.Outlined.Search,
             contentDescription = null,
             tint = colors.labelTertiary,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(V3Size.iconEmpty),
         )
         Spacer(Modifier.height(V3Space.md))
         Text(

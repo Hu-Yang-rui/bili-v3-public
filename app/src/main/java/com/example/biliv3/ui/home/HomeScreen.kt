@@ -478,7 +478,8 @@ private fun androidx.compose.foundation.lazy.grid.LazyGridScope.MainColumnItems(
                 loadingMore -> CircularProgressIndicator(
                     color = colors.brand,
                     strokeWidth = V3Space.progressTrack,
-                    modifier = Modifier.size(24.dp),
+                    // 行内加载（触底）—— 用 iconLg，与其它页面的触底加载一致
+                    modifier = Modifier.size(V3Size.iconLg),
                 )
                 !hasMore -> Text(
                     text = "没有更多了",

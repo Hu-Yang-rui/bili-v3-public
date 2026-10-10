@@ -313,7 +313,7 @@ fun WebViewLoginScreen(
                     CircularProgressIndicator(
                         color = colors.brand,
                         strokeWidth = V3Space.progressTrack,
-                        modifier = Modifier.size(V3Size.iconLg * 1.5f),
+                        modifier = Modifier.size(V3Size.spinnerPage),
                     )
                 }
             }
