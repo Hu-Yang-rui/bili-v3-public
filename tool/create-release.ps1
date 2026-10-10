@@ -68,9 +68,25 @@ $code = $cm.Groups[1].Value
 #
 # Beta tags are derived by scanning existing tags so a re-run never
 # overwrites the previous beta (each beta is an immutable snapshot of a
-# distinct build). Scanning is done with an explicit @() wrap -- see the
-# single-tag bug documented further down; the same PowerShell unwrapping
-# trap applies here.
+# distinct build).
+#
+# CRITICAL: the scan MUST include REMOTE tags, not just local ones.
+#
+# Tags are created by the GitHub API (`tag_name` in the release payload),
+# so a tag can exist on the remote while being absent locally. On
+# 2026-10-10 this actually happened: local had only v1.6.8-beta.1,
+# remote had beta.1 AND beta.2, so the counter computed "beta.2" again
+# and **silently overwrote the already-published beta.2 release**
+# (its body was replaced; the APK asset survived only because the upload
+# hit a 422 and was skipped).
+#
+# The fix is two-fold:
+#   1. `git fetch --tags` first (same requirement the changelog has), and
+#   2. scan the UNION of local and remote tags via `ls-remote`, so a
+#      fetch failure cannot silently reset the counter.
+#
+# Scanning is done with an explicit @() wrap -- see the single-tag bug
+# documented further down; the same PowerShell unwrapping trap applies.
 if ($Beta) {
     # NOTE: do NOT build the pattern from [regex]::Escape(...).
     # Escaping yields 'v1\.6\.8-beta\.' and embedding that inside a larger
@@ -79,7 +95,29 @@ if ($Beta) {
     # The version string only contains digits and dots, so escaping it for a
     # literal match is unnecessary -- match on the raw prefix instead.
     $prefix = "v$ver-beta."
-    $existing = @(@(& git -C $root tag -l "v$ver-beta.*" 2>$null) | Where-Object { $_ })
+
+    # Best-effort fetch, then take the union of local + remote tag names.
+    & git -C $root fetch --tags --quiet origin 2>$null | Out-Null
+
+    $localTags = @(@(& git -C $root tag -l "v$ver-beta.*" 2>$null) | Where-Object { $_ })
+
+    $remoteTags = @()
+    $lsOut = & git -C $root ls-remote --tags origin "refs/tags/v$ver-beta.*" 2>$null
+    foreach ($line in @($lsOut)) {
+        if (-not $line) { continue }
+        # "<sha>\trefs/tags/<name>"
+        $parts = $line -split "`t"
+        if ($parts.Count -ge 2) {
+            $name = $parts[1] -replace '^refs/tags/', ''
+            # annotated tags also list a "^{}" peeled ref -- skip those
+            if ($name -notmatch '\^\{\}$') { $remoteTags += $name }
+        }
+    }
+
+    $existing = @($localTags + $remoteTags) | Sort-Object -Unique
+    if (-not $existing) { $existing = @() }
+    Write-Host ("existing beta tags: {0}" -f (($existing -join ', ') -replace '^$', '(none)'))
+
     $max = 0
     foreach ($t in $existing) {
         if ($t.StartsWith($prefix)) {
