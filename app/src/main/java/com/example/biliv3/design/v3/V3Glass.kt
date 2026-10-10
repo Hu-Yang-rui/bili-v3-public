@@ -605,11 +605,12 @@ private fun HazeGlassSurface(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val m = BiliV3.colors.materials
+    val isLight = BiliV3.colors.isLight
 
     // 折射需要圆角形状 —— 直角会让折射带无处可放
     val rounded = shape as? RoundedCornerShape ?: RoundedCornerShape(V3Radius.sheet)
 
-    val style = remember(level, rounded, tint, m, refraction) {
+    val style = remember(level, rounded, tint, m, refraction, isLight) {
         val base = when (level) {
             V3Glass.Level.Clear -> dev.chrisbanes.haze.glass.GlassStyle.clear
             else -> dev.chrisbanes.haze.glass.GlassStyle.regular
@@ -618,6 +619,37 @@ private fun HazeGlassSurface(
             shape(rounded)
             // 底色：用本项目令牌（Haze 默认的容器色偏亮）
             tint(tint ?: m.tint)
+
+            if (isLight) {
+                // ---- 浅色专用调参（实测必需，不是微调）----
+                //
+                // ## 🔴 为什么必须显式调：Haze 的 `regular` 预设是按**深色**校准的
+                //
+                // 实测（动态页，白底列表）：底栏玻璃胶囊与页面底的对比度只有
+                // **1.11:1（边缘）/ 1.18:1（中部）** —— 完全看不出是个浮层，
+                // 底栏与白色内容区糊成一片。
+                //
+                // 原因：浅色下"玻璃糊白色"的结果**还是白色**。
+                // 深色下玻璃靠"比纯黑底亮"分层，浅色下这条路不存在。
+                //
+                // 所以浅色必须显式做三件事（Haze 的深色预设都不会做）：
+                //
+                // | 参数 | 深色预设 | 浅色需要 | 作用 |
+                // |---|---|---|---|
+                // | `specularIntensity` | 偏高（白高光压暗底） | **降低** | 白底上白高光看不见，反而让面板发灰 |
+                // | `edgeShadow` | 很淡 | **加重** | 白底上唯一能"框出"边界的手段 |
+                // | `backgroundColor` | 深 | **近白且更实** | 让面板区别于纯白页面底 |
+                //
+                // ⚠️ `whitePoint` / `alpha` 也一起调：前者压住浅色下的泛白，
+                //    后者让底色更实（通透优先 vs 可辨识优先 —— 这里选后者，
+                //    一个看不见的浮层不是"通透"而是缺陷）。
+                specularIntensity(0.55f)
+                edgeShadow(Color(0x2E000000))
+                backgroundColor(Color(0xE8F7F7FA))
+                alpha(0.92f)
+                whitePoint(1.0f)
+            }
+
             if (!refraction) {
                 // 关掉折射：把折射位移归零，保留模糊与高光
                 optics(refractionStrength = 0f)
