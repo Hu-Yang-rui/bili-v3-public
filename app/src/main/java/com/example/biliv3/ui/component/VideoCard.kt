@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,11 +16,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,9 +38,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.biliv3.data.model.VideoItem
 import com.example.biliv3.data.model.formatCount
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.tokens.Motion
-import com.example.biliv3.design.tokens.Rhythm
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.biliv3.design.v3.BiliV3
 import com.example.biliv3.design.v3.V3Radius

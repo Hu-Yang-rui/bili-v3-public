@@ -20,14 +20,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,7 +47,6 @@ import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.model.formatRelativeTime
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.design.v3.BiliV3

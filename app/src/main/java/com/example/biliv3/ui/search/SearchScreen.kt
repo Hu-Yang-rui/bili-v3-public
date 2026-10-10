@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -31,7 +30,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,12 +47,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.component.HideKeyboardOnDispose
@@ -69,6 +65,15 @@ import com.example.biliv3.design.v3.V3Size
 import com.example.biliv3.design.v3.V3Type
 import com.example.biliv3.design.v3.V3ContentRow
 import com.example.biliv3.design.v3.V3SectionTitle
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import com.example.biliv3.design.LocalWindowSize
+import com.example.biliv3.ui.home.gridGutterFor
+import com.example.biliv3.ui.home.gridRowSpacingFor
+import com.example.biliv3.ui.home.pagePaddingFor
 
 /**
  * 搜索页。
@@ -556,37 +561,70 @@ private fun ResultList(
     onLoadMore: () -> Unit,
 ) {
     val colors = BiliV3.colors
-    val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
+    val windowSize = LocalWindowSize.current
 
-    // 距底 5 项触发加载，避免用户看到"卡住不动"
+    // 距底 5 项触发加载，避免用户看到"卡住不动"。
+    //
+    // ⚠️ 网格与列表的 `layoutInfo` 都提供 `visibleItemsInfo` / `totalItemsCount`，
+    //    所以这段判断**不需要改** —— 这是换容器时容易过度改动的地方。
     val shouldLoad by remember {
         derivedStateOf {
-            val info = listState.layoutInfo
+            val info = gridState.layoutInfo
             val last = info.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
             val total = info.totalItemsCount
             total > 0 && last.index >= total - 5
         }
     }
-    LaunchedEffect(listState, state.keyword) {
+    LaunchedEffect(gridState, state.keyword) {
         snapshotFlow { shouldLoad }.collect { if (it) onLoadMore() }
     }
 
-    LazyColumn(
-        state = listState,
+    // 🔴 v3 深度重构：结果列表从 **LazyColumn（1 列全宽）** 改为
+    // **LazyVerticalGrid（与首页同款多列网格）**。
+    //
+    // ## 为什么这是真问题（不只是"风格差异"）
+    //
+    // 改之前，同一支视频在不同页面的呈现方式不一致：
+    //
+    // | 页面 | 容器 | 列数 |
+    // |---|---|---|
+    // | 首页 / 分区 | `LazyVerticalGrid` | **2** |
+    // | **搜索结果** | `LazyColumn` | **1（全宽）** |
+    // | 用户主页投稿 | `LazyColumn` | **1（全宽）** |
+    //
+    // 用户搜到一支视频、点进 UP 主页、再回首页 —— 同一个东西
+    // **一会儿是全宽大卡、一会儿是两列小卡**。这是任务书说的
+    // 「新旧风格不一致」的**具体形态**：不是颜色不同，是**信息密度不同**。
+    //
+    // ## 为什么 2 列是对的
+    //
+    // 搜索结果的信息密度应与首页一致：用户已在首页建立"一屏看 4 支"的
+    // 预期，搜索结果突然"一屏看 2 支"会显得笨重；且结果往往很多，
+    // 2 列能显著减少滚动。
+    //
+    // ⚠️ 用 `windowSize.gridColumns` 而不是硬编码 2 ——
+    //    平板（3 列）/ 桌面（4 列）自动适配，与首页同源。
+    LazyVerticalGrid(
+        state = gridState,
+        columns = GridCells.Fixed(windowSize.gridColumns),
         contentPadding = PaddingValues(
-            start = V3Space.md,
-            end = V3Space.md,
+            start = pagePaddingFor(windowSize),
+            end = pagePaddingFor(windowSize),
             top = V3Space.sm,
             bottom = V3Space.xxl,
         ),
-        verticalArrangement = Arrangement.spacedBy(V3Space.sm),
+        horizontalArrangement = Arrangement.spacedBy(gridGutterFor(windowSize)),
+        verticalArrangement = Arrangement.spacedBy(gridRowSpacingFor(windowSize)),
         modifier = Modifier.fillMaxSize(),
     ) {
         items(items = state.items, key = { it.bvid }) { video ->
             VideoCard(video = video, onClick = { onVideoClick(video.bvid) })
         }
 
-        item(key = "load-more") {
+        // ⚠️ 加载态跨满整行（`maxLineSpan`）—— 否则它只占第一列，
+        //    看起来像"某一支视频坏了"。
+        item(key = "load-more", span = { GridItemSpan(maxLineSpan) }) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

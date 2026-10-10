@@ -2,7 +2,6 @@ package com.example.biliv3.ui.live
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,7 +39,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.biliv3.data.meme.Meme
 import com.example.biliv3.data.meme.MemeSearch
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.v3.BiliV3

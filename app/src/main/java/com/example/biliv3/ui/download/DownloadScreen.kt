@@ -2,7 +2,6 @@ package com.example.biliv3.ui.download
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,7 +26,6 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DownloadDone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,7 +41,6 @@ import coil.compose.AsyncImage
 import com.example.biliv3.data.download.DownloadState
 import com.example.biliv3.data.download.DownloadTask
 import com.example.biliv3.data.download.DownloadedItem
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.ui.component.EmptyState

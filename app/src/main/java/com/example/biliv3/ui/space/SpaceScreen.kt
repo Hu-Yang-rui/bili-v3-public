@@ -32,7 +32,6 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -55,7 +54,6 @@ import com.example.biliv3.data.DynamicItem
 import com.example.biliv3.data.model.VideoItem
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.model.formatRelativeTime
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule

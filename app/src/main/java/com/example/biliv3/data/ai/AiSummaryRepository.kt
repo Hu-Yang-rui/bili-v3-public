@@ -3,7 +3,6 @@ package com.example.biliv3.data.ai
 import android.util.Log
 import com.example.biliv3.data.api.BiliApi
 import com.example.biliv3.data.api.BiliException
-import com.example.biliv3.data.api.BiliHeaders
 import com.example.biliv3.data.api.Endpoints
 import com.example.biliv3.data.subtitle.SubtitleBody
 import kotlinx.coroutines.Dispatchers

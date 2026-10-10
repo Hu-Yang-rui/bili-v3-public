@@ -19,11 +19,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,9 +38,7 @@ import coil.compose.AsyncImage
 import com.example.biliv3.data.live.LiveMessage
 import com.example.biliv3.data.live.LivePermissions
 import com.example.biliv3.data.model.CoverUrls
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
-import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.v3.BiliV3
 import com.example.biliv3.design.v3.V3Space

@@ -23,8 +23,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
@@ -38,12 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.biliv3.data.Settings
 import com.example.biliv3.data.SpeedTiers
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
 import com.example.biliv3.design.v3.BiliV3
 import com.example.biliv3.design.v3.V3Radius
@@ -52,7 +47,6 @@ import com.example.biliv3.design.v3.V3Space
 import com.example.biliv3.design.v3.V3Type
 import com.example.biliv3.design.v3.V3SectionTitle
 import com.example.biliv3.design.ruleBottom
-import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.ui.component.InlinePicker
 import com.example.biliv3.ui.component.PickerOption

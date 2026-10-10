@@ -1,6 +1,5 @@
 package com.example.biliv3.data.quality
 
-import org.json.JSONArray
 import org.json.JSONObject
 
 /**

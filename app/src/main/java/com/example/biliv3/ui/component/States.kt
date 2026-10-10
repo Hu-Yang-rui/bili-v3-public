@@ -20,7 +20,6 @@ import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,9 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.example.biliv3.data.api.BiliException
 import com.example.biliv3.data.NotLoggedInException
 import com.example.biliv3.design.tokens.FontFamilies
-import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.FontSize
-import com.example.biliv3.design.tokens.Radius
 import com.example.biliv3.design.v3.BiliV3
 import com.example.biliv3.design.v3.V3Space
 import com.example.biliv3.design.v3.V3Radius
@@ -236,6 +232,27 @@ private fun TerminalEmptyState(
                 horizontal = V3Space.md,
                 vertical = if (compact) V3Space.lg else V3Space.xxl,
             ),
+        // 🔴 深度重构：补 `horizontalAlignment`（原来只有 verticalArrangement）。
+        //
+        // ## 原来为什么看着"偏在左下角"
+        //
+        // 调用方（离线缓存 / 收藏 / 历史 …）传的是 `Modifier.fillMaxSize()`，
+        // 于是这个 Column 占满剩余高度、`verticalArrangement = Center` 生效 ——
+        // **垂直方向是居中的**。但**水平方向没有对齐约束**，
+        // Column 的默认 `horizontalAlignment = Start` 让它贴左边。
+        //
+        // 实测（1080×2400，离线缓存空态）：标题行 y≈1080（垂直居中没错），
+        // 但 x 从 40 开始贴左 —— 上面一大片空白、文字挤在左侧，
+        // 视觉重心明显偏左下，不像"页面中心"。
+        //
+        // ⚠️ 这与 `EmptyState`（非终端风）不一致：那个显式写了
+        //    `horizontalAlignment = CenterHorizontally`。
+        //    同一个 App 的两种空态**对齐方式不同**，属于任务书说的
+        //    「视觉不一致」。
+        //
+        // ⚠️ 保持左对齐的是**标题行内部的竖线 + 文字**（终端输出的视觉语言），
+        //    这里居中的是**整块内容**在页面里的位置 —— 两者不冲突。
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         // 🔴 v1.5.1：去掉 `$` 提示符（用户反馈"多条文字前面出现不该有的 $ 符号"）。

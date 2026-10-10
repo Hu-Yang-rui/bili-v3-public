@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,7 +34,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.biliv3.data.model.LiveItem
 import com.example.biliv3.data.model.NoticeItem
@@ -45,7 +43,6 @@ import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.design.tokens.Rhythm
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.tokens.Sizes
 import com.example.biliv3.design.v3.BiliV3
 import com.example.biliv3.design.v3.V3Space

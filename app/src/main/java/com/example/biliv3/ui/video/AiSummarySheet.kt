@@ -21,7 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,9 +34,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.biliv3.data.ai.SummarySection
 import com.example.biliv3.data.ai.SummarySource
 import com.example.biliv3.data.ai.VideoSummary
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
-import com.example.biliv3.design.tokens.FontSize
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.ui.component.BrandButton

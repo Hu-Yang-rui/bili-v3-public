@@ -2,7 +2,6 @@ package com.example.biliv3.player
 
 import android.content.Context
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.example.biliv3.data.lyrics.LyricsRepository
 import com.example.biliv3.data.model.PlayInfo

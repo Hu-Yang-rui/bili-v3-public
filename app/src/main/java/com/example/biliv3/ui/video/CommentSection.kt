@@ -28,7 +28,6 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -56,9 +55,7 @@ import com.example.biliv3.data.model.CommentItem
 import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.model.formatRelativeTime
 import com.example.biliv3.design.ruleTop
-import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.v3.BiliV3
 import com.example.biliv3.design.v3.V3Radius
 import com.example.biliv3.design.v3.V3Size

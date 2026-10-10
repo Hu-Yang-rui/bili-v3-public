@@ -14,7 +14,6 @@ import com.example.biliv3.data.model.CommentItem
 import com.example.biliv3.data.model.PlayInfo
 import com.example.biliv3.data.model.VideoDetail
 import com.example.biliv3.data.model.VideoItem
-import com.example.biliv3.data.quality.AutoQuality
 import com.example.biliv3.data.quality.AutoQualitySettings
 import com.example.biliv3.data.subtitle.SubtitleBody
 import com.example.biliv3.data.subtitle.SubtitleRepository

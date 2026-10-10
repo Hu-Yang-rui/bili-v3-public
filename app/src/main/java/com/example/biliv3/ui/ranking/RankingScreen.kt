@@ -27,7 +27,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,7 +40,6 @@ import coil.compose.AsyncImage
 import com.example.biliv3.data.RankingTab
 import com.example.biliv3.data.model.VideoItem
 import com.example.biliv3.data.model.formatCount
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.band
 import com.example.biliv3.design.BandLevel
 import com.example.biliv3.design.ruleBottom

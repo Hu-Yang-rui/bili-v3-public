@@ -18,12 +18,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,7 +25,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,7 +42,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.biliv3.AppContainer
 import com.example.biliv3.data.FavFolder
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
 import com.example.biliv3.design.tokens.Motion
 import com.example.biliv3.design.v3.ProvideHazeState
@@ -95,7 +87,6 @@ import com.example.biliv3.ui.video.VideoDetailViewModelFactory
 import com.example.biliv3.ui.video.ReplyDetailScreen
 import com.example.biliv3.ui.video.ReplyDetailVmFactory
 import com.example.biliv3.design.v3.BiliV3
-import com.example.biliv3.design.v3.GlassSurface
 import com.example.biliv3.design.v3.V3Space
 
 /**

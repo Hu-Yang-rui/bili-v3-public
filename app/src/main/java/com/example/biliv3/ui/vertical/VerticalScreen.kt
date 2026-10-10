@@ -36,7 +36,6 @@ import androidx.compose.material.icons.outlined.MonetizationOn
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,7 +48,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -65,7 +63,6 @@ import com.example.biliv3.data.model.formatCount
 import com.example.biliv3.data.subtitle.SubtitleBody
 import com.example.biliv3.ui.component.MonoReadout
 import com.example.biliv3.ui.component.TechTag
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.player.PlayerHolder
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.video.DanmakuLayer
@@ -73,7 +70,6 @@ import com.example.biliv3.ui.video.SubtitleOverlay
 import com.example.biliv3.ui.video.VideoPlayerSurface
 import kotlinx.coroutines.delay
 import com.example.biliv3.design.v3.BiliV3
-import com.example.biliv3.design.v3.GlassSurface
 import com.example.biliv3.design.v3.ProvideGlassBackdrop
 import com.example.biliv3.design.v3.V3Space
 import com.example.biliv3.design.v3.V3Radius

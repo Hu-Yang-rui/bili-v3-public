@@ -2,7 +2,6 @@ package com.example.biliv3.ui.video
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,7 +20,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.example.biliv3.design.BiliTheme
 import androidx.compose.ui.unit.sp
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.biliv3.data.danmaku.DanmakuItem

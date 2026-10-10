@@ -24,7 +24,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,12 +35,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.biliv3.data.BangumiEpisode
 import com.example.biliv3.data.model.CoverUrls
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.Rhythm
@@ -232,6 +229,12 @@ private fun BangumiHeader(
 ) {
     val colors = BiliV3.colors
 
+    // ⚠️ 外层 `Column` 是**必须的**：这个函数要输出两个"兄弟"区块 ——
+    //    ① 海报 + 文字的 `Row`  ② 整行的追番按钮。
+    //    直接写成两个顶层可组合项会让按钮跑到 Row 的右边
+    //    （Compose 里相邻的可组合项若无共同父容器，布局关系由调用方决定，
+    //     而调用方把它放在 `GridItemSpan(maxLineSpan)` 的一个 item 里）。
+    Column(modifier = Modifier.fillMaxWidth()) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -303,18 +306,37 @@ private fun BangumiHeader(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-
-            Spacer(Modifier.height(V3Space.sm))
-
-            // ---- 追番按钮（此前「追番」功能完全不存在）----
-            BrandButton(
-                label = if (isFollowing) "已追番" else "追番",
-                onClick = onToggleFollow,
-                variant = if (isFollowing) BrandButtonVariant.Outline
-                else BrandButtonVariant.Filled,
-            )
         }
     }
+
+    // ---- 追番按钮：移到**海报行之外**，独立成行 ----
+    //
+    // ## 🔴 原来为什么难看（实测截图发现）
+    //
+    // 它原本写在「海报右侧那个 `Column(weight(1f))`」里，于是宽度被
+    // 约束成**屏宽减去 96dp 海报再减间距** —— 一个左对齐、卡在
+    // 中间偏左的蓝色小方块，下面还压着一大片空白。
+    //
+    // 观感问题有两层：
+    // 1. **不是整行动作** —— 「追番」是这一页的主操作，应该有整行的
+    //    视觉重量，而不是缩在封面右侧
+    // 2. **与封面对齐关系混乱** —— 它左边缘贴着文字列，但视觉上
+    //    看起来像"挂在封面下面"
+    //
+    // ✅ 现在：移出 `Row`，作为头部区块的独立子项，**整行宽**。
+    //    这也是 iOS 的做法 —— 主操作按钮不与图文混排，独立成行。
+    Spacer(Modifier.height(V3Space.md))
+    BrandButton(
+        label = if (isFollowing) "已追番" else "追番",
+        onClick = onToggleFollow,
+        variant = if (isFollowing) BrandButtonVariant.Outline
+        else BrandButtonVariant.Filled,
+        modifier = Modifier
+            .fillMaxWidth()
+            // 与海报/文字用同一套页面边距，左右对齐
+            .padding(horizontal = V3Space.md),
+    )
+    }   // ← 关外层 Column
 }
 
 /**
@@ -336,8 +358,24 @@ private fun EpisodeCell(ep: BangumiEpisode, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            // 集数格子：直角（列表项一律直角），只有交互态保留可点。
-            .background(colors.bgSecondary)
+            // 🔴 深度重构：**去掉 `background(colors.bgSecondary)`**。
+            //
+            // ## 原来是什么样（实测截图）
+            //
+            // 每个集数格子都铺一块**实心灰底**，8 集排下来就是一屏
+            // **灰色方块阵列** —— 这正是任务书禁止的「把每个列表项都
+            // 包进容器」：格子本身是"可点的文字"，不是"独立的内容块"。
+            //
+            // ## 为什么去掉底反而更清楚
+            //
+            // 集数之间已经有**网格间距**（`spacedBy`）做分组，
+            // 而每个格子里是「集数 + 标题」两行文字 ——
+            // 文字的对齐（居中）与字号层级已经足够表达"这是一个单元"。
+            // 再加灰底只是重复表达，而且让整页看起来像"卡片仓库"。
+            //
+            // ⚠️ 保留 `clickable`：可点性不依赖底色（底色是"区域"语义，
+            //    见 `V3Colors` 的三层系统 —— 控件用 Fill，区域用 Background，
+            //    而这里既不是区域也不是标准控件，是**列表项**）。
             .clickable(onClick = onClick)
             .padding(vertical = V3Space.sm, horizontal = V3Space.xs),
         horizontalAlignment = Alignment.CenterHorizontally,

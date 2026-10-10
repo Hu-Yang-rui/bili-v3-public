@@ -2,7 +2,6 @@ package com.example.biliv3.ui.live
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,9 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -46,7 +43,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.exoplayer.ExoPlayer
@@ -54,13 +50,9 @@ import coil.compose.AsyncImage
 import com.example.biliv3.data.LiveRoom
 import com.example.biliv3.data.live.LiveMessage
 import com.example.biliv3.data.model.formatCount
-import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.RuleLine
 import com.example.biliv3.design.ruleBottom
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.ui.component.BrandButton
-import com.example.biliv3.ui.component.BrandButtonVariant
 import com.example.biliv3.ui.component.EmptyState
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.component.TerminalLoadingState

@@ -2,9 +2,6 @@ package com.example.biliv3.ui.video
 
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,13 +16,11 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -47,7 +42,6 @@ import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.material.icons.outlined.RemoveRedEye
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -86,16 +80,12 @@ import com.example.biliv3.data.model.formatRelativeTime
 import com.example.biliv3.design.ruleTop
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.WindowSize
 import com.example.biliv3.design.v3.BiliV3
-import com.example.biliv3.design.v3.GlassSurface
-import com.example.biliv3.design.v3.V3Glass
 import com.example.biliv3.design.v3.V3Radius
 import com.example.biliv3.design.v3.V3Size
 import com.example.biliv3.design.v3.V3Space
 import com.example.biliv3.design.v3.V3Type
-import com.example.biliv3.player.PlayerFactory
 import com.example.biliv3.ui.component.ErrorState
 import com.example.biliv3.ui.component.ProvideShimmer
 import com.example.biliv3.ui.component.SkeletonBox

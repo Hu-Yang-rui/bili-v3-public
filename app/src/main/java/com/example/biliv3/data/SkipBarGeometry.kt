@@ -1,6 +1,5 @@
 package com.example.biliv3.data
 
-import com.example.biliv3.design.v3.V3Space
 
 /**
  * 跳过区间在**进度条上的几何**（纯 Kotlin，可单测）。

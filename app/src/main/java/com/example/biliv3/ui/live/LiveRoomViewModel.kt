@@ -11,7 +11,6 @@ import com.example.biliv3.data.live.LiveDanmakuClient
 import com.example.biliv3.data.live.LiveMessage
 import com.example.biliv3.data.live.LivePermissions
 import com.example.biliv3.data.live.LiveRole
-import com.example.biliv3.data.live.LiveRoleResolver
 import com.example.biliv3.data.live.ModerationResult
 import com.example.biliv3.player.PlayerHolder
 import com.example.biliv3.ui.component.userMessageFor

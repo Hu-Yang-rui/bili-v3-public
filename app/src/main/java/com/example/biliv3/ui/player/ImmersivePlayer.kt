@@ -2,9 +2,6 @@ package com.example.biliv3.ui.player
 
 import android.app.Activity
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -35,7 +32,6 @@ import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,8 +50,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.biliv3.data.lyrics.LyricsUiState
-import com.example.biliv3.design.BiliTheme
-import com.example.biliv3.design.tokens.Motion
 import com.example.biliv3.player.PlaybackMode
 import com.example.biliv3.player.QueueItem
 import kotlinx.coroutines.delay

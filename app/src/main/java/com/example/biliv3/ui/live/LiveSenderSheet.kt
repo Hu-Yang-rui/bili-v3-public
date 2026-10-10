@@ -3,7 +3,6 @@ package com.example.biliv3.ui.live
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,7 +22,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -40,7 +38,6 @@ import com.example.biliv3.data.live.LiveMessage
 import com.example.biliv3.data.live.LiveRole
 import com.example.biliv3.data.model.CoverUrls
 import com.example.biliv3.data.model.formatCount
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
 import com.example.biliv3.design.tokens.Rhythm
 import com.example.biliv3.design.tokens.Rule

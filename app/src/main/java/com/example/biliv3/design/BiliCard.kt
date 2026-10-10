@@ -13,7 +13,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.biliv3.design.tokens.BiliColors
 import com.example.biliv3.design.tokens.Elevation
 import com.example.biliv3.design.v3.BiliV3
 import com.example.biliv3.design.v3.V3Radius

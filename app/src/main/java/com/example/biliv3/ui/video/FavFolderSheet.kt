@@ -3,7 +3,6 @@ package com.example.biliv3.ui.video
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -38,7 +36,6 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.biliv3.data.FavFolder
 import com.example.biliv3.data.model.CoverUrls
-import com.example.biliv3.design.BiliTheme
 import com.example.biliv3.design.RuleLine
 import com.example.biliv3.design.tokens.Rule
 import com.example.biliv3.ui.component.TerminalLoadingState
